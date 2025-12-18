@@ -1,6 +1,7 @@
 from django.urls import path, include
 from . import views
 from . import views_logistics
+from . import webhook_views
 # from . import analytics_views
 
 urlpatterns = [
@@ -88,6 +89,9 @@ urlpatterns = [
     
     # API
     path('api/branch/<int:branch_id>/stocks/', views.get_branch_stocks, name='get_branch_stocks'),
+    
+    # Webhook
+    path('webhook/', webhook_views.webhook_receiver, name='webhook_receiver'),
     
     # Enterprise Price Management
     path('pricing/', include('core.urls_pricing')),
