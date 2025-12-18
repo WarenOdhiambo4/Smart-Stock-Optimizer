@@ -34,6 +34,6 @@ PYTHON_VERSION=3.11.0
 
 ## Your Airtable Base
 
-- **Base ID:** `appoh0qpPOqZOH35E`
+- **Base ID:** 
 - **All 15 tables created with proper relationships**
 - **Data syncs automatically from Django to Airtable**
