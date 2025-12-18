@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Orders</h1>
+    <div class="d-flex gap-2">
+        <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <form method="get">
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search orders..." value="{{ search }}">
+            </form>
+        </div>
+        <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>New Order</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Branch</th>
+                    <th>Supplier</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in page_obj %}
+                <tr>
+                    <td><a href="{% url 'order_detail' order.pk %}"><strong>{{ order.order_number }}</strong></a></td>
+                    <td>{{ order.branch.name }}</td>
+                    <td>{{ order.supplier|default:'-' }}</td>
+                    <td>{{ order.items.count }}</td>
+                    <td>${{ order.total_amount }}</td>
+                    <td>
+                        <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% elif order.status == 'PROCESSING' %}badge-info{% else %}badge-secondary{% endif %}">
+                            {{ order.status }}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ order.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i></a>
+                            {% if order.status == 'PENDING' %}
+                            <form method="post" action="{% url 'order_complete' order.pk %}" style="display:inline;" onsubmit="return confirm('Mark this order as complete? This will add items to stock.')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check"></i></button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% include 'core/pagination.html' %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-clipboard-check" style="font-size: 3rem;"></i>
+            <h5>No orders found</h5>
+            <p>Create purchase orders to restock inventory</p>
+            <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm">Create Order</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

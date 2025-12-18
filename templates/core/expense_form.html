@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Expense - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} Expense</h1>
+    <a href="{% url 'expense_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to List</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="branch" class="form-label">Branch *</label>
+                            <select name="branch" id="branch" class="form-select" required>
+                                <option value="">Select Branch</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}" {% if expense and expense.branch.id == branch.id %}selected{% endif %}>{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="expense_type" class="form-label">Expense Type *</label>
+                            <select name="expense_type" id="expense_type" class="form-select" required>
+                                <option value="">Select Type</option>
+                                <option value="OPERATIONAL" {% if expense and expense.expense_type == 'OPERATIONAL' %}selected{% endif %}>Operational Expense</option>
+                                <option value="SALE_RELATED" {% if expense and expense.expense_type == 'SALE_RELATED' %}selected{% endif %}>Sale Related Expense</option>
+                                <option value="TRANSPORT" {% if expense and expense.expense_type == 'TRANSPORT' %}selected{% endif %}>Transport/Delivery</option>
+                                <option value="UTILITIES" {% if expense and expense.expense_type == 'UTILITIES' %}selected{% endif %}>Utilities</option>
+                                <option value="SALARY" {% if expense and expense.expense_type == 'SALARY' %}selected{% endif %}>Salary</option>
+                                <option value="RENT" {% if expense and expense.expense_type == 'RENT' %}selected{% endif %}>Rent</option>
+                                <option value="MAINTENANCE" {% if expense and expense.expense_type == 'MAINTENANCE' %}selected{% endif %}>Maintenance</option>
+                                <option value="OTHER" {% if expense and expense.expense_type == 'OTHER' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="amount" class="form-label">Amount *</label>
+                            <input type="number" name="amount" id="amount" class="form-control" step="0.01" value="{% if expense %}{{ expense.amount }}{% endif %}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="expense_date" class="form-label">Expense Date *</label>
+                            <input type="date" name="expense_date" id="expense_date" class="form-control" value="{% if expense %}{{ expense.expense_date|date:'Y-m-d' }}{% endif %}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="sale" class="form-label">Related Sale (Optional)</label>
+                            <select name="sale" id="sale" class="form-select">
+                                <option value="">None</option>
+                                {% for sale in sales %}
+                                <option value="{{ sale.id }}" {% if expense and expense.sale and expense.sale.id == sale.id %}selected{% endif %}>{{ sale.sale_number }} - {{ sale.branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="receipt_number" class="form-label">Receipt Number</label>
+                            <input type="text" name="receipt_number" id="receipt_number" class="form-control" value="{% if expense %}{{ expense.receipt_number }}{% endif %}">
+                        </div>
+                        <div class="col-12">
+                            <label for="description" class="form-label">Description *</label>
+                            <textarea name="description" id="description" class="form-control" rows="3" required>{% if expense %}{{ expense.description }}{% endif %}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="2">{% if expense %}{{ expense.notes }}{% endif %}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>Save Expense
+                            </button>
+                            <a href="{% url 'expense_list' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set today's date as default for new expenses
+    {% if not expense %}
+    document.getElementById('expense_date').valueAsDate = new Date();
+    {% endif %}
+</script>
+{% endblock %}

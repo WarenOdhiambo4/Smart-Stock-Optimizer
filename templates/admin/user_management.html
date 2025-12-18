@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Management - ERP Admin</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .messages { margin-bottom: 20px; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+        .users-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .users-table th, .users-table td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        .users-table th { background: #f8f9fa; }
+        .email-validation { margin-top: 5px; font-size: 12px; }
+        .valid { color: green; }
+        .invalid { color: red; }
+        .form-row { display: flex; gap: 15px; }
+        .form-row .form-group { flex: 1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>User Management</h1>
+        
+        <div class="messages">
+            {% for message in messages %}
+                <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <h2>Create New User</h2>
+        <form method="post" id="userForm">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="first_name">First Name:</label>
+                    <input type="text" id="first_name" name="first_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="last_name">Last Name:</label>
+                    <input type="text" id="last_name" name="last_name" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+                <div id="email-validation" class="email-validation"></div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="role">Role:</label>
+                    <select id="role" name="role" required>
+                        <option value="">Select Role</option>
+                        {% for role in roles %}
+                            <option value="{{ role }}">{{ role }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="branch_name">Branch:</label>
+                    <input type="text" id="branch_name" name="branch_name" placeholder="e.g., Main Branch">
+                </div>
+            </div>
+            
+            <button type="submit" id="submitBtn">Create User</button>
+        </form>
+
+        <h2>Existing Users</h2>
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Branch</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in airtable_users %}
+                <tr>
+                    <td>{{ user.fields.First_Name|default:"" }} {{ user.fields.Last_Name|default:"" }}</td>
+                    <td>{{ user.fields.Email|default:"" }}</td>
+                    <td>{{ user.fields.Role|default:"" }}</td>
+                    <td>{{ user.fields.Branch|default:"" }}</td>
+                    <td>{% if user.fields.Active %}Active{% else %}Inactive{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No users found. Create your first user above.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.getElementById('email').addEventListener('blur', function() {
+            const email = this.value;
+            const validationDiv = document.getElementById('email-validation');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (!email) {
+                validationDiv.innerHTML = '';
+                return;
+            }
+            
+            validationDiv.innerHTML = 'Validating email...';
+            submitBtn.disabled = true;
+            
+            fetch('/admin/validate-email/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({email: email})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    validationDiv.innerHTML = '<span class="valid">✓ Email is valid</span>';
+                    submitBtn.disabled = false;
+                } else {
+                    validationDiv.innerHTML = '<span class="invalid">✗ ' + data.message + '</span>';
+                    submitBtn.disabled = true;
+                }
+            })
+            .catch(error => {
+                validationDiv.innerHTML = '<span class="invalid">✗ Error validating email</span>';
+                submitBtn.disabled = true;
+            });
+        });
+    </script>
+</body>
+</html>

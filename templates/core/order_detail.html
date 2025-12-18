@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Order {{ order.order_number }} - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Order {{ order.order_number }}</h1>
+    <div class="d-flex gap-2">
+        {% if order.status == 'PENDING' %}
+        <form method="post" action="{% url 'order_complete' order.pk %}" onsubmit="return confirm('Mark this order as complete? This will add items to stock.')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check me-1"></i>Complete Order</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'order_list' %}" class="btn btn-secondary btn-sm">Back to Orders</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">Order Items</div>
+            <div class="card-body p-0">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items.all %}
+                        <tr>
+                            <td><strong>{{ item.product_name }}</strong></td>
+                            <td><code>{{ item.product_sku|default:'-' }}</code></td>
+                            <td>{{ item.quantity }}</td>
+                            <td>${{ item.unit_price }}</td>
+                            <td>${{ item.subtotal }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                            <td><strong>${{ order.total_amount }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Order Details</div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Status:</strong> 
+                    <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% else %}badge-secondary{% endif %}">
+                        {{ order.status }}
+                    </span>
+                </p>
+                <p class="mb-2"><strong>Branch:</strong> {{ order.branch.name }}</p>
+                <p class="mb-2"><strong>Supplier:</strong> {{ order.supplier|default:'-' }}</p>
+                <p class="mb-2"><strong>Created:</strong> {{ order.created_at|date:"M d, Y H:i" }}</p>
+                {% if order.notes %}
+                <p class="mb-0"><strong>Notes:</strong> {{ order.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

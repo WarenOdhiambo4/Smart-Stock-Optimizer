@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Transfer - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Stock Transfer</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">From Branch *</label>
+                    <select name="from_branch" class="form-select" required>
+                        <option value="">Select Source Branch</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.pk }}">{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">To Branch *</label>
+                    <select name="to_branch" class="form-select" required>
+                        <option value="">Select Destination Branch</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.pk }}">{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Product *</label>
+                    <select name="product" class="form-select" required>
+                        <option value="">Select Product</option>
+                        {% for product in products %}
+                        <option value="{{ product.pk }}">{{ product.name }} ({{ product.sku }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Quantity *</label>
+                    <input type="number" name="quantity" class="form-control" min="1" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Request Transfer</button>
+                <a href="{% url 'stock_movement_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

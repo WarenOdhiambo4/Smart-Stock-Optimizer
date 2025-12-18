@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Business Notes - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Business Notes</h1>
+    <div class="quick-actions">
+        <form method="get" class="search-box me-2">
+            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search notes..." value="{{ search }}">
+            <select name="priority" class="form-select form-select-sm ms-2">
+                <option value="">All Priorities</option>
+                <option value="LOW" {% if selected_priority == 'LOW' %}selected{% endif %}>Low</option>
+                <option value="MEDIUM" {% if selected_priority == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                <option value="HIGH" {% if selected_priority == 'HIGH' %}selected{% endif %}>High</option>
+                <option value="URGENT" {% if selected_priority == 'URGENT' %}selected{% endif %}>Urgent</option>
+            </select>
+            <button type="submit" class="btn btn-outline-secondary btn-sm ms-2">Filter</button>
+        </form>
+        <a href="{% url 'note_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Note</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Priority</th>
+                    <th>Tags</th>
+                    <th>Created By</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for note in page_obj %}
+                <tr>
+                    <td>
+                        <strong>{{ note.title }}</strong>
+                        <div class="text-muted small">{{ note.content|truncatewords:15 }}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-{% if note.priority == 'URGENT' %}danger{% elif note.priority == 'HIGH' %}warning{% elif note.priority == 'MEDIUM' %}info{% else %}secondary{% endif %}">
+                            {{ note.get_priority_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% for tag in note.tag_list %}
+                        <span class="badge bg-light text-dark me-1">{{ tag }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ note.created_by|default:"-" }}</td>
+                    <td class="text-muted">{{ note.created_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'note_update' note.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form method="post" action="{% url 'note_delete' note.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this note?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% include 'core/pagination.html' %}
+        {% else %}
+        <div class="empty-state">
+            <h5>No Notes Found</h5>
+            <p>Start documenting key business insights.</p>
+            <a href="{% url 'note_create' %}" class="btn btn-primary btn-sm">Add Note</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

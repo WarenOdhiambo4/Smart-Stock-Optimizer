@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Products - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Products</h1>
+    <div class="d-flex gap-2">
+        <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <form method="get">
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search products..." value="{{ search }}">
+            </form>
+        </div>
+        <a href="{% url 'product_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Product</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Unit Price</th>
+                    <th>Cost Price</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in page_obj %}
+                <tr>
+                    <td><code>{{ product.sku }}</code></td>
+                    <td><strong>{{ product.name }}</strong></td>
+                    <td>{{ product.category|default:'-' }}</td>
+                    <td>${{ product.unit_price }}</td>
+                    <td>${{ product.cost_price }}</td>
+                    <td>
+                        {% if product.is_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{% url 'product_edit' product.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{% url 'product_delete' product.pk %}" style="display:inline;" onsubmit="return confirm('Delete this product?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% include 'core/pagination.html' %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-tags" style="font-size: 3rem;"></i>
+            <h5>No products found</h5>
+            <p>Add products to your catalog</p>
+            <a href="{% url 'product_create' %}" class="btn btn-primary btn-sm">Add Product</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

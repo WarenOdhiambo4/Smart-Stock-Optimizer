@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Order - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} Order</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" id="orderForm">
+            {% csrf_token %}
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">Branch *</label>
+                    <select name="branch" class="form-select" required>
+                        <option value="">Select Branch</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.pk }}">{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Supplier</label>
+                    <input type="text" name="supplier" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" class="form-control">
+                </div>
+            </div>
+
+            <h6 class="mb-3">Order Items</h6>
+            <div id="orderItems">
+                <div class="row g-2 mb-2 order-item">
+                    <div class="col-md-4">
+                        <input type="text" name="product_name" class="form-control form-control-sm" placeholder="Product Name" required>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" name="product_sku" class="form-control form-control-sm" placeholder="SKU">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" name="quantity" class="form-control form-control-sm" placeholder="Qty" value="1" min="1" required>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" name="unit_price" step="0.01" class="form-control form-control-sm" placeholder="Price" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-item"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">
+                <i class="bi bi-plus me-1"></i>Add Item
+            </button>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Create Order</button>
+                <a href="{% url 'order_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addItem').addEventListener('click', function() {
+    const template = document.querySelector('.order-item').cloneNode(true);
+    template.querySelectorAll('input').forEach(input => input.value = input.name === 'quantity' ? '1' : '');
+    document.getElementById('orderItems').appendChild(template);
+});
+
+document.getElementById('orderItems').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-item')) {
+        const items = document.querySelectorAll('.order-item');
+        if (items.length > 1) {
+            e.target.closest('.order-item').remove();
+        }
+    }
+});
+</script>
+{% endblock %}

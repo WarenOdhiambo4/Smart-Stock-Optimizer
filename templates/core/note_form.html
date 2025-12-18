@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Note - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} Business Note</h1>
+    <a href="{% url 'note_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Notes</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="title" class="form-label">Title *</label>
+                            <input type="text" name="title" id="title" class="form-control" value="{% if note %}{{ note.title }}{% endif %}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="priority" class="form-label">Priority *</label>
+                            <select name="priority" id="priority" class="form-select" required>
+                                <option value="LOW" {% if note and note.priority == 'LOW' %}selected{% endif %}>Low</option>
+                                <option value="MEDIUM" {% if note and note.priority == 'MEDIUM' %}selected{% elif not note %}selected{% endif %}>Medium</option>
+                                <option value="HIGH" {% if note and note.priority == 'HIGH' %}selected{% endif %}>High</option>
+                                <option value="URGENT" {% if note and note.priority == 'URGENT' %}selected{% endif %}>Urgent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="tags" class="form-label">Tags</label>
+                            <input type="text" name="tags" id="tags" class="form-control" value="{% if note %}{{ note.tags }}{% endif %}" placeholder="strategy, meeting, idea">
+                            <div class="form-text">Comma-separated tags</div>
+                        </div>
+                        <div class="col-12">
+                            <label for="content" class="form-label">Content *</label>
+                            <textarea name="content" id="content" class="form-control" rows="8" required>{% if note %}{{ note.content }}{% endif %}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>Save Note
+                            </button>
+                            <a href="{% url 'note_list' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Tips</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled small">
+                    <li><strong>Title:</strong> Keep it concise and descriptive</li>
+                    <li><strong>Priority:</strong> Use Urgent for critical business decisions</li>
+                    <li><strong>Tags:</strong> Use keywords like "strategy", "meeting", "idea"</li>
+                    <li><strong>Content:</strong> Document key insights, decisions, and action items</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

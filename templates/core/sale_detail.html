@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Sale {{ sale.sale_number }} - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Sale {{ sale.sale_number }}</h1>
+    <a href="{% url 'sale_list' %}" class="btn btn-secondary btn-sm">Back to Sales</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">Sale Items</div>
+            <div class="card-body p-0">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in sale.items.all %}
+                        <tr>
+                            <td><strong>{{ item.stock.product.name }}</strong></td>
+                            <td>{{ item.quantity }}</td>
+                            <td>${{ item.unit_price }}</td>
+                            <td>${{ item.subtotal }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                            <td><strong>${{ sale.total_amount }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Sale Details</div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Branch:</strong> {{ sale.branch.name }}</p>
+                <p class="mb-2"><strong>Customer:</strong> {{ sale.customer_name|default:'-' }}</p>
+                <p class="mb-2"><strong>Phone:</strong> {{ sale.customer_phone|default:'-' }}</p>
+                <p class="mb-2"><strong>Payment:</strong> <span class="badge badge-info">{{ sale.payment_method }}</span></p>
+                <p class="mb-2"><strong>Date:</strong> {{ sale.created_at|date:"M d, Y H:i" }}</p>
+                {% if sale.notes %}
+                <p class="mb-0"><strong>Notes:</strong> {{ sale.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

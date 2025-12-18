@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">User Management</h1>
+    <a href="{% url 'user_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add User</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Branch</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in page_obj %}
+                <tr>
+                    <td><strong>{{ user.username }}</strong></td>
+                    <td>{{ user.first_name }} {{ user.last_name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.profile %}
+                        <span class="badge badge-info">{{ user.profile.get_role_display }}</span>
+                        {% else %}
+                        <span class="badge badge-secondary">No Profile</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.profile and user.profile.branch %}
+                        {{ user.profile.branch.name }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if user.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                            {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'user_edit' user.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% include 'core/pagination.html' %}
+        {% else %}
+        <div class="empty-state">
+            <h5>No Users Found</h5>
+            <p>Create your first user account.</p>
+            <a href="{% url 'user_create' %}" class="btn btn-primary btn-sm">Add User</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

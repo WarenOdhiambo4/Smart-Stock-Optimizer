@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}Business Notebook - Page {{ current_page }}{% endblock %}
+
+{% block content %}
+<div class="notebook-container">
+    <div class="notebook-header">
+        <h4>Business Notebook - Page {{ current_page }}</h4>
+        <div class="page-navigation">
+            {% if has_previous %}
+            <a href="?page={{ previous_page }}" class="btn btn-sm btn-outline-secondary">← Previous</a>
+            {% endif %}
+            <span class="mx-2">Page {{ current_page }}</span>
+            <a href="?page={{ next_page }}" class="btn btn-sm btn-outline-secondary">Next →</a>
+        </div>
+    </div>
+    
+    <div class="notebook-page">
+        <form method="post" id="notebookForm">
+            {% csrf_token %}
+            <textarea 
+                name="content" 
+                id="notebookContent" 
+                class="notebook-textarea"
+                placeholder="Start writing..."
+                rows="7"
+            >{{ note.content }}</textarea>
+        </form>
+    </div>
+</div>
+
+<style>
+.notebook-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.notebook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #333;
+}
+
+.notebook-page {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    background-image: repeating-linear-gradient(
+        transparent,
+        transparent 39px,
+        #ccc 39px,
+        #ccc 40px
+    );
+    background-position: 0 0;
+}
+
+.notebook-textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    line-height: 40px;
+    resize: none;
+    padding: 0;
+    margin-left: 30px;
+    vertical-align: bottom;
+}
+
+.notebook-textarea::placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+.page-navigation {
+    display: flex;
+    align-items: center;
+}
+</style>
+
+<script>
+let saveTimeout;
+const textarea = document.getElementById('notebookContent');
+const form = document.getElementById('notebookForm');
+
+textarea.addEventListener('input', function() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(function() {
+        // Auto-save after 2 seconds of no typing
+        fetch(window.location.href, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+    }, 2000);
+});
+
+// Limit to 7 lines
+textarea.addEventListener('input', function() {
+    const lines = this.value.split('\n');
+    if (lines.length > 7) {
+        const limitedContent = lines.slice(0, 7).join('\n');
+        this.value = limitedContent;
+    }
+});
+
+// Handle Enter key to go to next page when at line limit
+textarea.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        const lines = this.value.split('\n');
+        if (lines.length >= 7) {
+            e.preventDefault();
+            // Save current page and go to next
+            fetch(window.location.href, {
+                method: 'POST',
+                body: new FormData(form)
+            }).then(() => {
+                window.location.href = '?page={{ next_page }}';
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} User - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} User</h1>
+    <a href="{% url 'user_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to List</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Username *</label>
+                            <input type="text" name="username" id="username" class="form-control" value="{% if user %}{{ user.username }}{% endif %}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email" name="email" id="email" class="form-control" value="{% if user %}{{ user.email }}{% endif %}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" name="first_name" id="first_name" class="form-control" value="{% if user %}{{ user.first_name }}{% endif %}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" name="last_name" id="last_name" class="form-control" value="{% if user %}{{ user.last_name }}{% endif %}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Password {% if action == 'Edit' %}(leave blank to keep current){% else %}*{% endif %}</label>
+                            <input type="password" name="password" id="password" class="form-control" {% if action == 'Create' %}required{% endif %}>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="role" class="form-label">Role *</label>
+                            <select name="role" id="role" class="form-select" required>
+                                <option value="">Select Role</option>
+                                <option value="ADMIN" {% if profile and profile.role == 'ADMIN' %}selected{% endif %}>Administrator</option>
+                                <option value="BOSS" {% if profile and profile.role == 'BOSS' %}selected{% endif %}>Boss</option>
+                                <option value="MANAGER" {% if profile and profile.role == 'MANAGER' %}selected{% endif %}>Manager</option>
+                                <option value="FINANCE" {% if profile and profile.role == 'FINANCE' %}selected{% endif %}>Finance Officer</option>
+                                <option value="SALES" {% if profile and profile.role == 'SALES' %}selected{% endif %}>Salesperson</option>
+                                <option value="LOGISTICS" {% if profile and profile.role == 'LOGISTICS' %}selected{% endif %}>Logistics Officer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="branch" class="form-label">Branch</label>
+                            <select name="branch" id="branch" class="form-select">
+                                <option value="">None (All Branches)</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}" {% if profile and profile.branch and profile.branch.id == branch.id %}selected{% endif %}>{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="text" name="phone" id="phone" class="form-control" value="{% if profile %}{{ profile.phone }}{% endif %}">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>Save User
+                            </button>
+                            <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Branches - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Branches</h1>
+    <div class="d-flex gap-2">
+        <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <form method="get">
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search branches..." value="{{ search }}">
+            </form>
+        </div>
+        <a href="{% url 'branch_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Branch</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for branch in page_obj %}
+                <tr>
+                    <td><strong>{{ branch.name }}</strong></td>
+                    <td>{{ branch.address|truncatechars:30 }}</td>
+                    <td>{{ branch.phone }}</td>
+                    <td>{{ branch.email }}</td>
+                    <td>
+                        {% if branch.is_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{% url 'branch_edit' branch.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{% url 'branch_delete' branch.pk %}" style="display:inline;" onsubmit="return confirm('Delete this branch?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% include 'core/pagination.html' %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-building" style="font-size: 3rem;"></i>
+            <h5>No branches found</h5>
+            <p>Create your first branch to get started</p>
+            <a href="{% url 'branch_create' %}" class="btn btn-primary btn-sm">Add Branch</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Sale - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} Sale</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" id="saleForm">
+            {% csrf_token %}
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label">Branch *</label>
+                    <select name="branch" id="branchSelect" class="form-select" required>
+                        <option value="">Select Branch</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.pk }}">{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Customer Name</label>
+                    <input type="text" name="customer_name" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Customer Phone</label>
+                    <input type="text" name="customer_phone" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Payment Method</label>
+                    <select name="payment_method" class="form-select">
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="Mobile">Mobile Payment</option>
+                        <option value="Bank">Bank Transfer</option>
+                    </select>
+                </div>
+            </div>
+
+            <h6 class="mb-3">Sale Items</h6>
+            <div id="saleItems">
+                <div class="row g-2 mb-2 sale-item">
+                    <div class="col-md-5">
+                        <select name="stock_id" class="form-select form-select-sm stock-select" required>
+                            <option value="">Select Product (Select branch first)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" name="quantity" class="form-control form-control-sm" placeholder="Qty" value="1" min="1" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" name="unit_price" step="0.01" class="form-control form-control-sm" placeholder="Price" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-item"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">
+                <i class="bi bi-plus me-1"></i>Add Item
+            </button>
+
+            <div class="col-12 mt-3">
+                <label class="form-label">Notes</label>
+                <textarea name="notes" class="form-control" rows="2"></textarea>
+            </div>
+
+            <hr class="my-4">
+            
+            <h6 class="mb-3">Sale Related Expense (Optional)</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Expense Amount</label>
+                    <input type="number" name="expense_amount" id="expenseAmount" class="form-control" step="0.01" placeholder="0.00">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Expense Description</label>
+                    <input type="text" name="expense_description" id="expenseDescription" class="form-control" placeholder="e.g., Delivery charges">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Expense Notes</label>
+                    <textarea name="expense_notes" id="expenseNotes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="button" class="btn btn-primary" onclick="showConfirmation()">
+                    <i class="bi bi-check-lg me-1"></i>Create Sale
+                </button>
+                <a href="{% url 'sale_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Sale Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmContent">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Please review all details carefully before submitting.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Go Back & Edit</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">
+                    <i class="bi bi-check-lg me-1"></i>Confirm & Submit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let stockData = [];
+
+document.getElementById('branchSelect').addEventListener('change', function() {
+    const branchId = this.value;
+    if (branchId) {
+        fetch(`/api/branch/${branchId}/stocks/`)
+            .then(response => response.json())
+            .then(data => {
+                stockData = data;
+                updateStockSelects();
+            });
+    }
+});
+
+function updateStockSelects() {
+    document.querySelectorAll('.stock-select').forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Select Product</option>';
+        stockData.forEach(stock => {
+            const option = document.createElement('option');
+            option.value = stock.id;
+            option.textContent = `${stock.product_name} (${stock.product_sku}) - Qty: ${stock.quantity}`;
+            option.dataset.price = stock.unit_price;
+            select.appendChild(option);
+        });
+        if (currentValue) select.value = currentValue;
+    });
+}
+
+document.getElementById('saleItems').addEventListener('change', function(e) {
+    if (e.target.classList.contains('stock-select')) {
+        const option = e.target.options[e.target.selectedIndex];
+        const priceInput = e.target.closest('.sale-item').querySelector('[name="unit_price"]');
+        if (option.dataset.price) {
+            priceInput.value = option.dataset.price;
+        }
+    }
+});
+
+document.getElementById('addItem').addEventListener('click', function() {
+    const template = document.querySelector('.sale-item').cloneNode(true);
+    template.querySelectorAll('input').forEach(input => input.value = input.name === 'quantity' ? '1' : '');
+    template.querySelector('select').value = '';
+    document.getElementById('saleItems').appendChild(template);
+    updateStockSelects();
+});
+
+document.getElementById('saleItems').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-item')) {
+        const items = document.querySelectorAll('.sale-item');
+        if (items.length > 1) {
+            e.target.closest('.sale-item').remove();
+        }
+    }
+});
+
+function showConfirmation() {
+    const form = document.getElementById('saleForm');
+    const branch = form.querySelector('[name="branch"]');
+    const branchText = branch.options[branch.selectedIndex].text;
+    const customerName = form.querySelector('[name="customer_name"]').value || 'Walk-in customer';
+    const paymentMethod = form.querySelector('[name="payment_method"]').value;
+    
+    let itemsHtml = '<h6 class="mb-2">Sale Items:</h6><ul class="mb-3">';
+    let totalAmount = 0;
+    
+    document.querySelectorAll('.sale-item').forEach(item => {
+        const stockSelect = item.querySelector('.stock-select');
+        const qty = item.querySelector('[name="quantity"]').value;
+        const price = item.querySelector('[name="unit_price"]').value;
+        
+        if (stockSelect.value) {
+            const productName = stockSelect.options[stockSelect.selectedIndex].text;
+            const subtotal = (qty * price).toFixed(2);
+            totalAmount += parseFloat(subtotal);
+            itemsHtml += `<li>${productName} - Qty: ${qty} × $${price} = $${subtotal}</li>`;
+        }
+    });
+    itemsHtml += '</ul>';
+    
+    const expenseAmount = form.querySelector('[name="expense_amount"]').value;
+    let expenseHtml = '';
+    if (expenseAmount && parseFloat(expenseAmount) > 0) {
+        const expenseDesc = form.querySelector('[name="expense_description"]').value || 'Sale related expense';
+        expenseHtml = `<h6 class="mb-2">Expense:</h6><p class="text-danger">$${parseFloat(expenseAmount).toFixed(2)} - ${expenseDesc}</p>`;
+    }
+    
+    const confirmHtml = `
+        <div class="mb-3">
+            <strong>Branch:</strong> ${branchText}<br>
+            <strong>Customer:</strong> ${customerName}<br>
+            <strong>Payment Method:</strong> ${paymentMethod}
+        </div>
+        ${itemsHtml}
+        <h5 class="text-primary">Total Sale Amount: $${totalAmount.toFixed(2)}</h5>
+        ${expenseHtml}
+    `;
+    
+    document.getElementById('confirmContent').innerHTML = confirmHtml;
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    modal.show();
+}
+
+function submitForm() {
+    const form = document.getElementById('saleForm');
+    const confirmInput = document.createElement('input');
+    confirmInput.type = 'hidden';
+    confirmInput.name = 'confirm';
+    confirmInput.value = 'true';
+    form.appendChild(confirmInput);
+    form.submit();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+
+{% block title %}Price Management - Kabisa ERP{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🏷️ Enterprise Price Management</h1>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+            <i class="bi bi-arrow-up-circle me-1"></i>Bulk Update
+        </button>
+        <button class="btn btn-success btn-sm" onclick="refreshDashboard()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5>{{ products.count }}</h5>
+                <small>Active Products</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5>{{ recent_changes.count }}</h5>
+                <small>Recent Changes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h5 id="avgMargin">Loading...</h5>
+                <small>Avg Profit Margin</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 id="riskLevel">Low</h5>
+                <small>Price Risk Level</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Price Management -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-tag me-2"></i>Product Pricing</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Current Price</th>
+                                <th>Cost</th>
+                                <th>Margin</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products_page_obj %}
+                            <tr>
+                                <td>
+                                    <strong>{{ product.name }}</strong><br>
+                                    <small class="text-muted">{{ product.sku }}</small>
+                                </td>
+                                <td>
+                                    <span class="h6">${{ product.unit_price }}</span>
+                                </td>
+                                <td>${{ product.cost_price }}</td>
+                                <td>
+                                    <span class="badge {% if product.profit_margin > 30 %}bg-success{% elif product.profit_margin > 15 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ product.profit_margin|floatformat:1 }}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="changePriceModal({{ product.id }}, '{{ product.name }}', {{ product.unit_price }})">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewHistory({{ product.id }})">
+                                        <i class="bi bi-clock-history"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="analyzeElasticity({{ product.id }})">
+                                        <i class="bi bi-graph-up"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if products_page_obj.has_other_pages %}
+                <nav aria-label="Products pagination" class="mt-3">
+                    <ul class="pagination justify-content-center pagination-sm">
+                        {% if products_page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?products_page={{ products_page_obj.previous_page_number }}">&laquo;</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ products_page_obj.number }} / {{ products_page_obj.paginator.num_pages }}</span>
+                        </li>
+                        
+                        {% if products_page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?products_page={{ products_page_obj.next_page_number }}">&raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history me-2"></i>Recent Price Changes</h5>
+            </div>
+            <div class="card-body">
+                {% for change in recent_changes_page_obj %}
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                    <div>
+                        <strong>{{ change.product.name }}</strong><br>
+                        <small class="text-muted">
+                            ${{ change.old_price }} → ${{ change.new_price }}
+                            {% if change.price_change_percent > 0 %}
+                                <span class="text-success">+{{ change.price_change_percent|floatformat:1 }}%</span>
+                            {% else %}
+                                <span class="text-danger">{{ change.price_change_percent|floatformat:1 }}%</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                    <small class="text-muted">{{ change.change_date|timesince }} ago</small>
+                </div>
+                {% empty %}
+                <p class="text-muted">No recent price changes</p>
+                {% endfor %}
+                
+                {% if recent_changes_page_obj.has_other_pages %}
+                <nav aria-label="Changes pagination" class="mt-3">
+                    <ul class="pagination justify-content-center pagination-sm">
+                        {% if recent_changes_page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?changes_page={{ recent_changes_page_obj.previous_page_number }}">&laquo;</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ recent_changes_page_obj.number }} / {{ recent_changes_page_obj.paginator.num_pages }}</span>
+                        </li>
+                        
+                        {% if recent_changes_page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?changes_page={{ recent_changes_page_obj.next_page_number }}">&raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Single Price Change Modal -->
+<div class="modal fade" id="priceChangeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Change Product Price</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="priceChangeForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" id="productId" name="product_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <input type="text" id="productName" class="form-control" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Current Price</label>
+                        <input type="text" id="currentPrice" class="form-control" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">New Price *</label>
+                        <input type="number" step="0.01" name="new_price" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Change</label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="Market adjustment, cost increase, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Price</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Update Modal -->
+<div class="modal fade" id="bulkUpdateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Price Update</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Enterprise Feature:</strong> This will update multiple products in the background. You'll receive a notification when complete.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Update Type</label>
+                    <select id="updateType" class="form-select">
+                        <option value="percentage">Percentage Increase/Decrease</option>
+                        <option value="fixed">Fixed Amount Increase/Decrease</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Value</label>
+                    <input type="number" step="0.01" id="updateValue" class="form-control" placeholder="e.g., 5 for 5% or 10 for $10">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Reason</label>
+                    <textarea id="bulkReason" class="form-control" rows="2" placeholder="Inflation adjustment, market conditions, etc."></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Products to Update</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAll">
+                        <label class="form-check-label" for="selectAll">Select All Products</label>
+                    </div>
+                    <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
+                        {% for product in products_page_obj %}
+                        <div class="form-check">
+                            <input class="form-check-input product-checkbox" type="checkbox" value="{{ product.id }}" id="product{{ product.id }}">
+                            <label class="form-check-label" for="product{{ product.id }}">
+                                {{ product.name }} - ${{ product.unit_price }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="executeBulkUpdate()">Execute Bulk Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Single price change
+function changePriceModal(productId, productName, currentPrice) {
+    document.getElementById('productId').value = productId;
+    document.getElementById('productName').value = productName;
+    document.getElementById('currentPrice').value = '$' + currentPrice;
+    new bootstrap.Modal(document.getElementById('priceChangeModal')).show();
+}
+
+document.getElementById('priceChangeForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('{% url "change_product_price" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    }
+});
+
+// Bulk update functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.product-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+
+async function executeBulkUpdate() {
+    const updateType = document.getElementById('updateType').value;
+    const updateValue = parseFloat(document.getElementById('updateValue').value);
+    const reason = document.getElementById('bulkReason').value;
+    
+    const selectedProducts = Array.from(document.querySelectorAll('.product-checkbox:checked'))
+        .map(cb => parseInt(cb.value));
+    
+    if (selectedProducts.length === 0) {
+        alert('Please select at least one product');
+        return;
+    }
+    
+    if (!updateValue) {
+        alert('Please enter an update value');
+        return;
+    }
+    
+    // Calculate new prices
+    const priceChanges = selectedProducts.map(productId => {
+        const productRow = document.querySelector(`#product${productId}`).closest('.form-check');
+        const currentPriceText = productRow.querySelector('label').textContent;
+        const currentPrice = parseFloat(currentPriceText.split('$')[1]);
+        
+        let newPrice;
+        if (updateType === 'percentage') {
+            newPrice = currentPrice * (1 + updateValue / 100);
+        } else {
+            newPrice = currentPrice + updateValue;
+        }
+        
+        return {
+            product_id: productId,
+            new_price: Math.round(newPrice * 100) / 100
+        };
+    });
+    
+    try {
+        const response = await fetch('{% url "bulk_price_update" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                price_changes: priceChanges,
+                reason: reason
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            bootstrap.Modal.getInstance(document.getElementById('bulkUpdateModal')).hide();
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    }
+}
+
+// Analytics functions
+function viewHistory(productId) {
+    window.open(`/products/${productId}/price-history/`, '_blank');
+}
+
+async function analyzeElasticity(productId) {
+    try {
+        const response = await fetch(`/products/${productId}/elasticity/`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const analysis = data.analysis;
+            if (analysis.error) {
+                alert('Analysis Error: ' + analysis.error);
+            } else {
+                alert(`Price Elasticity Analysis for ${data.product}:\n\n` +
+                      `Elasticity: ${analysis.elasticity.toFixed(2)}\n` +
+                      `Type: ${analysis.interpretation}\n` +
+                      `Recommendation: ${analysis.recommendation}`);
+            }
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    }
+}
+
+function refreshDashboard() {
+    location.reload();
+}
+</script>
+{% endblock %}

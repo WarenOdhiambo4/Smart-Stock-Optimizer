@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Vehicle - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} Vehicle</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Registration Number *</label>
+                    <input type="text" name="registration_number" class="form-control" value="{{ vehicle.registration_number|default:'' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Vehicle Type *</label>
+                    <select name="vehicle_type" class="form-select" required>
+                        <option value="">Select Type</option>
+                        <option value="TRUCK" {% if vehicle.vehicle_type == 'TRUCK' %}selected{% endif %}>Truck</option>
+                        <option value="VAN" {% if vehicle.vehicle_type == 'VAN' %}selected{% endif %}>Van</option>
+                        <option value="PICKUP" {% if vehicle.vehicle_type == 'PICKUP' %}selected{% endif %}>Pickup</option>
+                        <option value="CAR" {% if vehicle.vehicle_type == 'CAR' %}selected{% endif %}>Car</option>
+                        <option value="MOTORCYCLE" {% if vehicle.vehicle_type == 'MOTORCYCLE' %}selected{% endif %}>Motorcycle</option>
+                        <option value="OTHER" {% if vehicle.vehicle_type == 'OTHER' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                {% if vehicle %}
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="ACTIVE" {% if vehicle.status == 'ACTIVE' %}selected{% endif %}>Active</option>
+                        <option value="MAINTENANCE" {% if vehicle.status == 'MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
+                        <option value="INACTIVE" {% if vehicle.status == 'INACTIVE' %}selected{% endif %}>Inactive</option>
+                        <option value="RETIRED" {% if vehicle.status == 'RETIRED' %}selected{% endif %}>Retired</option>
+                    </select>
+                </div>
+                {% endif %}
+                <div class="col-md-4">
+                    <label class="form-label">Make *</label>
+                    <input type="text" name="make" class="form-control" value="{{ vehicle.make|default:'' }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Model *</label>
+                    <input type="text" name="model" class="form-control" value="{{ vehicle.model|default:'' }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Year *</label>
+                    <input type="number" name="year" class="form-control" min="1990" max="2030" value="{{ vehicle.year|default:'' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Branch *</label>
+                    <select name="branch" class="form-select" required>
+                        <option value="">Select Branch</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.pk }}" {% if vehicle.branch_id == branch.pk %}selected{% endif %}>{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Assigned Driver</label>
+                    <select name="assigned_driver" class="form-select">
+                        <option value="">No Driver Assigned</option>
+                        {% for driver in drivers %}
+                        <option value="{{ driver.pk }}" {% if vehicle.assigned_driver_id == driver.pk %}selected{% endif %}>{{ driver.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Current Mileage (KM)</label>
+                    <input type="number" name="current_mileage" class="form-control" min="0" value="{{ vehicle.current_mileage|default:'0' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Fuel Capacity (L)</label>
+                    <input type="number" name="fuel_capacity" class="form-control" step="0.01" min="0" value="{{ vehicle.fuel_capacity|default:'0' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Color</label>
+                    <input type="text" name="color" class="form-control" value="{{ vehicle.color|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Purchase Price</label>
+                    <input type="number" name="purchase_price" class="form-control" step="0.01" min="0" value="{{ vehicle.purchase_price|default:'0' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Purchase Date</label>
+                    <input type="date" name="purchase_date" class="form-control" value="{{ vehicle.purchase_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Insurance Expiry</label>
+                    <input type="date" name="insurance_expiry" class="form-control" value="{{ vehicle.insurance_expiry|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Registration Expiry</label>
+                    <input type="date" name="registration_expiry" class="form-control" value="{{ vehicle.registration_expiry|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-control" rows="3">{{ vehicle.notes|default:'' }}</textarea>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">{{ action }} Vehicle</button>
+                <a href="{% url 'vehicle_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

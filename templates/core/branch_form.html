@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Branch - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} Branch</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Branch Name *</label>
+                    <input type="text" name="name" class="form-control" value="{{ branch.name|default:'' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phone</label>
+                    <input type="text" name="phone" class="form-control" value="{{ branch.phone|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="{{ branch.email|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    {% if branch %}
+                    <label class="form-label">Status</label>
+                    <div class="form-check mt-2">
+                        <input type="checkbox" name="is_active" class="form-check-input" {% if branch.is_active %}checked{% endif %}>
+                        <label class="form-check-label">Active</label>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Address</label>
+                    <textarea name="address" class="form-control" rows="2">{{ branch.address|default:'' }}</textarea>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Save Branch</button>
+                <a href="{% url 'branch_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

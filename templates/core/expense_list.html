@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Expenses - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Expenses</h1>
+    <div class="quick-actions">
+        <form method="get" class="search-box me-2">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search expenses..." value="{{ search }}">
+            {% csrf_token %}
+        </form>
+        <a href="{% url 'expense_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Expense</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Expense #</th>
+                    <th>Branch</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Related Sale</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in page_obj %}
+                <tr>
+                    <td><strong>{{ expense.expense_number }}</strong></td>
+                    <td>{{ expense.branch.name }}</td>
+                    <td><span class="badge badge-info">{{ expense.get_expense_type_display }}</span></td>
+                    <td>{{ expense.description|truncatewords:8 }}</td>
+                    <td><strong>${{ expense.amount }}</strong></td>
+                    <td class="text-muted">{{ expense.expense_date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if expense.sale %}
+                        <a href="{% url 'sale_detail' expense.sale.pk %}">{{ expense.sale.sale_number }}</a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not expense.expense_number|slice:":5" == "TRIP-" and not expense.expense_number|slice:":6" == "MAINT-" and not expense.expense_number|slice:":5" == "LOSS-" %}
+                        <a href="{% url 'expense_update' expense.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form method="post" action="{% url 'expense_delete' expense.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete expense {{ expense.expense_number }}?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-muted small">Auto-generated</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% include 'core/pagination.html' %}
+        {% else %}
+        <div class="empty-state">
+            <h5>No Expenses Found</h5>
+            <p>Start tracking expenses by adding a new one.</p>
+            <a href="{% url 'expense_create' %}" class="btn btn-primary btn-sm">Add Expense</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+

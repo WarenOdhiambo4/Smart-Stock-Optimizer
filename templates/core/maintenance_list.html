@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Vehicle Maintenance - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Vehicle Maintenance</h1>
+    <div class="page-actions">
+        <a href="{% url 'maintenance_create' %}" class="btn btn-primary">Schedule Maintenance</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="get" class="mb-3">
+            <div class="input-group">
+                <input type="text" name="search" class="form-control" placeholder="Search maintenance..." value="{{ search }}">
+                <button type="submit" class="btn btn-outline-secondary">Search</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Maintenance #</th>
+                        <th>Vehicle</th>
+                        <th>Type</th>
+                        <th>Service Date</th>
+                        <th>Provider</th>
+                        <th>Status</th>
+                        <th>Total Cost</th>
+                        <th>Mileage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for maint in page_obj %}
+                    <tr>
+                        <td><strong>{{ maint.maintenance_number }}</strong></td>
+                        <td>{{ maint.vehicle.registration_number }}</td>
+                        <td>{{ maint.get_maintenance_type_display }}</td>
+                        <td>{{ maint.service_date|date:"M d, Y" }}</td>
+                        <td>{{ maint.service_provider }}</td>
+                        <td>
+                            <span class="badge bg-{% if maint.status == 'COMPLETED' %}success{% elif maint.status == 'IN_PROGRESS' %}warning{% elif maint.status == 'SCHEDULED' %}info{% else %}secondary{% endif %}">
+                                {{ maint.get_status_display }}
+                            </span>
+                        </td>
+                        <td>${{ maint.total_cost|floatformat:2 }}</td>
+                        <td>{{ maint.mileage_at_service|floatformat:0 }} KM</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">No maintenance records found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Maintenance pagination">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}">&laquo; First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}">Previous</a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}">Last &raquo;</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        
+        <div class="text-center text-muted small">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} maintenance records
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

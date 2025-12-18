@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Stock - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} Stock</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Branch *</label>
+                    <select name="branch" class="form-select" required>
+                        <option value="">Select Branch</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.pk }}">{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Product *</label>
+                    <select name="product" class="form-select" required>
+                        <option value="">Select Product</option>
+                        {% for product in products %}
+                        <option value="{{ product.pk }}">{{ product.name }} ({{ product.sku }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Quantity *</label>
+                    <input type="number" name="quantity" class="form-control" value="0" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Minimum Quantity</label>
+                    <input type="number" name="min_quantity" class="form-control" value="10">
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Save Stock</button>
+                <a href="{% url 'stock_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

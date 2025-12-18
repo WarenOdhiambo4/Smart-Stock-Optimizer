@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Vehicles - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Vehicles</h1>
+    <div class="page-actions">
+        <a href="{% url 'vehicle_create' %}" class="btn btn-primary">Add Vehicle</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="get" class="mb-3">
+            <div class="input-group">
+                <input type="text" name="search" class="form-control" placeholder="Search vehicles..." value="{{ search }}">
+                <button type="submit" class="btn btn-outline-secondary">Search</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Registration</th>
+                        <th>Type</th>
+                        <th>Make/Model</th>
+                        <th>Branch</th>
+                        <th>Driver</th>
+                        <th>Status</th>
+                        <th>Mileage</th>
+                        <th>Revenue</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vehicle in page_obj %}
+                    <tr>
+                        <td><strong>{{ vehicle.registration_number }}</strong></td>
+                        <td>{{ vehicle.get_vehicle_type_display }}</td>
+                        <td>{{ vehicle.make }} {{ vehicle.model }} ({{ vehicle.year }})</td>
+                        <td>{{ vehicle.branch.name }}</td>
+                        <td>{{ vehicle.assigned_driver|default:"-" }}</td>
+                        <td>
+                            <span class="badge bg-{% if vehicle.status == 'ACTIVE' %}success{% elif vehicle.status == 'MAINTENANCE' %}warning{% else %}secondary{% endif %}">
+                                {{ vehicle.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ vehicle.current_mileage|floatformat:0 }} KM</td>
+                        <td>${{ vehicle.total_revenue|floatformat:2 }}</td>
+                        <td>
+                            <a href="{% url 'vehicle_edit' vehicle.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">No vehicles found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if page_obj %}
+        {% include 'core/pagination.html' %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

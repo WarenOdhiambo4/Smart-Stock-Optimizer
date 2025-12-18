@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Trip - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ action }} Trip</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Vehicle *</label>
+                    <select name="vehicle" class="form-select" required>
+                        <option value="">Select Vehicle</option>
+                        {% for vehicle in vehicles %}
+                        <option value="{{ vehicle.pk }}" {% if trip and trip.vehicle.pk == vehicle.pk %}selected{% endif %}>{{ vehicle.registration_number }} - {{ vehicle.make }} {{ vehicle.model }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Driver *</label>
+                    <select name="driver" class="form-select" required>
+                        <option value="">Select Driver</option>
+                        {% for driver in drivers %}
+                        <option value="{{ driver.pk }}" {% if trip and trip.driver and trip.driver.pk == driver.pk %}selected{% endif %}>{{ driver.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Trip Type *</label>
+                    <select name="trip_type" class="form-select" required>
+                        <option value="">Select Type</option>
+                        <option value="DELIVERY" {% if trip and trip.trip_type == 'DELIVERY' %}selected{% endif %}>Delivery</option>
+                        <option value="PICKUP" {% if trip and trip.trip_type == 'PICKUP' %}selected{% endif %}>Pickup</option>
+                        <option value="TRANSPORT" {% if trip and trip.trip_type == 'TRANSPORT' %}selected{% endif %}>Transport</option>
+                        <option value="RENTAL" {% if trip and trip.trip_type == 'RENTAL' %}selected{% endif %}>Rental</option>
+                        <option value="OTHER" {% if trip and trip.trip_type == 'OTHER' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Related Sale (Optional)</label>
+                    <select name="sale" class="form-select">
+                        <option value="">No Related Sale</option>
+                        {% for sale in sales %}
+                        <option value="{{ sale.pk }}" {% if trip and trip.sale and trip.sale.pk == sale.pk %}selected{% endif %}>{{ sale.sale_number }} - {{ sale.customer_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Origin *</label>
+                    <input type="text" name="origin" class="form-control" value="{% if trip %}{{ trip.origin }}{% endif %}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Destination *</label>
+                    <input type="text" name="destination" class="form-control" value="{% if trip %}{{ trip.destination }}{% endif %}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Distance (KM)</label>
+                    <input type="number" name="distance" class="form-control" step="0.1" min="0" value="{% if trip %}{{ trip.distance }}{% else %}0{% endif %}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Scheduled Date *</label>
+                    <input type="datetime-local" name="scheduled_date" class="form-control" value="{% if trip %}{{ trip.scheduled_date|date:'Y-m-d\TH:i' }}{% endif %}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Revenue</label>
+                    <input type="number" name="revenue" class="form-control" step="0.01" min="0" value="{% if trip %}{{ trip.revenue }}{% else %}0{% endif %}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Fuel Cost</label>
+                    <input type="number" name="fuel_cost" class="form-control" step="0.01" min="0" value="{% if trip %}{{ trip.fuel_cost }}{% else %}0{% endif %}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Other Expenses</label>
+                    <input type="number" name="other_expenses" class="form-control" step="0.01" min="0" value="{% if trip %}{{ trip.other_expenses }}{% else %}0{% endif %}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Customer Name</label>
+                    <input type="text" name="customer_name" class="form-control" value="{% if trip %}{{ trip.customer_name }}{% endif %}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Customer Phone</label>
+                    <input type="text" name="customer_phone" class="form-control" value="{% if trip %}{{ trip.customer_phone }}{% endif %}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-control" rows="3">{% if trip %}{{ trip.notes }}{% endif %}</textarea>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">{{ action }} Trip</button>
+                <a href="{% url 'trip_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

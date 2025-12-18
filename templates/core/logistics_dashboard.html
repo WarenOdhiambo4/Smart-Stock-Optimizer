@@ -1,0 +1,401 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Logistics Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4>Logistics Analytics Dashboard <span class="badge badge-success" id="liveIndicator">LIVE</span></h4>
+            <div class="row">
+                <div class="col-md-2">
+                    <select id="monthFilter" class="form-control">
+                        <option value="">All Months</option>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="yearFilter" class="form-control">
+                        <option value="">All Years</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="vehicleFilter" class="form-control">
+                        <option value="">All Vehicles</option>
+                        {% for vehicle in vehicles %}
+                        <option value="{{ vehicle.id }}">{{ vehicle.registration_number }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="dateFromFilter" class="form-control" placeholder="From">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="dateToFilter" class="form-control" placeholder="To">
+                </div>
+                <div class="col-md-2">
+                    <button id="analyzeBtn" class="btn btn-primary">Analyze Performance</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-info" style="height: 60px;">
+                <div class="card-body p-2">
+                    <small style="font-size: 10px;">Total Trips</small>
+                    <h6 class="mb-0" id="totalTrips">-</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning" style="height: 60px;">
+                <div class="card-body p-2">
+                    <small style="font-size: 10px;">Distance (km)</small>
+                    <h6 class="mb-0" id="totalDistance">-</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger" style="height: 60px;">
+                <div class="card-body p-2">
+                    <small style="font-size: 10px;">Fuel Cost</small>
+                    <h6 class="mb-0" id="totalFuelCost">-</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success" style="height: 60px;">
+                <div class="card-body p-2">
+                    <small style="font-size: 10px;">Efficiency</small>
+                    <h6 class="mb-0" id="avgEfficiency">-</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Trip Mileage Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6>Live Trip Mileage Analysis</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>Showing <span id="tripStart">0</span>-<span id="tripEnd">0</span> of <span id="tripTotal">0</span> trips</div>
+                        <div>
+                            <button id="tripPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                            <button id="tripNextBtn" class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="tripAnalysisTable">
+                            <thead>
+                                <tr>
+                                    <th>Trip #</th>
+                                    <th>Vehicle</th>
+                                    <th>Route</th>
+                                    <th>Distance (km)</th>
+                                    <th>Fuel Cost</th>
+                                    <th>Actual Fuel (L)</th>
+                                    <th>Mileage (km/L)</th>
+                                    <th>Revenue</th>
+                                    <th>Profit</th>
+                                    <th>Efficiency</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tripAnalysisBody">
+                                <tr><td colspan="10" class="text-center">Click "Analyze Performance" to load data</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver KPI Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6>Driver KPI Analysis (Maintenance - Transfers - Fuel - Profit)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>Showing <span id="driverStart">0</span>-<span id="driverEnd">0</span> of <span id="driverTotal">0</span> drivers</div>
+                        <div>
+                            <button id="driverPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                            <button id="driverNextBtn" class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="driverKpiTable">
+                            <thead>
+                                <tr>
+                                    <th>Driver</th>
+                                    <th>Trips</th>
+                                    <th>Fuel Efficiency</th>
+                                    <th>Fuel Score</th>
+                                    <th>Maintenance Events</th>
+                                    <th>Maint. Score</th>
+                                    <th>Transfers</th>
+                                    <th>Transfer Score</th>
+                                    <th>Net Profit</th>
+                                    <th>Profit Score</th>
+                                    <th>Overall KPI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="driverKpiBody">
+                                <tr><td colspan="11" class="text-center">Loading driver KPI analysis...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    let allTrips = [];
+    let allDrivers = [];
+    let currentTripPage = 0;
+    let currentDriverPage = 0;
+    const itemsPerPage = 5;
+    
+    analyzeBtn.addEventListener('click', function() {
+        const month = document.getElementById('monthFilter').value;
+        const year = document.getElementById('yearFilter').value;
+        const vehicle = document.getElementById('vehicleFilter').value;
+        const dateFrom = document.getElementById('dateFromFilter').value;
+        const dateTo = document.getElementById('dateToFilter').value;
+        
+        // Show loading indicator
+        document.getElementById('liveIndicator').innerHTML = 'UPDATING...';
+        
+        const params = new URLSearchParams();
+        if (month) params.append('month', month);
+        if (year) params.append('year', year);
+        if (vehicle) params.append('vehicle', vehicle);
+        if (dateFrom) params.append('date_from', dateFrom);
+        if (dateTo) params.append('date_to', dateTo);
+        
+        fetch(`/api/logistics-analysis/?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    populateTripAnalysis(data.trips);
+                    populateDriverKpi(data.drivers);
+                    updateSummaryCards(data.summary);
+                    
+                    // Show live indicator
+                    document.getElementById('liveIndicator').innerHTML = 'LIVE';
+                    
+                    // Flash update indicator
+                    setTimeout(() => {
+                        document.getElementById('liveIndicator').innerHTML = 'LIVE';
+                    }, 1000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('liveIndicator').innerHTML = 'ERROR';
+            });
+    });
+    
+    // Auto-load current month data
+    setTimeout(() => {
+        document.getElementById('monthFilter').value = new Date().getMonth() + 1;
+        document.getElementById('yearFilter').value = new Date().getFullYear();
+        analyzeBtn.click();
+    }, 500);
+    
+    // Live refresh every 30 seconds
+    setInterval(() => {
+        analyzeBtn.click();
+    }, 30000);
+    
+    function populateTripAnalysis(trips) {
+        allTrips = trips;
+        currentTripPage = 0;
+        displayTripPage();
+        setupTripPagination();
+    }
+    
+    function displayTripPage() {
+        const tbody = document.getElementById('tripAnalysisBody');
+        tbody.innerHTML = '';
+        
+        const start = currentTripPage * itemsPerPage;
+        const end = Math.min(start + itemsPerPage, allTrips.length);
+        const pageTrips = allTrips.slice(start, end);
+        
+        pageTrips.forEach(trip => {
+            const efficiency = getEfficiencyBadge(trip.efficiency_score);
+            const row = `
+                <tr>
+                    <td><strong>${trip.trip_number}</strong></td>
+                    <td>${trip.vehicle_name}</td>
+                    <td>${trip.route}</td>
+                    <td>${trip.distance}</td>
+                    <td>$${trip.fuel_cost.toLocaleString()}</td>
+                    <td>${trip.actual_fuel_liters}</td>
+                    <td>${trip.mileage}</td>
+                    <td>$${trip.revenue.toLocaleString()}</td>
+                    <td>$${trip.profit.toLocaleString()}</td>
+                    <td>${efficiency}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+        
+        // Update pagination info
+        document.getElementById('tripStart').textContent = start + 1;
+        document.getElementById('tripEnd').textContent = end;
+        document.getElementById('tripTotal').textContent = allTrips.length;
+    }
+    
+    function setupTripPagination() {
+        const prevBtn = document.getElementById('tripPrevBtn');
+        const nextBtn = document.getElementById('tripNextBtn');
+        
+        prevBtn.disabled = currentTripPage === 0;
+        nextBtn.disabled = (currentTripPage + 1) * itemsPerPage >= allTrips.length;
+        
+        prevBtn.onclick = () => {
+            if (currentTripPage > 0) {
+                currentTripPage--;
+                displayTripPage();
+                setupTripPagination();
+            }
+        };
+        
+        nextBtn.onclick = () => {
+            if ((currentTripPage + 1) * itemsPerPage < allTrips.length) {
+                currentTripPage++;
+                displayTripPage();
+                setupTripPagination();
+            }
+        };
+    }
+    
+    function populateDriverKpi(drivers) {
+        allDrivers = drivers;
+        currentDriverPage = 0;
+        displayDriverPage();
+        setupDriverPagination();
+    }
+    
+    function displayDriverPage() {
+        const tbody = document.getElementById('driverKpiBody');
+        tbody.innerHTML = '';
+        
+        const start = currentDriverPage * itemsPerPage;
+        const end = Math.min(start + itemsPerPage, allDrivers.length);
+        const pageDrivers = allDrivers.slice(start, end);
+        
+        pageDrivers.forEach(driver => {
+            const fuelBadge = getScoreBadge(driver.fuel_score);
+            const maintBadge = getScoreBadge(driver.maintenance_score);
+            const transferBadge = getScoreBadge(driver.transfer_score);
+            const profitBadge = getScoreBadge(driver.profit_score);
+            const overallBadge = getKpiBadge(driver.overall_kpi);
+            
+            const row = `
+                <tr>
+                    <td><strong>${driver.driver_name}</strong></td>
+                    <td>${driver.total_trips}</td>
+                    <td>${driver.fuel_efficiency} km/L</td>
+                    <td>${fuelBadge}</td>
+                    <td>${driver.maintenance_events}</td>
+                    <td>${maintBadge}</td>
+                    <td>${driver.inter_branch_transfers}</td>
+                    <td>${transferBadge}</td>
+                    <td>$${driver.net_profit.toLocaleString()}</td>
+                    <td>${profitBadge}</td>
+                    <td>${overallBadge}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+        
+        // Update pagination info
+        document.getElementById('driverStart').textContent = start + 1;
+        document.getElementById('driverEnd').textContent = end;
+        document.getElementById('driverTotal').textContent = allDrivers.length;
+    }
+    
+    function setupDriverPagination() {
+        const prevBtn = document.getElementById('driverPrevBtn');
+        const nextBtn = document.getElementById('driverNextBtn');
+        
+        prevBtn.disabled = currentDriverPage === 0;
+        nextBtn.disabled = (currentDriverPage + 1) * itemsPerPage >= allDrivers.length;
+        
+        prevBtn.onclick = () => {
+            if (currentDriverPage > 0) {
+                currentDriverPage--;
+                displayDriverPage();
+                setupDriverPagination();
+            }
+        };
+        
+        nextBtn.onclick = () => {
+            if ((currentDriverPage + 1) * itemsPerPage < allDrivers.length) {
+                currentDriverPage++;
+                displayDriverPage();
+                setupDriverPagination();
+            }
+        };
+    }
+    
+    function updateSummaryCards(summary) {
+        document.getElementById('totalTrips').textContent = summary.total_trips;
+        document.getElementById('totalDistance').textContent = `${summary.total_distance} km`;
+        document.getElementById('totalFuelCost').textContent = `$${summary.total_fuel_cost.toLocaleString()}`;
+        document.getElementById('avgEfficiency').textContent = `${summary.avg_efficiency}%`;
+    }
+    
+    function getEfficiencyBadge(score) {
+        if (score >= 80) return `<span class="badge badge-success">${score}%</span>`;
+        if (score >= 60) return `<span class="badge badge-warning">${score}%</span>`;
+        return `<span class="badge badge-danger">${score}%</span>`;
+    }
+    
+    function getScoreBadge(score) {
+        if (score >= 80) return `<span class="badge badge-success">${score}%</span>`;
+        if (score >= 60) return `<span class="badge badge-warning">${score}%</span>`;
+        return `<span class="badge badge-danger">${score}%</span>`;
+    }
+    
+    function getKpiBadge(kpi) {
+        if (kpi >= 85) return `<span class="badge badge-success"><strong>${kpi}%</strong></span>`;
+        if (kpi >= 70) return `<span class="badge badge-warning"><strong>${kpi}%</strong></span>`;
+        return `<span class="badge badge-danger"><strong>${kpi}%</strong></span>`;
+    }
+});
+</script>
+{% endblock %}

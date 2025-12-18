@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ branch.name }} - Branch Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ branch.name }}</h1>
+    <div class="quick-actions">
+        <a href="{% url 'branch_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Branches</a>
+        <a href="{% url 'branch_edit' branch.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Edit Branch</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left: 4px solid var(--success);">
+            <div class="stat-value" style="color: var(--success);">${{ monthly_sales|floatformat:2 }}</div>
+            <div class="stat-label"><i class="bi bi-graph-up me-1"></i>Monthly Sales</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left: 4px solid var(--danger);">
+            <div class="stat-value" style="color: var(--danger);">${{ monthly_expenses|floatformat:2 }}</div>
+            <div class="stat-label"><i class="bi bi-cash-stack me-1"></i>Monthly Expenses</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left: 4px solid var(--primary);">
+            <div class="stat-value" style="color: var(--primary);">${{ monthly_profit|floatformat:2 }}</div>
+            <div class="stat-label"><i class="bi bi-wallet2 me-1"></i>Monthly Profit</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left: 4px solid var(--secondary);">
+            <div class="stat-value">${{ total_stock_value|floatformat:2 }}</div>
+            <div class="stat-label"><i class="bi bi-boxes me-1"></i>Stock Value</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Branch Information</div>
+            <div class="card-body">
+                <div class="mb-2"><strong>Address:</strong> {{ branch.address|default:"-" }}</div>
+                <div class="mb-2"><strong>Phone:</strong> {{ branch.phone|default:"-" }}</div>
+                <div class="mb-2"><strong>Email:</strong> {{ branch.email|default:"-" }}</div>
+                <div class="mb-2"><strong>Status:</strong> 
+                    <span class="badge {% if branch.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                        {% if branch.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+                <div><strong>Low Stock Items:</strong> <span class="badge badge-danger">{{ low_stock_count }}</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">Recent Sales</div>
+            <div class="card-body p-0">
+                {% if recent_sales %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Sale #</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in recent_sales %}
+                        <tr>
+                            <td><a href="{% url 'sale_detail' sale.pk %}">{{ sale.sale_number }}</a></td>
+                            <td>{{ sale.customer_name|default:"-" }}</td>
+                            <td>${{ sale.total_amount }}</td>
+                            <td class="text-muted">{{ sale.created_at|date:"M d, H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <p>No sales yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">Recent Expenses</div>
+            <div class="card-body p-0">
+                {% if recent_expenses %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Expense #</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in recent_expenses %}
+                        <tr>
+                            <td>{{ expense.expense_number }}</td>
+                            <td><span class="badge badge-info">{{ expense.get_expense_type_display }}</span></td>
+                            <td>${{ expense.amount }}</td>
+                            <td class="text-muted">{{ expense.expense_date|date:"M d, Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <p>No expenses yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

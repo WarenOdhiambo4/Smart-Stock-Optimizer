@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Logistics - SaasApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Logistics & Delivery</h1>
+    <div class="quick-actions">
+        <form method="get" class="search-box me-2">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search logistics..." value="{{ search }}">
+        </form>
+        <a href="{% url 'logistics_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>New Logistics</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tracking #</th>
+                    <th>Customer</th>
+                    <th>From Branch</th>
+                    <th>Status</th>
+                    <th>Delivery Date</th>
+                    <th>Cost</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in page_obj %}
+                <tr>
+                    <td><strong>{{ log.tracking_number }}</strong></td>
+                    <td>
+                        {{ log.customer_name }}<br>
+                        <small class="text-muted">{{ log.customer_phone }}</small>
+                    </td>
+                    <td>{{ log.from_branch.name }}</td>
+                    <td>
+                        <span class="badge {% if log.status == 'DELIVERED' %}badge-success{% elif log.status == 'IN_TRANSIT' %}badge-info{% elif log.status == 'CANCELLED' %}badge-danger{% else %}badge-warning{% endif %}">
+                            {{ log.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ log.delivery_date|date:"M d, Y"|default:"-" }}</td>
+                    <td>${{ log.delivery_cost }}</td>
+                    <td>
+                        <div class="action-btns">
+                            <form method="post" action="{% url 'logistics_update_status' log.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <select name="status" onchange="this.form.submit()" class="form-select form-select-sm" style="width: auto;">
+                                    <option value="PENDING" {% if log.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                    <option value="PROCESSING" {% if log.status == 'PROCESSING' %}selected{% endif %}>Processing</option>
+                                    <option value="IN_TRANSIT" {% if log.status == 'IN_TRANSIT' %}selected{% endif %}>In Transit</option>
+                                    <option value="DELIVERED" {% if log.status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
+                                    <option value="CANCELLED" {% if log.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                                </select>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% include 'core/pagination.html' %}
+        {% else %}
+        <div class="empty-state">
+            <h5>No Logistics Found</h5>
+            <p>Start managing deliveries by creating a new logistics entry.</p>
+            <a href="{% url 'logistics_create' %}" class="btn btn-primary btn-sm">New Logistics</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

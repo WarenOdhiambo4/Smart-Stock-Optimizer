@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: kabisa-erp
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn saas_project.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: AIRTABLE_API_KEY
+        value: YOUR_AIRTABLE_API_KEY_HERE
+      - key: AIRTABLE_BASE_ID
+        value: YOUR_AIRTABLE_BASE_ID_HERE
+      - key: DEBUG
+        value: False
