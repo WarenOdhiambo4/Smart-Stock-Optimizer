@@ -3,7 +3,7 @@ Django signals for auto-sync to Airtable
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Branch, Employee, Product, Order, Sale, Expense
+from .models import Branch, Employee, Product, Order, Sale, Expense, Vehicle, Trip
 from .airtable_service import airtable_service
 
 @receiver(post_save, sender=Branch)
@@ -34,8 +34,10 @@ def sync_product_to_airtable(sender, instance, created, **kwargs):
                 'Name': instance.name,
                 'SKU': instance.sku,
                 'Price': float(instance.unit_price),
-                'Cost': float(instance.cost_price),
+                'Cost Price': float(instance.cost_price),
                 'Category': instance.category,
+                'Description': instance.description,
+                'Active': instance.is_active,
             }
             service.create_record('Products', data)
             print(f"✓ Product {instance.name} synced to Airtable")
@@ -50,11 +52,10 @@ def sync_sale_to_airtable(sender, instance, created, **kwargs):
             service = AirtableService()
             data = {
                 'Sale Number': instance.sale_number,
-                'Customer': instance.customer_name,
-                'Phone': instance.customer_phone,
-                'Total': float(instance.total_amount),
+                'Customer Name': instance.customer_name,
+                'Customer Phone': instance.customer_phone,
+                'Total Amount': float(instance.total_amount),
                 'Payment Method': instance.payment_method,
-                'Branch': instance.branch.name if instance.branch else '',
             }
             service.create_record('Sales', data)
             print(f"✓ Sale {instance.sale_number} synced to Airtable")
@@ -69,12 +70,52 @@ def sync_order_to_airtable(sender, instance, created, **kwargs):
             service = AirtableService()
             data = {
                 'Order Number': instance.order_number,
-                'Branch': instance.branch.name if instance.branch else '',
                 'Supplier': instance.supplier,
                 'Status': instance.status,
-                'Total': float(instance.total_amount),
+                'Total Amount': float(instance.total_amount),
             }
             service.create_record('Orders', data)
             print(f"✓ Order {instance.order_number} synced to Airtable")
         except Exception as e:
             print(f"✗ Error syncing order: {e}")
+
+@receiver(post_save, sender=Vehicle)
+def sync_vehicle_to_airtable(sender, instance, created, **kwargs):
+    if created:
+        try:
+            from .airtable_service import AirtableService
+            service = AirtableService()
+            data = {
+                'Registration Number': instance.registration_number,
+                'Type': instance.vehicle_type,
+                'Make': instance.make,
+                'Model': instance.model,
+                'Year': instance.year,
+                'Current Mileage': instance.current_mileage,
+                'Status': instance.status,
+            }
+            service.create_record('Vehicles', data)
+            print(f"✓ Vehicle {instance.registration_number} synced to Airtable")
+        except Exception as e:
+            print(f"✗ Error syncing vehicle: {e}")
+
+@receiver(post_save, sender=Trip)
+def sync_trip_to_airtable(sender, instance, created, **kwargs):
+    if created:
+        try:
+            from .airtable_service import AirtableService
+            service = AirtableService()
+            data = {
+                'Trip Number': instance.trip_number,
+                'Origin': instance.origin,
+                'Destination': instance.destination,
+                'Distance': float(instance.distance),
+                'Status': instance.status,
+                'Revenue': float(instance.revenue),
+                'Fuel Cost': float(instance.fuel_cost),
+                'Customer Name': instance.customer_name,
+            }
+            service.create_record('Trips', data)
+            print(f"✓ Trip {instance.trip_number} synced to Airtable")
+        except Exception as e:
+            print(f"✗ Error syncing trip: {e}")
