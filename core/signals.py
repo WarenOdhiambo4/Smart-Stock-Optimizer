@@ -3,7 +3,7 @@ Django signals for auto-sync to Airtable
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Branch, Employee, Product, Order, Sale, Expense, Vehicle, Trip
+from .models import Branch, Employee, Product, Order, Sale, Expense, Vehicle, Trip, UserProfile
 from .airtable_service import airtable_service
 
 @receiver(post_save, sender=Branch)
@@ -119,3 +119,38 @@ def sync_trip_to_airtable(sender, instance, created, **kwargs):
             print(f"✓ Trip {instance.trip_number} synced to Airtable")
         except Exception as e:
             print(f"✗ Error syncing trip: {e}")
+
+@receiver(post_save, sender=UserProfile)
+def sync_userprofile_to_airtable(sender, instance, created, **kwargs):
+    if created:
+        try:
+            from .airtable_service import AirtableService
+            service = AirtableService()
+            data = {
+                'Username': instance.user.username,
+                'Role': instance.role,
+                'Phone': instance.phone,
+            }
+            service.create_record('User Profiles', data)
+            print(f"✓ UserProfile {instance.user.username} synced to Airtable")
+        except Exception as e:
+            print(f"✗ Error syncing userprofile: {e}")
+
+@receiver(post_save, sender=Employee)
+def sync_employee_to_airtable(sender, instance, created, **kwargs):
+    if created:
+        try:
+            from .airtable_service import AirtableService
+            service = AirtableService()
+            data = {
+                'First Name': instance.first_name,
+                'Last Name': instance.last_name,
+                'Email': instance.email,
+                'Phone': instance.phone,
+                'Position': instance.position,
+                'Active': instance.is_active,
+            }
+            service.create_record('Employees', data)
+            print(f"✓ Employee {instance.first_name} {instance.last_name} synced to Airtable")
+        except Exception as e:
+            print(f"✗ Error syncing employee: {e}")
