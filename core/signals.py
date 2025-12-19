@@ -18,10 +18,11 @@ def sync_branch_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Name': instance.name,
-                'Address': instance.address,
-                'Phone': instance.phone,
-                'Email': instance.email,
+                'Address': instance.address or '',
+                'Phone': instance.phone or '',
+                'Email': instance.email or '',
                 'Active': instance.is_active,
+                'Created': instance.created_at.date().isoformat() if instance.created_at else None,
             }
             result = airtable_service.create_record('Branches', data)
             # Store Airtable ID to prevent future duplicates
@@ -47,9 +48,10 @@ def sync_product_to_airtable(sender, instance, created, **kwargs):
                 'SKU': instance.sku,
                 'Price': float(instance.unit_price),
                 'Cost Price': float(instance.cost_price),
-                'Category': instance.category,
-                'Description': instance.description,
+                'Category': instance.category or '',
+                'Description': instance.description or '',
                 'Active': instance.is_active,
+                'Created': instance.created_at.date().isoformat() if instance.created_at else None,
             }
             airtable_service.create_record('Products', data)
             print(f"✓ Product {instance.name} synced to Airtable")
@@ -68,10 +70,13 @@ def sync_sale_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Sale Number': instance.sale_number,
-                'Customer Name': instance.customer_name,
-                'Customer Phone': instance.customer_phone,
+                'Branch': [instance.branch.name] if instance.branch else [],
+                'Customer Name': instance.customer_name or '',
+                'Customer Phone': instance.customer_phone or '',
                 'Total Amount': float(instance.total_amount),
-                'Payment Method': instance.payment_method,
+                'Payment Method': instance.payment_method or 'Cash',
+                'Notes': instance.notes or '',
+                'Created': instance.created_at.date().isoformat() if instance.created_at else None,
             }
             airtable_service.create_record('Sales', data)
             print(f"✓ Sale {instance.sale_number} synced to Airtable")
@@ -90,9 +95,12 @@ def sync_order_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Order Number': instance.order_number,
-                'Supplier': instance.supplier,
+                'Branch': [instance.branch.name] if instance.branch else [],
+                'Supplier': instance.supplier or '',
                 'Status': instance.status,
                 'Total Amount': float(instance.total_amount),
+                'Notes': instance.notes or '',
+                'Created': instance.created_at.date().isoformat() if instance.created_at else None,
             }
             airtable_service.create_record('Orders', data)
             print(f"✓ Order {instance.order_number} synced to Airtable")
@@ -111,6 +119,7 @@ def sync_vehicle_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Registration Number': instance.registration_number,
+                'Branch': [instance.branch.name] if instance.branch else [],
                 'Type': instance.vehicle_type,
                 'Make': instance.make,
                 'Model': instance.model,
@@ -135,13 +144,17 @@ def sync_trip_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Trip Number': instance.trip_number,
+                'Vehicle': [instance.vehicle.registration_number] if instance.vehicle else [],
+                'Driver Name': instance.driver.full_name if instance.driver else '',
                 'Origin': instance.origin,
                 'Destination': instance.destination,
                 'Distance': float(instance.distance),
                 'Status': instance.status,
                 'Revenue': float(instance.revenue),
                 'Fuel Cost': float(instance.fuel_cost),
-                'Customer Name': instance.customer_name,
+                'Customer Name': instance.customer_name or '',
+                'Customer Phone': instance.customer_phone or '',
+                'Scheduled Date': instance.scheduled_date.isoformat() if instance.scheduled_date else None,
             }
             airtable_service.create_record('Trips', data)
             print(f"✓ Trip {instance.trip_number} synced to Airtable")
@@ -161,7 +174,9 @@ def sync_userprofile_to_airtable(sender, instance, created, **kwargs):
             data = {
                 'Username': instance.user.username,
                 'Role': instance.role,
-                'Phone': instance.phone,
+                'Phone': instance.phone or '',
+                'Active': instance.user.is_active,
+                'Branch': [instance.branch.name] if instance.branch else [],
             }
             airtable_service.create_record('User Profiles', data)
             print(f"✓ UserProfile {instance.user.username} synced to Airtable")
@@ -182,9 +197,10 @@ def sync_employee_to_airtable(sender, instance, created, **kwargs):
                 'First Name': instance.first_name,
                 'Last Name': instance.last_name,
                 'Email': instance.email,
-                'Phone': instance.phone,
-                'Position': instance.position,
+                'Phone': instance.phone or '',
+                'Position': instance.position or '',
                 'Active': instance.is_active,
+                'Created': instance.created_at.date().isoformat() if instance.created_at else None,
             }
             airtable_service.create_record('Employees', data)
             print(f"✓ Employee {instance.first_name} {instance.last_name} synced to Airtable")
