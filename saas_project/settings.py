@@ -72,15 +72,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'saas_project.wsgi.application'
 
+# Database Configuration for Supabase
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="postgres"),
-        "USER": config("DB_USER", default="postgres.bmbvkdzvdlgnncshpchw"),
-        "PASSWORD": config("DB_PASSWORD", default="xxyyz418712"),
-        "HOST": config("DB_HOST", default="aws-1-eu-west-2.pooler.supabase.com"),
-        "PORT": config("DB_PORT", default="5432"),
-        "OPTIONS": {"sslmode": "require"},
+        "NAME": "postgres",
+        "USER": "postgres.bmbvkdzvdlgnncshpchw",
+        "PASSWORD": "Kabisa@2024",
+        "HOST": "aws-1-eu-west-2.pooler.supabase.com",
+        "PORT": "5432",
+        "OPTIONS": {
+            "sslmode": "require",
+            "connect_timeout": 60,
+        },
     }
 }
 
