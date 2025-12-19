@@ -1,7 +1,7 @@
 import json
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+
 from django.utils.decorators import method_decorator
 from django.views import View
 from .webhook_manager import AirtableWebhookManager
@@ -9,24 +9,23 @@ from .airtable_service import AirtableService
 from .models import Branch, Product, Sale, Order
 
 @csrf_exempt
-@require_http_methods(["POST"])
 def webhook_receiver(request):
     """Receive webhook notifications from Airtable"""
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+        
     try:
         data = json.loads(request.body)
         webhook_id = data.get('webhook', {}).get('id')
         
         if webhook_id:
-            # Process the webhook payload
             manager = AirtableWebhookManager()
             payload_data = manager.get_payload(webhook_id)
-            
-            # Sync changes to Django
             sync_airtable_changes(payload_data)
             
-        return HttpResponse(status=200)
+        return HttpResponse('OK', status=200)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return HttpResponse(f'Error: {str(e)}', status=400)
 
 def sync_airtable_changes(payload_data):
     """Sync Airtable changes to Django models"""
