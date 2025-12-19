@@ -54,13 +54,27 @@ def sync_sale_to_airtable(sender, instance, created, **kwargs):
                 'Phone': instance.customer_phone,
                 'Total': float(instance.total_amount),
                 'Payment Method': instance.payment_method,
+                'Branch': instance.branch.name if instance.branch else '',
             }
             service.create_record('Sales', data)
             print(f"✓ Sale {instance.sale_number} synced to Airtable")
         except Exception as e:
             print(f"✗ Error syncing sale: {e}")
 
-# @receiver(post_save, sender=Order)
-# def sync_order_to_airtable(sender, instance, created, **kwargs):
-#     # Disabled - sync issues
-#     pass
+@receiver(post_save, sender=Order)
+def sync_order_to_airtable(sender, instance, created, **kwargs):
+    if created:
+        try:
+            from .airtable_service import AirtableService
+            service = AirtableService()
+            data = {
+                'Order Number': instance.order_number,
+                'Branch': instance.branch.name if instance.branch else '',
+                'Supplier': instance.supplier,
+                'Status': instance.status,
+                'Total': float(instance.total_amount),
+            }
+            service.create_record('Orders', data)
+            print(f"✓ Order {instance.order_number} synced to Airtable")
+        except Exception as e:
+            print(f"✗ Error syncing order: {e}")
