@@ -5,15 +5,14 @@ Django settings for saas_project project.
 import os
 from pathlib import Path
 
+from decouple import config
+
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
-
-def config(key, default=None):
-    return os.environ.get(key, default)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -72,8 +71,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'saas_project.wsgi.application'
-
-from decouple import config
 
 DATABASES = {
     "default": {
