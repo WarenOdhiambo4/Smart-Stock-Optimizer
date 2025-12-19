@@ -60,49 +60,57 @@ def sync_branches(records):
     """Sync branch records from Airtable"""
     for record in records:
         fields = record['fields']
-        Branch.objects.update_or_create(
+        branch, created = Branch.objects.update_or_create(
             name=fields.get('Name', ''),
             defaults={
-                'location': fields.get('Location', ''),
-                'manager': fields.get('Manager', ''),
+                'address': fields.get('Address', ''),
                 'phone': fields.get('Phone', ''),
                 'email': fields.get('Email', ''),
             }
         )
+        # Prevent circular sync
+        if created:
+            branch._skip_sync = True
 
 def sync_products(records):
     """Sync product records from Airtable"""
     for record in records:
         fields = record['fields']
-        Product.objects.update_or_create(
-            name=fields.get('Name', ''),
+        product, created = Product.objects.update_or_create(
+            sku=fields.get('SKU', ''),
             defaults={
+                'name': fields.get('Name', ''),
                 'category': fields.get('Category', ''),
-                'price': fields.get('Price', 0),
-                'cost': fields.get('Cost', 0),
-                'stock_quantity': fields.get('Stock', 0),
+                'unit_price': fields.get('Price', 0),
+                'cost_price': fields.get('Cost Price', 0),
                 'description': fields.get('Description', ''),
             }
         )
+        # Prevent circular sync
+        if created:
+            product._skip_sync = True
 
 def sync_sales(records):
     """Sync sale records from Airtable"""
     for record in records:
         fields = record['fields']
         try:
-            product = Product.objects.get(name=fields.get('Product', ''))
             branch = Branch.objects.get(name=fields.get('Branch', ''))
             
-            Sale.objects.update_or_create(
-                product=product,
-                branch=branch,
-                quantity=fields.get('Quantity', 0),
+            sale, created = Sale.objects.update_or_create(
+                sale_number=fields.get('Sale Number', ''),
                 defaults={
-                    'unit_price': fields.get('Unit Price', 0),
-                    'total_amount': fields.get('Total', 0),
+                    'branch': branch,
+                    'customer_name': fields.get('Customer Name', ''),
+                    'customer_phone': fields.get('Customer Phone', ''),
+                    'total_amount': fields.get('Total Amount', 0),
+                    'payment_method': fields.get('Payment Method', 'Cash'),
                 }
             )
-        except (Product.DoesNotExist, Branch.DoesNotExist):
+            # Prevent circular sync
+            if created:
+                sale._skip_sync = True
+        except Branch.DoesNotExist:
             continue
 
 def sync_orders(records):
@@ -112,14 +120,17 @@ def sync_orders(records):
         try:
             branch = Branch.objects.get(name=fields.get('Branch', ''))
             
-            Order.objects.update_or_create(
+            order, created = Order.objects.update_or_create(
                 order_number=fields.get('Order Number', ''),
                 defaults={
                     'branch': branch,
-                    'customer_name': fields.get('Customer', ''),
-                    'total_amount': fields.get('Total', 0),
-                    'status': fields.get('Status', 'pending'),
+                    'supplier': fields.get('Supplier', ''),
+                    'total_amount': fields.get('Total Amount', 0),
+                    'status': fields.get('Status', 'PENDING'),
                 }
             )
+            # Prevent circular sync
+            if created:
+                order._skip_sync = True
         except Branch.DoesNotExist:
             continue
