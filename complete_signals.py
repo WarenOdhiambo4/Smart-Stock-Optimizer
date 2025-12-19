@@ -1,9 +1,9 @@
+#!/usr/bin/env python
 """
-Complete Django signals for all 16 Airtable tables
+Complete signals for all 16 Airtable tables
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import User
 from .models import *
 from .airtable_service import airtable_service
 
@@ -343,4 +343,4 @@ def sync_user_to_airtable(sender, instance, created, **kwargs):
         except Exception as e:
             print(f"✗ User sync error: {e}")
 
-# All 16 Airtable tables now have sync signals
+print("📡 All 16 table signals loaded successfully!")
