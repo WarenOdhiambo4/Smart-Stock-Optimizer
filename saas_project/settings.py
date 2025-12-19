@@ -17,7 +17,7 @@ def config(key, default=None):
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config('SESSION_SECRET', default='django-insecure-dev-key-change-in-production')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
 
 DEBUG = config('DEBUG', default='False').lower() == 'true'
 
@@ -73,19 +73,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'saas_project.wsgi.application'
 
-# Database Configuration
-if config('DATABASE_URL'):
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(config('DATABASE_URL'))
+from decouple import config
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("DB_NAME"),
+        "USER": config("DB_USER"),
+        "PASSWORD": config("DB_PASSWORD"),
+        "HOST": config("DB_HOST"),
+        "PORT": config("DB_PORT"),
+        "OPTIONS": {"sslmode": "require"},
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
