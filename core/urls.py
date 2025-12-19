@@ -93,6 +93,9 @@ urlpatterns = [
     # Webhook
     path('webhook/', webhook_views.webhook_receiver, name='webhook_receiver'),
     
+    # Manual sync test
+    path('manual-sync/', 'core.views_sync_test.manual_sync', name='manual_sync'),
+    
     # Enterprise Price Management
     path('pricing/', include('core.urls_pricing')),
     
