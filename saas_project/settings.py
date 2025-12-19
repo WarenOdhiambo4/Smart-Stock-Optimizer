@@ -73,12 +73,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'saas_project.wsgi.application'
 
 # Database Configuration for Supabase
-import dj_database_url
-
-DATABASE_URL = "postgresql://postgres.bmbvkdzvdlgnncshpchw:Kabisa@2024@aws-1-eu-west-2.pooler.supabase.com:5432/postgres"
-
 DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("DB_NAME", default="postgres"),
+        "USER": config("DB_USER", default="postgres.bmbvkdzvdlgnncshpchw"),
+        "PASSWORD": config("DB_PASSWORD", default="xxyyz418712"),
+        "HOST": config("DB_HOST", default="aws-1-eu-west-2.pooler.supabase.com"),
+        "PORT": config("DB_PORT", default="5432"),
+        "OPTIONS": {
+            "sslmode": "require",
+        },
+    }
 }
 
 AUTH_PASSWORD_VALIDATORS = [
