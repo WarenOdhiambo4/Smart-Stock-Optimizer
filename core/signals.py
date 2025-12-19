@@ -3,7 +3,7 @@ Django signals for auto-sync to Airtable
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Branch, Employee, Product, Order, Sale, Expense, Vehicle, Trip, UserProfile
+from .models import Branch, Employee, Product, Order, Sale, Expense, Vehicle, Trip, UserProfile, Stock, Logistics
 from .airtable_service import airtable_service
 
 @receiver(post_save, sender=Branch)
@@ -70,7 +70,6 @@ def sync_sale_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Sale Number': instance.sale_number,
-                'Branch': [instance.branch.name] if instance.branch else [],
                 'Customer Name': instance.customer_name or '',
                 'Customer Phone': instance.customer_phone or '',
                 'Total Amount': float(instance.total_amount),
@@ -95,7 +94,6 @@ def sync_order_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Order Number': instance.order_number,
-                'Branch': [instance.branch.name] if instance.branch else [],
                 'Supplier': instance.supplier or '',
                 'Status': instance.status,
                 'Total Amount': float(instance.total_amount),
@@ -119,7 +117,6 @@ def sync_vehicle_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Registration Number': instance.registration_number,
-                'Branch': [instance.branch.name] if instance.branch else [],
                 'Type': instance.vehicle_type,
                 'Make': instance.make,
                 'Model': instance.model,
@@ -144,7 +141,6 @@ def sync_trip_to_airtable(sender, instance, created, **kwargs):
                 
             data = {
                 'Trip Number': instance.trip_number,
-                'Vehicle': [instance.vehicle.registration_number] if instance.vehicle else [],
                 'Driver Name': instance.driver.full_name if instance.driver else '',
                 'Origin': instance.origin,
                 'Destination': instance.destination,
@@ -176,7 +172,6 @@ def sync_userprofile_to_airtable(sender, instance, created, **kwargs):
                 'Role': instance.role,
                 'Phone': instance.phone or '',
                 'Active': instance.user.is_active,
-                'Branch': [instance.branch.name] if instance.branch else [],
             }
             airtable_service.create_record('User Profiles', data)
             print(f"✓ UserProfile {instance.user.username} synced to Airtable")
@@ -206,3 +201,65 @@ def sync_employee_to_airtable(sender, instance, created, **kwargs):
             print(f"✓ Employee {instance.first_name} {instance.last_name} synced to Airtable")
         except Exception as e:
             print(f"✗ Error syncing employee: {e}")
+
+@receiver(post_save, sender=Stock)
+def sync_stock_to_airtable(sender, instance, created, **kwargs):
+    if created and not hasattr(instance, '_skip_sync'):
+        try:
+            data = {
+                'Quantity': instance.quantity,
+                'Min Quantity': instance.min_quantity,
+                'Created': instance.created_at.date().isoformat() if instance.created_at else None,
+            }
+            airtable_service.create_record('Stock', data)
+            print(f"✓ Stock synced to Airtable")
+        except Exception as e:
+            print(f"✗ Error syncing stock: {e}")
+
+@receiver(post_save, sender=Logistics)
+def sync_logistics_to_airtable(sender, instance, created, **kwargs):
+    if created and not hasattr(instance, '_skip_sync'):
+        try:
+            existing_records = airtable_service.get_records('Logistics', formula=f"{{Tracking Number}} = '{instance.tracking_number}'")
+            if existing_records:
+                print(f"⚠ Logistics {instance.tracking_number} already exists in Airtable, skipping sync")
+                return
+                
+            data = {
+                'Tracking Number': instance.tracking_number,
+                'Customer Name': instance.customer_name,
+                'Customer Phone': instance.customer_phone,
+                'Address': instance.to_address,
+                'Status': instance.status,
+                'Vehicle Number': instance.vehicle.registration_number if instance.vehicle else instance.vehicle_number or '',
+                'Driver Name': instance.driver.full_name if instance.driver else instance.driver_name or '',
+                'Delivery Cost': float(instance.delivery_cost),
+                'Delivery Date': instance.delivery_date.isoformat() if instance.delivery_date else None,
+            }
+            airtable_service.create_record('Logistics', data)
+            print(f"✓ Logistics {instance.tracking_number} synced to Airtable")
+        except Exception as e:
+            print(f"✗ Error syncing logistics: {e}")
+
+@receiver(post_save, sender=Expense)
+def sync_expense_to_airtable(sender, instance, created, **kwargs):
+    if created and not hasattr(instance, '_skip_sync'):
+        try:
+            existing_records = airtable_service.get_records('Expenses', formula=f"{{Expense Number}} = '{instance.expense_number}'")
+            if existing_records:
+                print(f"⚠ Expense {instance.expense_number} already exists in Airtable, skipping sync")
+                return
+                
+            data = {
+                'Expense Number': instance.expense_number,
+                'Type': instance.expense_type,
+                'Description': instance.description,
+                'Amount': float(instance.amount),
+                'Date': instance.expense_date.isoformat() if instance.expense_date else None,
+                'Receipt Number': instance.receipt_number or '',
+                'Notes': instance.notes or '',
+            }
+            airtable_service.create_record('Expenses', data)
+            print(f"✓ Expense {instance.expense_number} synced to Airtable")
+        except Exception as e:
+            print(f"✗ Error syncing expense: {e}")
