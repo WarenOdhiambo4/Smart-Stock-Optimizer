@@ -2,6 +2,7 @@ from django.urls import path, include
 from . import views
 from . import views_logistics
 from . import webhook_views
+from . import views_sync_test
 # from . import analytics_views
 
 urlpatterns = [
@@ -94,7 +95,7 @@ urlpatterns = [
     path('webhook/', webhook_views.webhook_receiver, name='webhook_receiver'),
     
     # Manual sync test
-    path('manual-sync/', 'core.views_sync_test.manual_sync', name='manual_sync'),
+    path('manual-sync/', views_sync_test.manual_sync, name='manual_sync'),
     
     # Enterprise Price Management
     path('pricing/', include('core.urls_pricing')),
