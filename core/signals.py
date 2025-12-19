@@ -150,7 +150,7 @@ def sync_trip_to_airtable(sender, instance, created, **kwargs):
                 'Fuel Cost': float(instance.fuel_cost),
                 'Customer Name': instance.customer_name or '',
                 'Customer Phone': instance.customer_phone or '',
-                'Scheduled Date': instance.scheduled_date.isoformat() if instance.scheduled_date else None,
+                'Scheduled Date': instance.scheduled_date.date().isoformat() if instance.scheduled_date else None,
             }
             airtable_service.create_record('Trips', data)
             print(f"✓ Trip {instance.trip_number} synced")
@@ -169,7 +169,7 @@ def sync_logistics_to_airtable(sender, instance, created, **kwargs):
                 'Tracking Number': instance.tracking_number,
                 'Customer Name': instance.customer_name,
                 'Customer Phone': instance.customer_phone,
-                'Address': instance.to_address,
+                'To Address': instance.to_address,
                 'Status': instance.status,
                 'Vehicle Number': instance.vehicle.registration_number if instance.vehicle else instance.vehicle_number or '',
                 'Driver Name': instance.driver.full_name if instance.driver else instance.driver_name or '',
