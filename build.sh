@@ -7,9 +7,7 @@ pip install -r requirements.txt
 
 python manage.py collectstatic --noinput
 
-# Fix migration conflicts first
-python manage.py fix_migrations || echo "Fix migrations failed, continuing..."
-python manage.py migrate --fake-initial || echo "Fake initial failed, trying normal migrate..."
-python manage.py migrate
+# Mark all migrations as applied since tables already exist
+python manage.py migrate --fake
 
 python manage.py create_admin || echo "Create admin failed, continuing..."
