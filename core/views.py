@@ -637,28 +637,24 @@ def sale_create(request):
             })
         
         # Confirmed submission
-        try:
-            branch_id = request.POST.get('branch')
-            sale_date = request.POST.get('sale_date')
-            sale = Sale.objects.create(
-                sale_number=f"SALE-{uuid.uuid4().hex[:8].upper()}",
-                branch_id=branch_id,
-                customer_name=request.POST.get('customer_name', ''),
-                customer_phone=request.POST.get('customer_phone', ''),
-                payment_method=request.POST.get('payment_method', 'Cash'),
-                notes=request.POST.get('notes', ''),
-            )
-            
-            # Set created_at to the provided date
-            if sale_date:
-                from datetime import datetime
-                from django.utils import timezone
-                sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
-                sale.created_at = timezone.make_aware(sale_datetime)
-                sale.save()
-        except Exception as e:
-            messages.error(request, f'Error creating sale: {str(e)}')
-            return redirect('sale_create')
+        branch_id = request.POST.get('branch')
+        sale_date = request.POST.get('sale_date')
+        sale = Sale.objects.create(
+            sale_number=f"SALE-{uuid.uuid4().hex[:8].upper()}",
+            branch_id=branch_id,
+            customer_name=request.POST.get('customer_name', ''),
+            customer_phone=request.POST.get('customer_phone', ''),
+            payment_method=request.POST.get('payment_method', 'Cash'),
+            notes=request.POST.get('notes', ''),
+        )
+        
+        # Set created_at to the provided date
+        if sale_date:
+            from datetime import datetime
+            from django.utils import timezone
+            sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
+            sale.created_at = timezone.make_aware(sale_datetime)
+            sale.save()
         
         stock_ids = request.POST.getlist('stock_id')
         quantities = request.POST.getlist('quantity')
