@@ -652,13 +652,9 @@ def sale_create(request):
         if sale_date:
             from datetime import datetime
             from django.utils import timezone
-            try:
-                sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
-                sale.created_at = timezone.make_aware(sale_datetime)
-                sale.save()
-            except Exception as e:
-                print(f"Date error: {e}")
-                pass
+            sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
+            sale.created_at = timezone.make_aware(sale_datetime)
+            sale.save()
         
         stock_ids = request.POST.getlist('stock_id')
         quantities = request.POST.getlist('quantity')
