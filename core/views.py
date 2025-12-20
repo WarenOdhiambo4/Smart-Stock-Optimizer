@@ -577,6 +577,7 @@ def order_complete(request, pk):
 @login_required
 @role_required('ADMIN', 'BOSS', 'MANAGER', 'FINANCE', 'SALES')
 def sale_list(request):
+    from django.utils import timezone
     search = request.GET.get('search', '')
     branch_id = request.GET.get('branch', '')
     date_from = request.GET.get('date_from', '')
@@ -599,9 +600,21 @@ def sale_list(request):
         )
     
     if date_from:
-        sales = sales.filter(created_at__gte=date_from)
+        try:
+            from datetime import datetime
+            date_from_dt = datetime.strptime(date_from, '%Y-%m-%d')
+            date_from_aware = timezone.make_aware(date_from_dt)
+            sales = sales.filter(created_at__gte=date_from_aware)
+        except:
+            pass
     if date_to:
-        sales = sales.filter(created_at__lte=date_to + ' 23:59:59')
+        try:
+            from datetime import datetime
+            date_to_dt = datetime.strptime(date_to + ' 23:59:59', '%Y-%m-%d %H:%M:%S')
+            date_to_aware = timezone.make_aware(date_to_dt)
+            sales = sales.filter(created_at__lte=date_to_aware)
+        except:
+            pass
     
     # Pagination - 5 sales per page
     paginator = Paginator(sales, 5)
