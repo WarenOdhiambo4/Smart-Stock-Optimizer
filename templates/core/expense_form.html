@@ -84,9 +84,6 @@
 
 {% block scripts %}
 <script>
-    // Set today's date as default for new expenses
-    {% if not expense %}
-    document.getElementById('expense_date').valueAsDate = new Date();
-    {% endif %}
+    // No auto-date setting - user will input manually
 </script>
 {% endblock %}

@@ -22,6 +22,10 @@
                     </select>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label">Sale Date *</label>
+                    <input type="date" name="sale_date" class="form-control" required>
+                </div>
+                <div class="col-md-3">
                     <label class="form-label">Customer Name</label>
                     <input type="text" name="customer_name" class="form-control">
                 </div>
@@ -198,7 +202,7 @@ function showConfirmation() {
             const productName = stockSelect.options[stockSelect.selectedIndex].text;
             const subtotal = (qty * price).toFixed(2);
             totalAmount += parseFloat(subtotal);
-            itemsHtml += `<li>${productName} - Qty: ${qty} × $${price} = $${subtotal}</li>`;
+            itemsHtml += `<li>${productName} - Qty: ${qty} × KES ${price} = KES ${subtotal}</li>`;
         }
     });
     itemsHtml += '</ul>';
@@ -207,7 +211,7 @@ function showConfirmation() {
     let expenseHtml = '';
     if (expenseAmount && parseFloat(expenseAmount) > 0) {
         const expenseDesc = form.querySelector('[name="expense_description"]').value || 'Sale related expense';
-        expenseHtml = `<h6 class="mb-2">Expense:</h6><p class="text-danger">$${parseFloat(expenseAmount).toFixed(2)} - ${expenseDesc}</p>`;
+        expenseHtml = `<h6 class="mb-2">Expense:</h6><p class="text-danger">KES ${parseFloat(expenseAmount).toFixed(2)} - ${expenseDesc}</p>`;
     }
     
     const confirmHtml = `
@@ -217,7 +221,7 @@ function showConfirmation() {
             <strong>Payment Method:</strong> ${paymentMethod}
         </div>
         ${itemsHtml}
-        <h5 class="text-primary">Total Sale Amount: $${totalAmount.toFixed(2)}</h5>
+        <h5 class="text-primary">Total Sale Amount: KES ${totalAmount.toFixed(2)}</h5>
         ${expenseHtml}
     `;
     

@@ -31,6 +31,10 @@
                     </select>
                 </div>
                 <div class="col-md-6">
+                    <label class="form-label">Date Added *</label>
+                    <input type="date" name="date_added" class="form-control" required>
+                </div>
+                <div class="col-md-6">
                     <label class="form-label">Quantity *</label>
                     <input type="number" name="quantity" class="form-control" value="0" required>
                 </div>
@@ -46,4 +50,10 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// No auto-date setting - user will input manually
+</script>
 {% endblock %}
