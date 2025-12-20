@@ -352,6 +352,7 @@ def stock_create(request):
         product_id = request.POST.get('product')
         quantity = int(request.POST.get('quantity', 0))
         min_quantity = int(request.POST.get('min_quantity', 10))
+        date_added = request.POST.get('date_added')
         
         stock, created = Stock.objects.get_or_create(
             branch_id=branch_id,
@@ -361,6 +362,14 @@ def stock_create(request):
         if not created:
             stock.quantity += quantity
             stock.min_quantity = min_quantity
+            stock.save()
+        
+        # Set created_at to the provided date
+        if date_added:
+            from datetime import datetime
+            from django.utils import timezone
+            stock_datetime = datetime.strptime(date_added, '%Y-%m-%d')
+            stock.created_at = timezone.make_aware(stock_datetime)
             stock.save()
         
         messages.success(request, 'Stock updated successfully!')
@@ -495,12 +504,21 @@ def order_list(request):
 def order_create(request):
     branches = Branch.objects.filter(is_active=True)
     if request.method == 'POST':
+        order_date = request.POST.get('order_date')
         order = Order.objects.create(
             order_number=f"ORD-{uuid.uuid4().hex[:8].upper()}",
             branch_id=request.POST.get('branch'),
             supplier=request.POST.get('supplier', ''),
             notes=request.POST.get('notes', ''),
         )
+        
+        # Set created_at to the provided date
+        if order_date:
+            from datetime import datetime
+            from django.utils import timezone
+            order_datetime = datetime.strptime(order_date, '%Y-%m-%d')
+            order.created_at = timezone.make_aware(order_datetime)
+            order.save()
         
         product_names = request.POST.getlist('product_name')
         product_skus = request.POST.getlist('product_sku')
@@ -620,6 +638,7 @@ def sale_create(request):
         
         # Confirmed submission
         branch_id = request.POST.get('branch')
+        sale_date = request.POST.get('sale_date')
         sale = Sale.objects.create(
             sale_number=f"SALE-{uuid.uuid4().hex[:8].upper()}",
             branch_id=branch_id,
@@ -628,6 +647,14 @@ def sale_create(request):
             payment_method=request.POST.get('payment_method', 'Cash'),
             notes=request.POST.get('notes', ''),
         )
+        
+        # Set created_at to the provided date
+        if sale_date:
+            from datetime import datetime
+            from django.utils import timezone
+            sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
+            sale.created_at = timezone.make_aware(sale_datetime)
+            sale.save()
         
         stock_ids = request.POST.getlist('stock_id')
         quantities = request.POST.getlist('quantity')
