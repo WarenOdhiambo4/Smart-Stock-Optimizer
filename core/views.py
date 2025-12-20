@@ -367,9 +367,8 @@ def stock_create(request):
         # Set created_at to the provided date
         if date_added:
             from datetime import datetime
-            from django.utils import timezone
             stock_datetime = datetime.strptime(date_added, '%Y-%m-%d')
-            stock.created_at = timezone.make_aware(stock_datetime)
+            stock.created_at = stock_datetime
             stock.save()
         
         messages.success(request, 'Stock updated successfully!')
@@ -515,9 +514,8 @@ def order_create(request):
         # Set created_at to the provided date
         if order_date:
             from datetime import datetime
-            from django.utils import timezone
             order_datetime = datetime.strptime(order_date, '%Y-%m-%d')
-            order.created_at = timezone.make_aware(order_datetime)
+            order.created_at = order_datetime
             order.save()
         
         product_names = request.POST.getlist('product_name')
@@ -651,9 +649,8 @@ def sale_create(request):
         # Set created_at to the provided date
         if sale_date:
             from datetime import datetime
-            from django.utils import timezone
             sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
-            sale.created_at = timezone.make_aware(sale_datetime)
+            sale.created_at = sale_datetime
             sale.save()
         
         stock_ids = request.POST.getlist('stock_id')
