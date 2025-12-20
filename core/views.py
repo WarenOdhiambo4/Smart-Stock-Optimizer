@@ -626,71 +626,75 @@ def sale_create(request):
     branches = Branch.objects.filter(is_active=True)
     
     if request.method == 'POST':
-        # Check if confirmation is required
-        if request.POST.get('confirm') != 'true':
-            # First submission - show confirmation
-            return render(request, 'core/sale_form.html', {
-                'branches': branches,
-                'action': 'Create',
-                'confirm_data': request.POST,
-                'show_confirmation': True
-            })
-        
-        # Confirmed submission
-        branch_id = request.POST.get('branch')
-        sale_date = request.POST.get('sale_date')
-        sale = Sale.objects.create(
-            sale_number=f"SALE-{uuid.uuid4().hex[:8].upper()}",
-            branch_id=branch_id,
-            customer_name=request.POST.get('customer_name', ''),
-            customer_phone=request.POST.get('customer_phone', ''),
-            payment_method=request.POST.get('payment_method', 'Cash'),
-            notes=request.POST.get('notes', ''),
-        )
-        
-        # Set created_at to the provided date
-        if sale_date:
-            from datetime import datetime
-            from django.utils import timezone
-            sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
-            sale.created_at = timezone.make_aware(sale_datetime)
-            sale.save()
-        
-        stock_ids = request.POST.getlist('stock_id')
-        quantities = request.POST.getlist('quantity')
-        unit_prices = request.POST.getlist('unit_price')
-        
-        for i in range(len(stock_ids)):
-            if stock_ids[i]:
-                stock = get_object_or_404(Stock, pk=stock_ids[i])
-                qty = int(quantities[i]) if i < len(quantities) else 1
-                price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
-                
-                SaleItem.objects.create(
-                    sale=sale,
-                    stock=stock,
-                    quantity=qty,
-                    unit_price=price,
-                )
-        
-        sale.calculate_total()
-        
-        # Add expense if provided
-        expense_amount = request.POST.get('expense_amount')
-        if expense_amount and Decimal(expense_amount) > 0:
-            Expense.objects.create(
-                expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
+        try:
+            # Check if confirmation is required
+            if request.POST.get('confirm') != 'true':
+                # First submission - show confirmation
+                return render(request, 'core/sale_form.html', {
+                    'branches': branches,
+                    'action': 'Create',
+                    'confirm_data': request.POST,
+                    'show_confirmation': True
+                })
+            
+            # Confirmed submission
+            branch_id = request.POST.get('branch')
+            sale_date = request.POST.get('sale_date')
+            sale = Sale.objects.create(
+                sale_number=f"SALE-{uuid.uuid4().hex[:8].upper()}",
                 branch_id=branch_id,
-                sale=sale,
-                expense_type='SALE_RELATED',
-                description=request.POST.get('expense_description', 'Sale related expense'),
-                amount=Decimal(expense_amount),
-                expense_date=timezone.now().date(),
-                notes=request.POST.get('expense_notes', ''),
+                customer_name=request.POST.get('customer_name', ''),
+                customer_phone=request.POST.get('customer_phone', ''),
+                payment_method=request.POST.get('payment_method', 'Cash'),
+                notes=request.POST.get('notes', ''),
             )
-        
-        messages.success(request, f'Sale {sale.sale_number} created successfully!')
-        return redirect('sale_list')
+            
+            # Set created_at to the provided date
+            if sale_date:
+                from datetime import datetime
+                from django.utils import timezone
+                sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
+                sale.created_at = timezone.make_aware(sale_datetime)
+                sale.save()
+            
+            stock_ids = request.POST.getlist('stock_id')
+            quantities = request.POST.getlist('quantity')
+            unit_prices = request.POST.getlist('unit_price')
+            
+            for i in range(len(stock_ids)):
+                if stock_ids[i]:
+                    stock = get_object_or_404(Stock, pk=stock_ids[i])
+                    qty = int(quantities[i]) if i < len(quantities) else 1
+                    price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
+                    
+                    SaleItem.objects.create(
+                        sale=sale,
+                        stock=stock,
+                        quantity=qty,
+                        unit_price=price,
+                    )
+            
+            sale.calculate_total()
+            
+            # Add expense if provided
+            expense_amount = request.POST.get('expense_amount')
+            if expense_amount and Decimal(expense_amount) > 0:
+                Expense.objects.create(
+                    expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
+                    branch_id=branch_id,
+                    sale=sale,
+                    expense_type='SALE_RELATED',
+                    description=request.POST.get('expense_description', 'Sale related expense'),
+                    amount=Decimal(expense_amount),
+                    expense_date=timezone.now().date(),
+                    notes=request.POST.get('expense_notes', ''),
+                )
+            
+            messages.success(request, f'Sale {sale.sale_number} created successfully!')
+            return redirect('sale_list')
+        except Exception as e:
+            messages.error(request, f'Error creating sale: {str(e)}')
+            return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
     
     return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
 
