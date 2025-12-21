@@ -9,32 +9,7 @@
         <div class="col-12">
             <h4>Logistics Analytics Dashboard <span class="badge badge-success" id="liveIndicator">LIVE</span></h4>
             <div class="row">
-                <div class="col-md-2">
-                    <select id="monthFilter" class="form-control">
-                        <option value="">All Months</option>
-                        <option value="1">January</option>
-                        <option value="2">February</option>
-                        <option value="3">March</option>
-                        <option value="4">April</option>
-                        <option value="5">May</option>
-                        <option value="6">June</option>
-                        <option value="7">July</option>
-                        <option value="8">August</option>
-                        <option value="9">September</option>
-                        <option value="10">October</option>
-                        <option value="11">November</option>
-                        <option value="12">December</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select id="yearFilter" class="form-control">
-                        <option value="">All Years</option>
-                        <option value="2025">2025</option>
-                        <option value="2024">2024</option>
-                        <option value="2023">2023</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <select id="vehicleFilter" class="form-control">
                         <option value="">All Vehicles</option>
                         {% for vehicle in vehicles %}
@@ -42,13 +17,13 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <input type="date" id="dateFromFilter" class="form-control" placeholder="From">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <input type="date" id="dateToFilter" class="form-control" placeholder="To">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <button id="analyzeBtn" class="btn btn-primary">Analyze Performance</button>
                 </div>
             </div>
@@ -187,8 +162,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const itemsPerPage = 5;
     
     analyzeBtn.addEventListener('click', function() {
-        const month = document.getElementById('monthFilter').value;
-        const year = document.getElementById('yearFilter').value;
         const vehicle = document.getElementById('vehicleFilter').value;
         const dateFrom = document.getElementById('dateFromFilter').value;
         const dateTo = document.getElementById('dateToFilter').value;
@@ -197,8 +170,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('liveIndicator').innerHTML = 'UPDATING...';
         
         const params = new URLSearchParams();
-        if (month) params.append('month', month);
-        if (year) params.append('year', year);
         if (vehicle) params.append('vehicle', vehicle);
         if (dateFrom) params.append('date_from', dateFrom);
         if (dateTo) params.append('date_to', dateTo);

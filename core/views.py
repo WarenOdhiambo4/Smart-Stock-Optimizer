@@ -68,6 +68,8 @@ def logout_view(request):
 
 @login_required
 def dashboard(request):
+    from .delivery_manager import DeliveryChargesManager
+    
     user_profile = request.user.profile if hasattr(request.user, 'profile') else None
     
     # Filter data based on user role
@@ -98,11 +100,15 @@ def dashboard(request):
     total_sales = Sale.objects.filter(sales_filter).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
     monthly_sales = Sale.objects.filter(sales_filter, created_at__gte=month_start).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
     
-    total_expenses = Expense.objects.filter(expense_filter).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    monthly_expenses = Expense.objects.filter(expense_filter, expense_date__gte=month_start).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_expenses = Expense.objects.filter(expense_filter).exclude(expense_type='DELIVERY').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    monthly_expenses = Expense.objects.filter(expense_filter, expense_date__gte=month_start).exclude(expense_type='DELIVERY').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
-    total_profit = total_sales - total_expenses
-    monthly_profit = monthly_sales - monthly_expenses
+    # Calculate delivery expenses separately (business-wide)
+    delivery_expenses = DeliveryChargesManager.get_total_delivery_expenses()
+    monthly_delivery_expenses = DeliveryChargesManager.get_total_delivery_expenses(start_date=month_start)
+    
+    total_profit = total_sales - total_expenses - delivery_expenses
+    monthly_profit = monthly_sales - monthly_expenses - monthly_delivery_expenses
     
     recent_sales = Sale.objects.filter(sales_filter).select_related('branch')[:5]
     recent_orders = Order.objects.select_related('branch')[:5]
@@ -523,42 +529,69 @@ def order_list(request):
 
 
 def order_create(request):
+    from .delivery_manager import DeliveryChargesManager
+    
     branches = Branch.objects.filter(is_active=True)
     if request.method == 'POST':
-        order_date = request.POST.get('order_date')
-        order = Order.objects.create(
-            order_number=f"ORD-{uuid.uuid4().hex[:8].upper()}",
-            branch_id=request.POST.get('branch'),
-            supplier=request.POST.get('supplier', ''),
-            notes=request.POST.get('notes', ''),
-        )
-        
-        # Set created_at to the provided date
-        if order_date:
-            from datetime import datetime
-            from django.utils import timezone
-            order_datetime = datetime.strptime(order_date, '%Y-%m-%d')
-            order.created_at = timezone.make_aware(order_datetime)
-            order.save()
-        
-        product_names = request.POST.getlist('product_name')
-        product_skus = request.POST.getlist('product_sku')
-        quantities = request.POST.getlist('quantity')
-        unit_prices = request.POST.getlist('unit_price')
-        
-        for i in range(len(product_names)):
-            if product_names[i]:
-                OrderItem.objects.create(
-                    order=order,
-                    product_name=product_names[i],
-                    product_sku=product_skus[i] if i < len(product_skus) else '',
-                    quantity_ordered=int(quantities[i]) if i < len(quantities) else 1,
-                    unit_price=Decimal(unit_prices[i]) if i < len(unit_prices) else Decimal('0'),
-                )
-        
-        order.calculate_total()
-        messages.success(request, f'Order {order.order_number} created!')
-        return redirect('order_list')
+        try:
+            order_date = request.POST.get('order_date')
+            delivery_charges_str = request.POST.get('delivery_charges', '0')
+            delivery_charges = Decimal(delivery_charges_str) if delivery_charges_str else Decimal('0')
+            
+            order = Order.objects.create(
+                order_number=f"ORD-{uuid.uuid4().hex[:8].upper()}",
+                branch_id=request.POST.get('branch'),
+                supplier=request.POST.get('supplier', ''),
+                notes=request.POST.get('notes', ''),
+            )
+            
+            # Set created_at to the provided date
+            if order_date:
+                try:
+                    from datetime import datetime
+                    from django.utils import timezone
+                    order_datetime = datetime.strptime(order_date, '%Y-%m-%d')
+                    order.created_at = timezone.make_aware(order_datetime)
+                    order.save()
+                except Exception as date_error:
+                    print(f"Date parsing error: {date_error}")
+                    pass  # Use default created_at
+            
+            # Set delivery charges using manager
+            DeliveryChargesManager.set_delivery_charges(
+                order, 
+                delivery_charges, 
+                created_by=getattr(request.user, 'employee', None)
+            )
+            
+            product_names = request.POST.getlist('product_name')
+            product_skus = request.POST.getlist('product_sku')
+            quantities = request.POST.getlist('quantity')
+            unit_prices = request.POST.getlist('unit_price')
+            
+            for i in range(len(product_names)):
+                if product_names[i]:
+                    try:
+                        quantity = int(quantities[i]) if i < len(quantities) and quantities[i] else 1
+                        unit_price = Decimal(unit_prices[i]) if i < len(unit_prices) and unit_prices[i] else Decimal('0')
+                    except (ValueError, IndexError):
+                        quantity = 1
+                        unit_price = Decimal('0')
+                    
+                    OrderItem.objects.create(
+                        order=order,
+                        product_name=product_names[i],
+                        product_sku=product_skus[i] if i < len(product_skus) else '',
+                        quantity_ordered=quantity,
+                        unit_price=unit_price,
+                    )
+            
+            order.calculate_total()
+            messages.success(request, f'Order {order.order_number} created!')
+            return redirect('order_list')
+        except Exception as e:
+            messages.error(request, f'Error creating order: {str(e)}')
+            return render(request, 'core/order_form.html', {'branches': branches, 'action': 'Create'})
     
     return render(request, 'core/order_form.html', {'branches': branches, 'action': 'Create'})
 
@@ -971,6 +1004,8 @@ def logistics_update_status(request, pk):
 @login_required
 @role_required('ADMIN', 'BOSS', 'FINANCE', 'MANAGER')
 def financial_reports(request):
+    from .delivery_manager import DeliveryChargesManager
+    
     # Get date range from request or default to current month
     year = int(request.GET.get('year', timezone.now().year))
     month = int(request.GET.get('month', timezone.now().month))
@@ -1002,11 +1037,12 @@ def financial_reports(request):
             created_at__lt=end_date
         ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
         
+        # Branch-specific expenses (excluding delivery charges)
         expenses = Expense.objects.filter(
             branch=branch,
             expense_date__gte=start_date,
             expense_date__lt=end_date
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        ).exclude(expense_type='DELIVERY').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         
         profit = sales - expenses
         
@@ -1021,11 +1057,19 @@ def financial_reports(request):
         total_expenses += expenses
         total_profit += profit
     
+    # Calculate total delivery expenses (business-wide)
+    delivery_expenses = DeliveryChargesManager.get_total_delivery_expenses(start_date, end_date)
+    
+    # Adjust business net profit by subtracting delivery expenses
+    business_net_profit = total_profit - delivery_expenses
+    
     context = {
         'branch_reports': branch_reports,
         'total_sales': total_sales,
         'total_expenses': total_expenses,
         'total_profit': total_profit,
+        'delivery_expenses': delivery_expenses,
+        'business_net_profit': business_net_profit,
         'year': year,
         'month': month,
         'month_name': datetime(year, month, 1).strftime('%B'),

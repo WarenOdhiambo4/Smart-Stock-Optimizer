@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from .models import (
     Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory,
     Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance,
-    OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection, BusinessNote
+    OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection, BusinessNote, InventoryLayer
 )
 
 
@@ -522,3 +522,24 @@ class BusinessNoteAdmin(admin.ModelAdmin):
     def content_preview(self, obj):
         return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
     content_preview.short_description = 'Content Preview'
+
+
+@admin.register(InventoryLayer)
+class InventoryLayerAdmin(admin.ModelAdmin):
+    list_display = ['stock', 'quantity', 'remaining_quantity', 'unit_cost', 'source_type', 'source_id', 'created_at']
+    list_filter = ['source_type', 'stock__branch', 'created_at']
+    search_fields = ['stock__product__name', 'stock__branch__name']
+    readonly_fields = ['created_at']
+    ordering = ['stock', 'created_at']
+    
+    fieldsets = (
+        ('Inventory Information', {
+            'fields': ('stock', 'quantity', 'remaining_quantity', 'unit_cost')
+        }),
+        ('Source Tracking', {
+            'fields': ('source_type', 'source_id')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',)
+        }),
+    )

@@ -56,9 +56,19 @@
                         </div>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Notes</label>
-                    <textarea name="notes" class="form-control" rows="3">{{ order.notes }}</textarea>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Delivery Charges (KES)</label>
+                            <input type="number" name="delivery_charges" step="0.01" class="form-control" value="{{ delivery_charges }}" min="0">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2">{{ order.notes }}</textarea>
+                        </div>
+                    </div>
                 </div>
                 <div class="d-flex justify-content-between">
                     <button type="submit" class="btn btn-primary">Update Order</button>

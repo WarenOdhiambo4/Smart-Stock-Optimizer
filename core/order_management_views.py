@@ -13,6 +13,8 @@ from .views import role_required
 @role_required('ADMIN', 'BOSS', 'MANAGER', 'SALES')
 def order_edit(request, pk):
     """Edit order details including items, branch, and supplier"""
+    from .delivery_manager import DeliveryChargesManager
+    
     try:
         order = get_object_or_404(Order, pk=pk)
         branches = Branch.objects.filter(is_active=True)
@@ -26,6 +28,14 @@ def order_edit(request, pk):
                 
                 order.supplier = request.POST.get('supplier', '')
                 order.notes = request.POST.get('notes', '')
+                
+                # Handle delivery charges update
+                delivery_charges = Decimal(request.POST.get('delivery_charges', '0'))
+                DeliveryChargesManager.set_delivery_charges(
+                    order, 
+                    delivery_charges, 
+                    created_by=getattr(request.user, 'employee', None)
+                )
                 
                 # Change branch if different
                 if old_branch and old_branch.id != int(new_branch_id):
@@ -47,7 +57,8 @@ def order_edit(request, pk):
         return render(request, 'core/order_edit.html', {
             'order': order,
             'branches': branches,
-            'action': 'Edit'
+            'action': 'Edit',
+            'delivery_charges': DeliveryChargesManager.get_delivery_charges(order)
         })
     except Exception as e:
         messages.error(request, f'Error editing order: {str(e)}')

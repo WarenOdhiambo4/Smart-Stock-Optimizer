@@ -3,88 +3,108 @@
 {% block title %}Dashboard - SaasApp{% endblock %}
 
 {% block content %}
+<style>
+    body { font-family: 'Nunito', sans-serif; font-size: 14px; }
+    .page-header { background: #10b981; color: white; padding: 1rem; margin-bottom: 1rem; }
+    .page-title { font-size: 14px; font-weight: 600; margin: 0; }
+    .quick-actions .btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 14px; }
+    .stat-box { background: #f9f9f9; padding: 0.8rem; margin-bottom: 0.8rem; border-left: 3px solid #10b981; }
+    .stat-value { font-size: 14px; font-weight: 700; color: #059669; }
+    .stat-label { font-size: 12px; color: #6b7280; margin-top: 0.2rem; }
+    .section { background: #f9f9f9; padding: 1rem; margin-bottom: 1rem; }
+    .section-title { font-size: 14px; font-weight: 600; color: #059669; margin-bottom: 1rem; }
+    .table { font-size: 14px; }
+    .table th { background: #f0fdf4; color: #059669; font-weight: 600; font-size: 12px; }
+    .badge { font-size: 11px; }
+    .badge-warning { background: #fbbf24; color: #78350f; }
+    .badge-success { background: #10b981; color: white; }
+    .badge-info { background: #06b6d4; color: white; }
+    .badge-danger { background: #ef4444; color: white; }
+    .low-stock { color: #ef4444; font-weight: 600; }
+</style>
+
 <div class="page-header">
     <h1 class="page-title">Dashboard</h1>
-    <div class="quick-actions">
-        <a href="{% url 'sale_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>New Sale</a>
-        <a href="{% url 'order_create' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus me-1"></i>New Order</a>
+    <div class="quick-actions mt-2">
+        <a href="{% url 'sale_create' %}" class="btn btn-sm me-2">New Sale</a>
+        <a href="{% url 'order_create' %}" class="btn btn-sm">New Order</a>
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-2 mb-3">
     <div class="col-6 col-md-3">
-        <div class="card stat-card" style="border-left: 4px solid var(--success);">
-            <div class="stat-value" style="color: var(--success);">${{ monthly_sales|floatformat:2 }}</div>
-            <div class="stat-label"><i class="bi bi-graph-up me-1"></i>Monthly Sales</div>
+        <div class="stat-box">
+            <div class="stat-value">KES {{ monthly_sales|floatformat:2 }}</div>
+            <div class="stat-label">Monthly Sales</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card" style="border-left: 4px solid var(--danger);">
-            <div class="stat-value" style="color: var(--danger);">${{ monthly_expenses|floatformat:2 }}</div>
-            <div class="stat-label"><i class="bi bi-cash-stack me-1"></i>Monthly Expenses</div>
+        <div class="stat-box">
+            <div class="stat-value">KES {{ monthly_expenses|floatformat:2 }}</div>
+            <div class="stat-label">Monthly Expenses</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card" style="border-left: 4px solid var(--primary);">
-            <div class="stat-value" style="color: var(--primary);">${{ monthly_profit|floatformat:2 }}</div>
-            <div class="stat-label"><i class="bi bi-wallet2 me-1"></i>Monthly Profit</div>
+        <div class="stat-box">
+            <div class="stat-value">KES {{ monthly_profit|floatformat:2 }}</div>
+            <div class="stat-label">Monthly Profit</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card" style="border-left: 4px solid var(--secondary);">
-            <div class="stat-value">${{ total_sales|floatformat:2 }}</div>
-            <div class="stat-label"><i class="bi bi-currency-dollar me-1"></i>Total Sales</div>
+        <div class="stat-box">
+            <div class="stat-value">KES {{ total_sales|floatformat:2 }}</div>
+            <div class="stat-label">Total Sales</div>
         </div>
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-2 mb-3">
     <div class="col-6 col-md-3">
-        <div class="card stat-card">
+        <div class="stat-box">
             <div class="stat-value">{{ total_branches }}</div>
             <div class="stat-label">Branches</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card">
+        <div class="stat-box">
             <div class="stat-value">{{ total_products }}</div>
             <div class="stat-label">Products</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card">
+        <div class="stat-box">
             <div class="stat-value">{{ pending_logistics }}</div>
             <div class="stat-label">Pending Logistics</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card">
+        <div class="stat-box">
             <div class="stat-value">{{ low_stock_items|length }}</div>
             <div class="stat-label">Low Stock Items</div>
         </div>
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-2 mb-3">
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="stat-box">
+            <div class="d-flex justify-content-between">
                 <span>Pending Orders</span>
                 <span class="badge badge-warning">{{ pending_orders }}</span>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="stat-box">
+            <div class="d-flex justify-content-between">
                 <span>Pending Transfers</span>
                 <span class="badge badge-info">{{ pending_transfers }}</span>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="stat-box">
+            <div class="d-flex justify-content-between">
                 <span>Low Stock Items</span>
                 <span class="badge badge-danger">{{ low_stock_items|length }}</span>
             </div>
@@ -92,106 +112,96 @@
     </div>
 </div>
 
-<div class="row g-3">
+<div class="row g-2">
     <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">Recent Sales</div>
-            <div class="card-body p-0">
-                {% if recent_sales %}
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Sale #</th>
-                            <th>Branch</th>
-                            <th>Amount</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for sale in recent_sales %}
-                        <tr>
-                            <td><a href="{% url 'sale_detail' sale.pk %}">{{ sale.sale_number }}</a></td>
-                            <td>{{ sale.branch.name }}</td>
-                            <td>${{ sale.total_amount }}</td>
-                            <td class="text-muted">{{ sale.created_at|date:"M d, H:i" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <div class="empty-state">
-                    <p>No sales yet</p>
-                </div>
-                {% endif %}
-            </div>
+        <div class="section">
+            <h6 class="section-title">Recent Sales</h6>
+            {% if recent_sales %}
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Sale #</th>
+                        <th>Branch</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in recent_sales %}
+                    <tr>
+                        <td><a href="{% url 'sale_detail' sale.pk %}">{{ sale.sale_number }}</a></td>
+                        <td>{{ sale.branch.name }}</td>
+                        <td>KES {{ sale.total_amount }}</td>
+                        <td>{{ sale.created_at|date:"M d, H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No sales yet</p>
+            {% endif %}
         </div>
     </div>
     <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">Recent Orders</div>
-            <div class="card-body p-0">
-                {% if recent_orders %}
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Order #</th>
-                            <th>Branch</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in recent_orders %}
-                        <tr>
-                            <td><a href="{% url 'order_detail' order.pk %}">{{ order.order_number }}</a></td>
-                            <td>{{ order.branch.name }}</td>
-                            <td>
-                                <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% elif order.status == 'PARTIALLY_COMPLETED' %}badge-secondary{% else %}badge-info{% endif %}">
-                                    {{ order.status }}
-                                </span>
-                            </td>
-                            <td class="text-muted">{{ order.created_at|date:"M d, H:i" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <div class="empty-state">
-                    <p>No orders yet</p>
-                </div>
-                {% endif %}
-            </div>
+        <div class="section">
+            <h6 class="section-title">Recent Orders</h6>
+            {% if recent_orders %}
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Branch</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td><a href="{% url 'order_detail' order.pk %}">{{ order.order_number }}</a></td>
+                        <td>{{ order.branch.name }}</td>
+                        <td>
+                            <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% else %}badge-info{% endif %}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                        <td>{{ order.created_at|date:"M d, H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No orders yet</p>
+            {% endif %}
         </div>
     </div>
 </div>
 
 {% if low_stock_items %}
-<div class="row g-3 mt-2">
+<div class="row g-2 mt-2">
     <div class="col-12">
-        <div class="card">
-            <div class="card-header">Low Stock Alerts</div>
-            <div class="card-body p-0">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Branch</th>
-                            <th>Current Qty</th>
-                            <th>Min Qty</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stock in low_stock_items %}
-                        <tr>
-                            <td>{{ stock.product.name }}</td>
-                            <td>{{ stock.branch.name }}</td>
-                            <td class="low-stock">{{ stock.quantity }}</td>
-                            <td>{{ stock.min_quantity }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="section">
+            <h6 class="section-title">Low Stock Alerts</h6>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Branch</th>
+                        <th>Current Qty</th>
+                        <th>Min Qty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in low_stock_items %}
+                    <tr>
+                        <td>{{ stock.product.name }}</td>
+                        <td>{{ stock.branch.name }}</td>
+                        <td class="low-stock">{{ stock.quantity }}</td>
+                        <td>{{ stock.min_quantity }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

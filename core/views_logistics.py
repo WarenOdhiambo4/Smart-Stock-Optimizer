@@ -17,47 +17,41 @@ def logistics_dashboard(request):
 @login_required
 def logistics_analysis_api(request):
     """API endpoint for logistics analysis data"""
-    month = request.GET.get('month')
-    year = request.GET.get('year')
-    vehicle_id = request.GET.get('vehicle')
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    
-    analytics = LogisticsAnalytics()
-    
-    # Get live trip analysis with filters
-    trips = analytics.get_live_trip_analysis(
-        month=month, 
-        year=year, 
-        vehicle_id=vehicle_id,
-        date_from=date_from,
-        date_to=date_to
-    )
-    
-    # Get driver KPI analysis with filters
-    drivers = analytics.get_driver_kpi_analysis(
-        month=month, 
-        year=year,
-        vehicle_id=vehicle_id,
-        date_from=date_from,
-        date_to=date_to
-    )
-    
-    # Get monthly summary with filters
-    summary = analytics.get_monthly_summary(
-        month=month, 
-        year=year,
-        vehicle_id=vehicle_id,
-        date_from=date_from,
-        date_to=date_to
-    )
-    
-    return JsonResponse({
-        'status': 'success',
-        'trips': trips,
-        'drivers': drivers,
-        'summary': summary
-    })
+    try:
+        vehicle_id = request.GET.get('vehicle')
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+        
+        print(f"API called with: vehicle={vehicle_id}, date_from={date_from}, date_to={date_to}")
+        
+        analytics = LogisticsAnalytics()
+        
+        # Get summary data
+        summary = analytics.get_monthly_summary(vehicle_id, date_from, date_to)
+        print(f"Summary data: {summary}")
+        
+        # Get trip analysis
+        trips = analytics.get_live_trip_analysis(vehicle_id, date_from, date_to)
+        print(f"Found {len(trips)} trips")
+        
+        # Get driver KPI
+        drivers = analytics.get_driver_kpi_analysis(vehicle_id, date_from, date_to)
+        print(f"Found {len(drivers)} drivers")
+        
+        return JsonResponse({
+            'status': 'success',
+            'trips': trips,
+            'drivers': drivers,
+            'summary': summary
+        })
+    except Exception as e:
+        print(f"API Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'status': 'error',
+            'error': str(e)
+        }, status=500)
 
 @login_required
 def kpi_secret_dashboard(request):
@@ -70,16 +64,58 @@ def kpi_secret_dashboard(request):
 @login_required
 def kpi_dashboard_api(request):
     """API endpoint for KPI secret dashboard data"""
-    if not hasattr(request.user, 'profile') or request.user.profile.role != 'ADMIN':
-        return JsonResponse({'error': 'Access denied'}, status=403)
-    
-    kpi_dashboard = KPISecretDashboard()
-    dashboard_data = kpi_dashboard.get_secret_dashboard_data()
-    
-    return JsonResponse({
-        'status': 'success',
-        'data': dashboard_data
-    })
+    try:
+        if not hasattr(request.user, 'profile') or request.user.profile.role != 'ADMIN':
+            return JsonResponse({'error': 'Access denied'}, status=403)
+        
+        # Get date filters from request
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        # Convert to datetime if provided
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        kpi_dashboard = KPISecretDashboard()
+        
+        # Get all branches
+        branches = Branch.objects.all()
+        dashboard_data = []
+        
+        for branch in branches:
+            branch_performance = kpi_dashboard.analyze_branch_performance(
+                branch.id,
+                start_date=start_date,
+                end_date=end_date
+            )
+            dashboard_data.append(branch_performance)
+        
+        # Sort by adjusted KPI
+        dashboard_data.sort(key=lambda x: x['adjusted_kpi'], reverse=True)
+        
+        # Calculate summary
+        import numpy as np
+        summary = {
+            'total_branches': len(dashboard_data),
+            'avg_profit_margin': float(np.mean([b['profit_margin'] for b in dashboard_data])) if dashboard_data else 0,
+            'avg_adjusted_kpi': float(np.mean([b['adjusted_kpi'] for b in dashboard_data])) if dashboard_data else 0,
+            'high_performing_branches': len([b for b in dashboard_data if b['adjusted_kpi'] >= 70])
+        }
+        
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'branch_performances': dashboard_data,
+                'summary': summary
+            }
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'error': str(e)
+        }, status=500)
 
 @login_required
 def branch_performance_detail_api(request, branch_id):

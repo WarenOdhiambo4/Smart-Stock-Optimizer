@@ -38,18 +38,14 @@ class LogisticsAnalytics:
             logger.error(f"Google Maps API error: {e}")
             return 50.0
     
-    def get_live_trip_analysis(self, month=None, year=None, vehicle_id=None, date_from=None, date_to=None):
+    def get_live_trip_analysis(self, vehicle_id=None, date_from=None, date_to=None):
         """Get live trip mileage analysis"""
         try:
-            # Filter trips by month/year or date range
+            # Filter trips by date range
             trip_filter = {}
             if date_from and date_to:
                 trip_filter['scheduled_date__gte'] = date_from
                 trip_filter['scheduled_date__lte'] = date_to + ' 23:59:59'
-            elif month and year:
-                start_date = datetime(int(year), int(month), 1)
-                end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-                trip_filter['scheduled_date__range'] = [start_date, end_date]
             
             if vehicle_id:
                 trip_filter['vehicle_id'] = vehicle_id
@@ -109,7 +105,7 @@ class LogisticsAnalytics:
             logger.error(f"Error in get_live_trip_analysis: {e}")
             return []
     
-    def get_driver_kpi_analysis(self, month=None, year=None, vehicle_id=None, date_from=None, date_to=None):
+    def get_driver_kpi_analysis(self, vehicle_id=None, date_from=None, date_to=None):
         """Get driver KPI based on maintenance, transfers, fuel consumption, net profit"""
         try:
             # Filter by date
@@ -117,10 +113,6 @@ class LogisticsAnalytics:
             if date_from and date_to:
                 date_filter['scheduled_date__gte'] = date_from
                 date_filter['scheduled_date__lte'] = date_to + ' 23:59:59'
-            elif month and year:
-                start_date = datetime(int(year), int(month), 1)
-                end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-                date_filter['scheduled_date__range'] = [start_date, end_date]
             
             if vehicle_id:
                 date_filter['vehicle_id'] = vehicle_id
@@ -155,8 +147,9 @@ class LogisticsAnalytics:
                 maintenance_cost = 0
                 for vehicle in vehicles_used:
                     maint_filter = {'vehicle': vehicle}
-                    if month and year:
-                        maint_filter['service_date__range'] = [start_date.date(), end_date.date()]
+                    if date_from and date_to:
+                        maint_filter['service_date__gte'] = date_from
+                        maint_filter['service_date__lte'] = date_to
                     maintenances = VehicleMaintenance.objects.filter(**maint_filter)
                     maintenance_events += maintenances.count()
                     maintenance_cost += sum(float((m.parts_cost or 0) + (m.labor_cost or 0) + (m.other_costs or 0)) for m in maintenances)
@@ -238,22 +231,19 @@ class LogisticsAnalytics:
             logger.error(f"Error in get_vehicle_performance_comparison: {e}")
             return []
     
-    def get_monthly_summary(self, month=None, year=None, vehicle_id=None, date_from=None, date_to=None):
+    def get_monthly_summary(self, vehicle_id=None, date_from=None, date_to=None):
         """Get monthly logistics summary"""
         try:
             date_filter = {}
             if date_from and date_to:
                 date_filter['scheduled_date__gte'] = date_from
                 date_filter['scheduled_date__lte'] = date_to + ' 23:59:59'
-            elif month and year:
-                start_date = datetime(int(year), int(month), 1)
-                end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-                date_filter['scheduled_date__range'] = [start_date, end_date]
             
             if vehicle_id:
                 date_filter['vehicle_id'] = vehicle_id
             
             trips = Trip.objects.filter(**date_filter)
+            print(f"Found {trips.count()} trips with filter: {date_filter}")
             
             total_trips = trips.count()
             total_distance = sum(float(trip.distance or 0) for trip in trips)
@@ -289,39 +279,56 @@ class KPISecretDashboard:
     def __init__(self):
         pass
     
-    def analyze_branch_performance(self, branch_id, month=None, year=None):
+    def analyze_branch_performance(self, branch_id, start_date=None, end_date=None):
         """Analyze branch performance with stock discrepancy impact"""
-        if not month:
-            month = datetime.now().month
-        if not year:
-            year = datetime.now().year
-            
-        start_date = datetime(year, month, 1)
-        end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-        
         branch = Branch.objects.get(id=branch_id)
+        
+        # Use all-time data if no dates provided
+        if start_date and end_date:
+            date_filter = Q(created_at__range=[start_date, end_date])
+            expense_date_filter = Q(expense_date__range=[start_date, end_date])
+        else:
+            date_filter = Q()  # No filter = all time
+            expense_date_filter = Q()  # No filter = all time
         
         # Sales and profit analysis
         sales_data = Sale.objects.filter(
-            branch=branch,
-            created_at__range=[start_date, end_date]
-        ).aggregate(
+            branch=branch
+        ).filter(date_filter).aggregate(
             total_sales=Sum('total_amount')
         )
         
         total_revenue = sales_data['total_sales'] or 0
         
-        # Get cost of goods sold
+        # Get cost of goods sold using FIFO costing
         try:
-            sales = Sale.objects.filter(branch=branch, created_at__range=[start_date, end_date])
-            total_cost = 0
+            from .fifo_inventory import FIFOInventoryManager
+            gross_profit = FIFOInventoryManager.calculate_gross_profit_fifo(branch, date_filter)
+        except Exception as e:
+            # Fallback to average selling price method if FIFO fails
+            sales = Sale.objects.filter(branch=branch).filter(date_filter)
+            product_stats = {}
+            
             for sale in sales:
                 for item in sale.items.all():
-                    total_cost += item.stock.product.cost_price * item.quantity
-        except:
-            total_cost = total_revenue * 0.7  # Assume 70% cost ratio
-        
-        gross_profit = total_revenue - total_cost
+                    product_id = item.stock.product.id
+                    if product_id not in product_stats:
+                        product_stats[product_id] = {
+                            'total_revenue': 0,
+                            'total_quantity': 0,
+                            'cost_price': item.stock.product.cost_price
+                        }
+                    
+                    product_stats[product_id]['total_revenue'] += item.unit_price * item.quantity
+                    product_stats[product_id]['total_quantity'] += item.quantity
+            
+            gross_profit = 0
+            for product_id, stats in product_stats.items():
+                if stats['total_quantity'] > 0:
+                    avg_selling_price = stats['total_revenue'] / stats['total_quantity']
+                    profit_per_unit = avg_selling_price - stats['cost_price']
+                    product_gross_profit = profit_per_unit * stats['total_quantity']
+                    gross_profit += product_gross_profit
         profit_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
         
         # Stock discrepancy analysis

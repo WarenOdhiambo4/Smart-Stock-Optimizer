@@ -161,12 +161,7 @@ class StockMovement(models.Model):
         self._processed = True
         self.save(update_fields=['_processed'])
 
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        super().save(*args, **kwargs)
-        
-        if is_new and self.status == 'APPROVED' and not self._processed:
-            self.apply_stock_adjustment()
+
 
 
 class Order(models.Model):
@@ -547,6 +542,7 @@ class Expense(models.Model):
         ('SALARY', 'Salary'),
         ('RENT', 'Rent'),
         ('MAINTENANCE', 'Maintenance'),
+        ('DELIVERY', 'Delivery Charges'),
         ('OTHER', 'Other'),
     ]
     
@@ -1279,6 +1275,27 @@ class Maintenance(models.Model):
     
     def __str__(self):
         return f"{self.vehicle.registration_number} - {self.description}"
+
+
+class InventoryLayer(models.Model):
+    """Track inventory layers for FIFO costing"""
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='layers')
+    quantity = models.PositiveIntegerField()
+    remaining_quantity = models.PositiveIntegerField()
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    source_type = models.CharField(max_length=20, choices=[
+        ('ORDER', 'From Order'),
+        ('MANUAL', 'Manual Stock Addition'),
+        ('TRANSFER', 'Stock Transfer')
+    ])
+    source_id = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"{self.stock.product.name} - {self.remaining_quantity}/{self.quantity} @ {self.unit_cost}"
 
 
 class BusinessNote(models.Model):

@@ -5,13 +5,13 @@
 {% block content %}
 <div class="notebook-container">
     <div class="notebook-header">
-        <h4>Business Notebook - Page {{ current_page }}</h4>
+        <h4>Business Notebook - Page {{ page_number }}</h4>
         <div class="page-navigation">
-            {% if has_previous %}
-            <a href="?page={{ previous_page }}" class="btn btn-sm btn-outline-secondary">← Previous</a>
-            {% endif %}
-            <span class="mx-2">Page {{ current_page }}</span>
-            <a href="?page={{ next_page }}" class="btn btn-sm btn-outline-secondary">Next →</a>
+            <a href="?page={{ page_number|add:-1 }}" class="btn btn-sm btn-outline-secondary">← Previous</a>
+            <input type="number" id="pageInput" value="{{ page_number }}" min="1" class="form-control" style="width: 80px; display: inline-block; margin: 0 10px;">
+            <button type="button" id="goToPage" class="btn btn-sm btn-primary">Go</button>
+            <a href="?page={{ page_number|add:1 }}" class="btn btn-sm btn-outline-secondary">Next →</a>
+            <button type="button" id="saveBtn" class="btn btn-sm btn-success ms-2">Save</button>
         </div>
     </div>
     
@@ -89,19 +89,70 @@
 let saveTimeout;
 const textarea = document.getElementById('notebookContent');
 const form = document.getElementById('notebookForm');
+const saveBtn = document.getElementById('saveBtn');
+const pageInput = document.getElementById('pageInput');
+const goToPageBtn = document.getElementById('goToPage');
+
+// Manual save button
+saveBtn.addEventListener('click', function() {
+    saveNote();
+});
+
+// Go to specific page
+goToPageBtn.addEventListener('click', function() {
+    const pageNum = parseInt(pageInput.value);
+    if (pageNum && pageNum > 0) {
+        window.location.href = `?page=${pageNum}`;
+    }
+});
+
+// Enter key on page input
+pageInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        goToPageBtn.click();
+    }
+});
+
+function saveNote() {
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    }).then(response => response.json())
+    .then(data => {
+        if (data.status === 'saved') {
+            saveBtn.textContent = 'Saved!';
+            saveBtn.classList.remove('btn-success');
+            saveBtn.classList.add('btn-outline-success');
+            setTimeout(() => {
+                saveBtn.textContent = 'Save';
+                saveBtn.classList.remove('btn-outline-success');
+                saveBtn.classList.add('btn-success');
+                saveBtn.disabled = false;
+            }, 1500);
+        }
+    }).catch(() => {
+        saveBtn.textContent = 'Error';
+        saveBtn.classList.add('btn-danger');
+        setTimeout(() => {
+            saveBtn.textContent = 'Save';
+            saveBtn.classList.remove('btn-danger');
+            saveBtn.disabled = false;
+        }, 2000);
+    });
+}
 
 textarea.addEventListener('input', function() {
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(function() {
-        // Auto-save after 2 seconds of no typing
-        fetch(window.location.href, {
-            method: 'POST',
-            body: new FormData(form),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-    }, 2000);
+        // Auto-save after 3 seconds of no typing
+        saveNote();
+    }, 3000);
 });
 
 // Limit to 7 lines
@@ -120,12 +171,10 @@ textarea.addEventListener('keydown', function(e) {
         if (lines.length >= 7) {
             e.preventDefault();
             // Save current page and go to next
-            fetch(window.location.href, {
-                method: 'POST',
-                body: new FormData(form)
-            }).then(() => {
-                window.location.href = '?page={{ next_page }}';
-            });
+            saveNote();
+            setTimeout(() => {
+                window.location.href = `?page={{ page_number|add:1 }}`;
+            }, 500);
         }
     }
 });
