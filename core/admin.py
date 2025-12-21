@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
-    Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, 
+    Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory,
     Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance,
     OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection, BusinessNote
 )
@@ -45,15 +45,91 @@ class StockMovementAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['order_number', 'branch', 'supplier', 'status', 'total_amount', 'created_at']
-    list_filter = ['status', 'branch']
+    list_display = ['order_number', 'branch', 'supplier', 'status', 'total_amount', 'completed_amount', 'completion_percentage', 'created_at']
+    list_filter = ['status', 'branch', 'created_at']
     search_fields = ['order_number', 'supplier']
+    readonly_fields = ['completed_amount', 'remaining_amount', 'completion_percentage', 'items_completion_summary', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Order Information', {
+            'fields': ('order_number', 'branch', 'supplier', 'status')
+        }),
+        ('Financial Summary', {
+            'fields': (
+                ('total_amount', 'completed_amount', 'remaining_amount'),
+                'completion_percentage'
+            ),
+            'classes': ('wide',)
+        }),
+        ('Completion Summary', {
+            'fields': ('items_completion_summary',),
+            'classes': ('collapse',)
+        }),
+        ('Additional Info', {
+            'fields': ('notes', 'created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['recalculate_completion_status']
+    
+    def recalculate_completion_status(self, request, queryset):
+        for order in queryset:
+            order.update_completion_status()
+        self.message_user(request, f"Recalculated completion status for {queryset.count()} orders")
+    recalculate_completion_status.short_description = "Recalculate completion status"
 
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ['order', 'product_name', 'quantity', 'unit_price', 'subtotal']
+    list_display = ['order', 'product_name', 'quantity_ordered', 'quantity_completed', 'quantity_remaining', 'status', 'unit_price', 'subtotal']
+    list_filter = ['status', 'completion_branch']
     search_fields = ['product_name', 'order__order_number']
+    readonly_fields = ['quantity_remaining', 'completed_subtotal', 'remaining_subtotal', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Order Item Information', {
+            'fields': ('order', 'product', 'product_name', 'product_sku')
+        }),
+        ('Quantities', {
+            'fields': (
+                ('quantity_ordered', 'quantity_completed', 'quantity_remaining'),
+                'status'
+            ),
+            'classes': ('wide',)
+        }),
+        ('Pricing', {
+            'fields': (
+                'unit_price',
+                ('subtotal', 'completed_subtotal', 'remaining_subtotal')
+            )
+        }),
+        ('Completion Details', {
+            'fields': ('completion_branch',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(OrderItemCompletion)
+class OrderItemCompletionAdmin(admin.ModelAdmin):
+    list_display = ['order_item', 'quantity_completed', 'completion_branch', 'completed_by', 'completion_date']
+    list_filter = ['completion_branch', 'completion_date', 'completed_by']
+    search_fields = ['order_item__product_name', 'order_item__order__order_number']
+    readonly_fields = ['completion_date']
+    date_hierarchy = 'completion_date'
+
+
+@admin.register(OrderStatusHistory)
+class OrderStatusHistoryAdmin(admin.ModelAdmin):
+    list_display = ['order', 'old_status', 'new_status', 'old_branch', 'new_branch', 'changed_by', 'change_date']
+    list_filter = ['old_status', 'new_status', 'old_branch', 'new_branch', 'change_date']
+    search_fields = ['order__order_number', 'notes']
+    readonly_fields = ['change_date']
+    date_hierarchy = 'change_date'
 
 
 @admin.register(Sale)

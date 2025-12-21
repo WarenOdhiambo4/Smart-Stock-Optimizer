@@ -146,7 +146,7 @@
                             <td><a href="{% url 'order_detail' order.pk %}">{{ order.order_number }}</a></td>
                             <td>{{ order.branch.name }}</td>
                             <td>
-                                <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% else %}badge-secondary{% endif %}">
+                                <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% elif order.status == 'PARTIALLY_COMPLETED' %}badge-secondary{% else %}badge-info{% endif %}">
                                     {{ order.status }}
                                 </span>
                             </td>

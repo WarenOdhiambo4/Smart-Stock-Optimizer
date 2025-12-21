@@ -3,6 +3,7 @@ from . import views
 from . import views_logistics
 from . import webhook_views
 from . import views_sync_test
+from . import order_management_views
 # from . import analytics_views
 
 urlpatterns = [
@@ -39,11 +40,22 @@ urlpatterns = [
     path('stock/transfer/', views.stock_transfer, name='stock_transfer'),
     path('stock/transfer/<int:pk>/approve/', views.approve_transfer, name='approve_transfer'),
     
-    # Orders
+    # Orders - Basic
     path('orders/', views.order_list, name='order_list'),
     path('orders/create/', views.order_create, name='order_create'),
     path('orders/<int:pk>/', views.order_detail, name='order_detail'),
     path('orders/<int:pk>/complete/', views.order_complete, name='order_complete'),
+    
+    # Orders - Enhanced Management
+    path('orders/<int:pk>/edit/', order_management_views.order_edit, name='order_edit'),
+    path('orders/<int:pk>/partial-complete/', order_management_views.order_partial_complete, name='order_partial_complete'),
+    path('orders/<int:pk>/change-branch/', order_management_views.order_change_branch, name='order_change_branch'),
+    path('orders/<int:order_pk>/items/<int:item_pk>/complete/', order_management_views.order_item_complete, name='order_item_complete'),
+    path('orders/<int:pk>/history/', order_management_views.order_completion_history, name='order_completion_history'),
+    path('orders/bulk-operations/', order_management_views.bulk_order_operations, name='bulk_order_operations'),
+    
+    # Order API
+    path('api/order-items/<int:item_pk>/', order_management_views.get_order_item_details, name='get_order_item_details'),
     
     # Sales
     path('sales/', views.sale_list, name='sale_list'),

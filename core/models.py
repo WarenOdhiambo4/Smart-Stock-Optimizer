@@ -173,6 +173,7 @@ class Order(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
         ('PROCESSING', 'Processing'),
+        ('PARTIALLY_COMPLETED', 'Partially Completed'),
         ('COMPLETED', 'Completed'),
         ('CANCELLED', 'Cancelled'),
     ]
@@ -183,9 +184,14 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     notes = models.TextField(blank=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    
+    # NEW FIELDS - ALL SAFE WITH DEFAULTS
+    completed_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), null=True, blank=True)
+    remaining_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), null=True, blank=True)
+    
     created_by = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  # Safe to add
 
     class Meta:
         ordering = ['-created_at']
@@ -196,30 +202,214 @@ class Order(models.Model):
     def calculate_total(self):
         total = sum(item.subtotal for item in self.items.all())
         self.total_amount = total
+        
+        # SAFE: Only update new fields if they exist
+        if hasattr(self, 'completed_amount') and self.completed_amount is not None:
+            self.remaining_amount = total - (self.completed_amount or Decimal('0.00'))
+        
         self.save()
         return total
 
+    def update_completion_status(self):
+        """Update order status based on item completion - SAFE for existing orders"""
+        items = self.items.all()
+        if not items:
+            return
+        
+        # SAFE: Only proceed if new fields exist
+        if not hasattr(items.first(), 'quantity_completed'):
+            return
+        
+        total_items = items.count()
+        completed_items = items.filter(status='COMPLETED').count()
+        partially_completed_items = items.filter(status='PARTIALLY_COMPLETED').count()
+        
+        # Calculate completed amount safely
+        self.completed_amount = sum(
+            getattr(item, 'completed_subtotal', Decimal('0.00')) 
+            for item in items
+        )
+        self.remaining_amount = self.total_amount - (self.completed_amount or Decimal('0.00'))
+        
+        # Update status
+        old_status = self.status
+        if completed_items == total_items:
+            self.status = 'COMPLETED'
+        elif completed_items > 0 or partially_completed_items > 0:
+            self.status = 'PARTIALLY_COMPLETED'
+        else:
+            self.status = 'PENDING'
+        
+        self.save()
+        
+        # Log status change if OrderStatusHistory exists
+        try:
+            if old_status != self.status:
+                OrderStatusHistory.objects.create(
+                    order=self,
+                    old_status=old_status,
+                    new_status=self.status,
+                    notes=f"Status updated based on item completion"
+                )
+        except:
+            pass  # Safe fallback if model doesn't exist yet
+
+    def change_branch(self, new_branch, changed_by=None, notes=''):
+        """Change order branch and log the change - SAFE"""
+        old_branch = self.branch
+        self.branch = new_branch
+        self.save()
+        
+        # Log branch change if OrderStatusHistory exists
+        try:
+            OrderStatusHistory.objects.create(
+                order=self,
+                old_status=self.status,
+                new_status=self.status,
+                old_branch=old_branch,
+                new_branch=new_branch,
+                changed_by=changed_by,
+                notes=notes or f"Branch changed from {old_branch.name} to {new_branch.name}"
+            )
+        except:
+            pass  # Safe fallback if model doesn't exist yet
+
+    @property
+    def completion_percentage(self):
+        """Calculate completion percentage by amount - SAFE"""
+        if self.total_amount > 0 and hasattr(self, 'completed_amount') and self.completed_amount:
+            return (self.completed_amount / self.total_amount) * 100
+        return 0
+
+    @property
+    def items_completion_summary(self):
+        """Get summary of item completion status - SAFE"""
+        items = self.items.all()
+        
+        # SAFE: Check if new fields exist
+        if not items or not hasattr(items.first(), 'status'):
+            return {
+                'total': items.count(),
+                'pending': items.count(),
+                'partially_completed': 0,
+                'completed': 0,
+                'cancelled': 0,
+            }
+        
+        return {
+            'total': items.count(),
+            'pending': items.filter(status='PENDING').count(),
+            'partially_completed': items.filter(status='PARTIALLY_COMPLETED').count(),
+            'completed': items.filter(status='COMPLETED').count(),
+            'cancelled': items.filter(status='CANCELLED').count(),
+        }
+
 
 class OrderItem(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PARTIALLY_COMPLETED', 'Partially Completed'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+    
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, blank=True)
     product_name = models.CharField(max_length=200)
     product_sku = models.CharField(max_length=50, blank=True)
+    
+    # EXISTING FIELD - KEEP FOR BACKWARD COMPATIBILITY
     quantity = models.IntegerField(default=1)
+    
+    # NEW FIELDS - ALL SAFE WITH DEFAULTS
+    quantity_ordered = models.IntegerField(default=1, help_text="Original quantity ordered")
+    quantity_completed = models.IntegerField(default=0, help_text="Quantity completed so far")
+    quantity_remaining = models.IntegerField(default=0, help_text="Quantity still pending")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    completion_branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, help_text="Branch where item was completed")
+    
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  # Safe to add
 
     class Meta:
         ordering = ['id']
 
     def __str__(self):
-        return f"{self.product_name} x {self.quantity}"
+        return f"{self.product_name} x {self.quantity_ordered} ({self.get_status_display()})"
 
     @property
     def subtotal(self):
-        return self.quantity * self.unit_price
+        # BACKWARD COMPATIBILITY - use existing quantity field if new fields not set
+        qty = self.quantity_ordered if self.quantity_ordered > 0 else self.quantity
+        return qty * self.unit_price
+
+    @property
+    def completed_subtotal(self):
+        return self.quantity_completed * self.unit_price
+
+    @property
+    def remaining_subtotal(self):
+        return self.quantity_remaining * self.unit_price
+
+    def update_completion_status(self):
+        """Update item status based on completion quantities"""
+        if self.quantity_completed == 0:
+            self.status = 'PENDING'
+        elif self.quantity_completed >= self.quantity_ordered:
+            self.status = 'COMPLETED'
+            self.quantity_completed = self.quantity_ordered
+            self.quantity_remaining = 0
+        else:
+            self.status = 'PARTIALLY_COMPLETED'
+        
+        self.quantity_remaining = self.quantity_ordered - self.quantity_completed
+        self.save()
+
+    def complete_partial_quantity(self, quantity_to_complete, branch=None):
+        """Complete a partial quantity of this item"""
+        if quantity_to_complete <= 0:
+            return False
+        
+        if self.quantity_completed + quantity_to_complete > self.quantity_ordered:
+            quantity_to_complete = self.quantity_ordered - self.quantity_completed
+        
+        self.quantity_completed += quantity_to_complete
+        if branch:
+            self.completion_branch = branch
+        
+        self.update_completion_status()
+        
+        # Add to stock if completed
+        if quantity_to_complete > 0 and self.product:
+            target_branch = branch or self.order.branch
+            stock, created = Stock.objects.get_or_create(
+                branch=target_branch,
+                product=self.product,
+                defaults={'quantity': 0}
+            )
+            stock.quantity += quantity_to_complete
+            stock.save()
+            
+            # Create stock movement record
+            StockMovement.objects.create(
+                stock=stock,
+                movement_type='IN',
+                quantity=quantity_to_complete,
+                status='APPROVED',
+                notes=f"Partial completion of Order #{self.order.order_number} - Item: {self.product_name}"
+            )
+        
+        return True
 
     def save(self, *args, **kwargs):
+        # SAFE INITIALIZATION - only set if not already set
+        if not self.pk:  # New record
+            if not self.quantity_ordered:
+                self.quantity_ordered = self.quantity
+            if not self.quantity_remaining:
+                self.quantity_remaining = self.quantity_ordered
+        
         if not self.product:
             product, created = Product.objects.get_or_create(
                 sku=self.product_sku or f"AUTO-{self.product_name[:20].upper().replace(' ', '-')}",
@@ -233,14 +423,39 @@ class OrderItem(models.Model):
 
         super().save(*args, **kwargs)
 
-        if self.order.status == 'COMPLETED':
-            stock, created = Stock.objects.get_or_create(
-                branch=self.order.branch,
-                product=self.product,
-                defaults={'quantity': 0}
-            )
-            stock.quantity += self.quantity
-            stock.save()
+
+class OrderItemCompletion(models.Model):
+    """Track individual completions of order items for audit trail"""
+    order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='completions')
+    quantity_completed = models.IntegerField(help_text="Quantity completed in this action")
+    completion_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, help_text="Branch where completion happened")
+    completed_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    completion_date = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-completion_date']
+    
+    def __str__(self):
+        return f"{self.order_item.product_name} - {self.quantity_completed} completed at {self.completion_branch.name}"
+
+
+class OrderStatusHistory(models.Model):
+    """Track order status changes and branch changes"""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_history')
+    old_status = models.CharField(max_length=20, blank=True)
+    new_status = models.CharField(max_length=20)
+    old_branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name='old_order_changes')
+    new_branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name='new_order_changes')
+    changed_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    change_date = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-change_date']
+    
+    def __str__(self):
+        return f"Order #{self.order.order_number} - {self.old_status} → {self.new_status}"
 
 
 class Sale(models.Model):

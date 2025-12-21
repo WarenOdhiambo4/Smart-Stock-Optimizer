@@ -49,7 +49,7 @@ class LogisticsAnalytics:
             elif month and year:
                 start_date = datetime(int(year), int(month), 1)
                 end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-                trip_filter['created_at__range'] = [start_date, end_date]
+                trip_filter['scheduled_date__range'] = [start_date, end_date]
             
             if vehicle_id:
                 trip_filter['vehicle_id'] = vehicle_id
@@ -120,40 +120,22 @@ class LogisticsAnalytics:
             elif month and year:
                 start_date = datetime(int(year), int(month), 1)
                 end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-                date_filter['created_at__range'] = [start_date, end_date]
+                date_filter['scheduled_date__range'] = [start_date, end_date]
             
             if vehicle_id:
                 date_filter['vehicle_id'] = vehicle_id
             
-            from .models import Employee
-            # Get drivers from filtered trips or all active drivers if no trips have drivers
-            from .models import Employee
+            # Get drivers from Employee table who have trips
             filtered_trips = Trip.objects.filter(**date_filter)
-            driver_trips = filtered_trips.exclude(driver=None)
+            driver_ids = filtered_trips.exclude(driver=None).values_list('driver', flat=True).distinct()
             
-            if driver_trips.exists():
-                driver_ids = list(driver_trips.values_list('driver', flat=True).distinct())
-                drivers = Employee.objects.filter(id__in=driver_ids)
-            else:
-                # If no trips have drivers assigned, create dummy driver data from trips
-                drivers = []
-                vehicles_with_trips = filtered_trips.values_list('vehicle__registration_number', flat=True).distinct()
-                for i, vehicle_reg in enumerate(vehicles_with_trips[:5]):  # Limit to 5 for display
-                    class DummyDriver:
-                        def __init__(self, name, id):
-                            self.full_name = name
-                            self.id = id
-                    drivers.append(DummyDriver(f"Driver-{vehicle_reg}", i+1))
+            from .models import Employee
+            drivers = Employee.objects.filter(id__in=driver_ids)
             driver_kpis = []
             
             for driver in drivers:
-                # Get trips for this driver from already filtered trips
-                if hasattr(driver, 'id') and isinstance(driver.id, int) and driver.id > 0:
-                    trips = filtered_trips.filter(driver=driver)
-                else:
-                    # For dummy drivers, get trips by vehicle
-                    vehicle_name = driver.full_name.replace('Driver-', '')
-                    trips = filtered_trips.filter(vehicle__registration_number=vehicle_name)
+                # Get trips for this driver using Employee ID
+                trips = filtered_trips.filter(driver=driver)
                 
                 if trips.count() == 0:
                     continue
@@ -266,7 +248,7 @@ class LogisticsAnalytics:
             elif month and year:
                 start_date = datetime(int(year), int(month), 1)
                 end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-                date_filter['created_at__range'] = [start_date, end_date]
+                date_filter['scheduled_date__range'] = [start_date, end_date]
             
             if vehicle_id:
                 date_filter['vehicle_id'] = vehicle_id

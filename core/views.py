@@ -13,7 +13,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import uuid
 
-from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote
+from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote
 
 
 def role_required(*roles):
@@ -113,9 +113,6 @@ def dashboard(request):
     pending_transfers = StockMovement.objects.filter(movement_type='TRANSFER', status='PENDING').count()
     pending_logistics = Logistics.objects.filter(status__in=['PENDING', 'PROCESSING', 'IN_TRANSIT']).count()
     
-    # Get transfer alerts for user's branch
-    transfer_alerts = []
-    
     context = {
         'user_profile': user_profile,
         'total_branches': total_branches,
@@ -134,7 +131,6 @@ def dashboard(request):
         'pending_orders': pending_orders,
         'pending_transfers': pending_transfers,
         'pending_logistics': pending_logistics,
-        'transfer_alerts': transfer_alerts,
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -490,6 +486,21 @@ def order_list(request):
             Q(supplier__icontains=search)
         )
     
+    # Order Management Metrics
+    total_orders = orders.count()
+    pending_orders = orders.filter(status='PENDING').count()
+    processing_orders = orders.filter(status='PROCESSING').count()
+    partially_completed_orders = orders.filter(status='PARTIALLY_COMPLETED').count()
+    completed_orders = orders.filter(status='COMPLETED').count()
+    
+    # Order value metrics
+    total_order_value = orders.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+    completed_order_value = orders.filter(status='COMPLETED').aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+    pending_order_value = orders.exclude(status='COMPLETED').aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+    
+    # Orders needing attention
+    orders_needing_attention = orders.filter(status__in=['PENDING', 'PROCESSING', 'PARTIALLY_COMPLETED'])
+    
     paginator = Paginator(orders, 5)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -497,7 +508,17 @@ def order_list(request):
     return render(request, 'core/order_list.html', {
         'page_obj': page_obj,
         'orders': page_obj,
-        'search': search
+        'search': search,
+        # Order Management Dashboard
+        'total_orders': total_orders,
+        'pending_orders': pending_orders,
+        'processing_orders': processing_orders,
+        'partially_completed_orders': partially_completed_orders,
+        'completed_orders': completed_orders,
+        'total_order_value': total_order_value,
+        'completed_order_value': completed_order_value,
+        'pending_order_value': pending_order_value,
+        'orders_needing_attention': orders_needing_attention,
     })
 
 
@@ -531,7 +552,7 @@ def order_create(request):
                     order=order,
                     product_name=product_names[i],
                     product_sku=product_skus[i] if i < len(product_skus) else '',
-                    quantity=int(quantities[i]) if i < len(quantities) else 1,
+                    quantity_ordered=int(quantities[i]) if i < len(quantities) else 1,
                     unit_price=Decimal(unit_prices[i]) if i < len(unit_prices) else Decimal('0'),
                 )
         
@@ -544,34 +565,73 @@ def order_create(request):
 
 def order_detail(request, pk):
     order = get_object_or_404(Order, pk=pk)
-    return render(request, 'core/order_detail.html', {'order': order})
+    
+    # Get completion history
+    completions = OrderItemCompletion.objects.filter(
+        order_item__order=order
+    ).select_related('order_item', 'completion_branch', 'completed_by')[:10]
+    
+    # Get status history
+    status_history = order.status_history.all()[:5]
+    
+    context = {
+        'order': order,
+        'completions': completions,
+        'status_history': status_history,
+        'completion_summary': order.items_completion_summary,
+    }
+    
+    return render(request, 'core/order_detail.html', context)
 
 
 def order_complete(request, pk):
     order = get_object_or_404(Order, pk=pk)
+    branches = Branch.objects.filter(is_active=True)
+    
     if request.method == 'POST':
-        order.status = 'COMPLETED'
-        order.save()
+        completion_branch_id = request.POST.get('completion_branch')
+        completion_branch = get_object_or_404(Branch, pk=completion_branch_id)
         
-        for item in order.items.all():
-            stock, created = Stock.objects.get_or_create(
-                branch=order.branch,
-                product=item.product,
-                defaults={'quantity': 0}
-            )
-            stock.quantity += item.quantity
-            stock.save()
+        with transaction.atomic():
+            completed_items = 0
             
-            StockMovement.objects.create(
-                stock=stock,
-                movement_type='IN',
-                quantity=item.quantity,
-                status='APPROVED',
-                notes=f"Order #{order.order_number} completed"
-            )
+            for item in order.items.exclude(status='COMPLETED'):
+                remaining_qty = item.quantity_remaining
+                if remaining_qty > 0:
+                    # Complete remaining quantity
+                    item.complete_partial_quantity(remaining_qty, completion_branch)
+                    
+                    # Log completion
+                    OrderItemCompletion.objects.create(
+                        order_item=item,
+                        quantity_completed=remaining_qty,
+                        completion_branch=completion_branch,
+                        completed_by=getattr(request.user, 'employee', None),
+                        notes=f"Full order completion - {remaining_qty} units"
+                    )
+                    
+                    completed_items += 1
+            
+            # Update order status
+            order.update_completion_status()
+            
+            if completed_items > 0:
+                messages.success(
+                    request, 
+                    f'Order {order.order_number} completed! {completed_items} items added to {completion_branch.name} stock.'
+                )
+            else:
+                messages.info(request, 'Order was already completed.')
         
-        messages.success(request, f'Order {order.order_number} completed! Stock updated.')
-    return redirect('order_list')
+        return redirect('order_list')
+    
+    # Show completion form
+    pending_items = order.items.exclude(status='COMPLETED')
+    return render(request, 'core/order_complete.html', {
+        'order': order,
+        'pending_items': pending_items,
+        'branches': branches
+    })
 
 
 @login_required

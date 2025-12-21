@@ -16,6 +16,58 @@
     </div>
 </div>
 
+<!-- Order Management Dashboard -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Order Management Overview</h5>
+                <a href="{% url 'bulk_order_operations' %}" class="btn btn-sm btn-outline-secondary">Bulk Actions</a>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6 col-md-2">
+                        <div class="text-center">
+                            <div class="h4 mb-1 text-primary">{{ total_orders }}</div>
+                            <small class="text-muted">Total Orders</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-center">
+                            <div class="h4 mb-1 text-warning">{{ pending_orders }}</div>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-center">
+                            <div class="h4 mb-1 text-info">{{ processing_orders }}</div>
+                            <small class="text-muted">Processing</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-center">
+                            <div class="h4 mb-1 text-secondary">{{ partially_completed_orders }}</div>
+                            <small class="text-muted">Partial</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-center">
+                            <div class="h4 mb-1 text-success">{{ completed_orders }}</div>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="text-center">
+                            <div class="h4 mb-1 text-primary">${{ total_order_value|floatformat:0 }}</div>
+                            <small class="text-muted">Total Value</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
@@ -41,19 +93,23 @@
                     <td>{{ order.items.count }}</td>
                     <td>${{ order.total_amount }}</td>
                     <td>
-                        <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% elif order.status == 'PROCESSING' %}badge-info{% else %}badge-secondary{% endif %}">
+                        <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% elif order.status == 'PROCESSING' %}badge-info{% elif order.status == 'PARTIALLY_COMPLETED' %}badge-secondary{% else %}badge-secondary{% endif %}">
                             {{ order.status }}
                         </span>
                     </td>
                     <td class="text-muted">{{ order.created_at|date:"M d, Y" }}</td>
                     <td>
-                        <div class="action-btns">
-                            <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i></a>
-                            {% if order.status == 'PENDING' %}
-                            <form method="post" action="{% url 'order_complete' order.pk %}" style="display:inline;" onsubmit="return confirm('Mark this order as complete? This will add items to stock.')">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check"></i></button>
-                            </form>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-primary btn-sm" title="View">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'order_edit' order.pk %}" class="btn btn-outline-secondary btn-sm" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% if order.status != 'COMPLETED' %}
+                            <a href="{% url 'order_partial_complete' order.pk %}" class="btn btn-outline-success btn-sm" title="Complete">
+                                <i class="bi bi-check-circle"></i>
+                            </a>
                             {% endif %}
                         </div>
                     </td>
