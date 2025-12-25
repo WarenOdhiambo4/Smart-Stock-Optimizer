@@ -161,6 +161,13 @@ class StockMovement(models.Model):
         self._processed = True
         self.save(update_fields=['_processed'])
 
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        if is_new and self.status == 'APPROVED' and not self._processed:
+            self.apply_stock_adjustment()
+
 
 
 
