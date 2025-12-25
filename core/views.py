@@ -861,18 +861,33 @@ def expense_create(request):
     sales = Sale.objects.select_related('branch').all()
     
     if request.method == 'POST':
-        expense = Expense.objects.create(
-            expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
-            branch_id=request.POST.get('branch'),
-            sale_id=request.POST.get('sale') if request.POST.get('sale') else None,
-            expense_type=request.POST.get('expense_type'),
-            description=request.POST.get('description'),
-            amount=Decimal(request.POST.get('amount', '0')),
-            expense_date=request.POST.get('expense_date'),
-            receipt_number=request.POST.get('receipt_number', ''),
-            notes=request.POST.get('notes', ''),
-        )
-        messages.success(request, f'Expense {expense.expense_number} created!')
+        branch_id = request.POST.get('branch')
+        expense_type = request.POST.get('expense_type')
+        expense_date = request.POST.get('expense_date')
+        sale_id = request.POST.get('sale') if request.POST.get('sale') else None
+        notes = request.POST.get('notes', '')
+        
+        # Get expense items
+        item_descriptions = request.POST.getlist('item_description')
+        item_amounts = request.POST.getlist('item_amount')
+        item_receipts = request.POST.getlist('item_receipt')
+        
+        # Create multiple expenses
+        for i in range(len(item_descriptions)):
+            if item_descriptions[i] and item_amounts[i]:
+                Expense.objects.create(
+                    expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
+                    branch_id=branch_id,
+                    sale_id=sale_id,
+                    expense_type=expense_type,
+                    description=item_descriptions[i],
+                    amount=Decimal(item_amounts[i]),
+                    expense_date=expense_date,
+                    receipt_number=item_receipts[i] if i < len(item_receipts) else '',
+                    notes=notes,
+                )
+        
+        messages.success(request, f'{len(item_descriptions)} expenses created!')
         return redirect('expense_list')
     
     return render(request, 'core/expense_form.html', {

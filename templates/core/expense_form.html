@@ -67,6 +67,30 @@
                             <label for="notes" class="form-label">Notes</label>
                             <textarea name="notes" id="notes" class="form-control" rows="2">{% if expense %}{{ expense.notes }}{% endif %}</textarea>
                         </div>
+                    </div>
+                    
+                    <h6 class="mt-4 mb-3">Expense Items</h6>
+                    <div id="expenseItems">
+                        <div class="row g-2 mb-2 expense-item">
+                            <div class="col-md-4">
+                                <input type="text" name="item_description" class="form-control form-control-sm" placeholder="Item Description" required>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="number" name="item_amount" step="0.01" class="form-control form-control-sm" placeholder="Amount" required>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" name="item_receipt" class="form-control form-control-sm" placeholder="Receipt #">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-item">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">
+                        Add Item
+                    </button>
+                    
+                    <div class="row g-3 mt-3">
                         <div class="col-12">
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-lg me-1"></i>Save Expense
@@ -84,6 +108,19 @@
 
 {% block scripts %}
 <script>
-    // No auto-date setting - user will input manually
+document.getElementById('addItem').addEventListener('click', function() {
+    const template = document.querySelector('.expense-item').cloneNode(true);
+    template.querySelectorAll('input').forEach(input => input.value = '');
+    document.getElementById('expenseItems').appendChild(template);
+});
+
+document.getElementById('expenseItems').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-item')) {
+        const items = document.querySelectorAll('.expense-item');
+        if (items.length > 1) {
+            e.target.closest('.expense-item').remove();
+        }
+    }
+});
 </script>
 {% endblock %}
