@@ -5,6 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from .logistics_analytics import LogisticsAnalytics, KPISecretDashboard
 from .models import Vehicle, Branch
+from datetime import datetime
 import json
 
 @login_required
