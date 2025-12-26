@@ -110,33 +110,18 @@
                 box-shadow: none;
                 background: rgba(255,255,255,0.1);
                 margin-left: var(--spacing-md);
+                position: static !important;
             }
         }
         
-        /* Prevent horizontal overflow */
-        html, body {
-            overflow-x: hidden;
-            max-width: 100vw;
+        /* Fix dropdown positioning */
+        .dropdown-menu {
+            position: absolute;
+            z-index: 1000;
         }
         
-        .container-fluid, .container {
-            max-width: 100%;
-            overflow-x: hidden;
-        }
-        
-        .table-responsive {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .row {
-            margin-left: 0;
-            margin-right: 0;
-        }
-        
-        .row > * {
-            padding-left: calc(var(--bs-gutter-x) * 0.5);
-            padding-right: calc(var(--bs-gutter-x) * 0.5);
+        .navbar-nav .dropdown-menu {
+            position: absolute;
         }
         
         /* Responsive Spacing */
@@ -215,7 +200,7 @@
                     </li>
                     {% if user.profile.role in 'ADMIN,BOSS,MANAGER' %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-building me-1"></i>Organization
                         </a>
                         <ul class="dropdown-menu">
@@ -227,7 +212,7 @@
                     </li>
                     {% endif %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-box me-1"></i>Inventory
                         </a>
                         <ul class="dropdown-menu">
@@ -256,7 +241,7 @@
 
                     {% if user.profile.role in 'ADMIN,BOSS,MANAGER,LOGISTICS' %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-truck me-1"></i>Logistics
                         </a>
                         <ul class="dropdown-menu">
@@ -271,7 +256,7 @@
                     {% endif %}
                     {% if user.profile.role in 'ADMIN,BOSS,FINANCE,MANAGER' %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-graph-up me-1"></i>Finance
                         </a>
                         <ul class="dropdown-menu">
@@ -295,7 +280,7 @@
                     </li>
                     {% endif %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-person-circle me-1"></i>{{ user.username }}
                         </a>
                         <ul class="dropdown-menu">
