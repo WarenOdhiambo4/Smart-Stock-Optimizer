@@ -382,7 +382,7 @@ class OrderItem(models.Model):
         
         self.update_completion_status()
         
-        # Add to stock if completed
+        # Create stock movement record only - stock will be updated automatically
         if quantity_to_complete > 0 and self.product:
             target_branch = branch or self.order.branch
             stock, created = Stock.objects.get_or_create(
@@ -390,10 +390,8 @@ class OrderItem(models.Model):
                 product=self.product,
                 defaults={'quantity': 0}
             )
-            stock.quantity += quantity_to_complete
-            stock.save()
             
-            # Create stock movement record
+            # Create stock movement record - this will automatically update stock
             StockMovement.objects.create(
                 stock=stock,
                 movement_type='IN',
@@ -1303,6 +1301,45 @@ class InventoryLayer(models.Model):
     
     def __str__(self):
         return f"{self.stock.product.name} - {self.remaining_quantity}/{self.quantity} @ {self.unit_cost}"
+
+
+class PhysicalStockCount(models.Model):
+    """Track physical stock counts and discrepancies"""
+    count_number = models.CharField(max_length=50, unique=True)
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='stock_counts')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    system_quantity = models.IntegerField(help_text="Quantity according to system")
+    physical_quantity = models.IntegerField(help_text="Actual physical count")
+    discrepancy = models.IntegerField(help_text="Difference (physical - system)")
+    discrepancy_value = models.DecimalField(max_digits=10, decimal_places=2, help_text="Value of discrepancy")
+    count_date = models.DateTimeField(auto_now_add=True)
+    counted_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-count_date']
+    
+    def __str__(self):
+        return f"Count #{self.count_number} - {self.product.name} @ {self.branch.name}"
+    
+    def save(self, *args, **kwargs):
+        # Calculate discrepancy
+        self.discrepancy = self.physical_quantity - self.system_quantity
+        self.discrepancy_value = abs(self.discrepancy) * self.product.cost_price
+        
+        super().save(*args, **kwargs)
+        
+        # Create stock adjustment if there's a discrepancy
+        if self.discrepancy != 0:
+            stock = Stock.objects.get(branch=self.branch, product=self.product)
+            StockMovement.objects.create(
+                stock=stock,
+                movement_type='ADJUSTMENT',
+                quantity=self.discrepancy,
+                status='APPROVED',
+                notes=f"Physical count adjustment - Count #{self.count_number}",
+                created_by=self.counted_by
+            )
 
 
 class BusinessNote(models.Model):

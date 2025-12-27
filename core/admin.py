@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from .models import (
     Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory,
     Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance,
-    OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection, BusinessNote, InventoryLayer
+    OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection, BusinessNote, InventoryLayer, PhysicalStockCount
 )
 
 
@@ -543,3 +543,37 @@ class InventoryLayerAdmin(admin.ModelAdmin):
             'fields': ('created_at',)
         }),
     )
+
+
+@admin.register(PhysicalStockCount)
+class PhysicalStockCountAdmin(admin.ModelAdmin):
+    list_display = ['count_number', 'branch', 'product', 'system_quantity', 'physical_quantity', 'discrepancy', 'discrepancy_value', 'count_date', 'counted_by']
+    list_filter = ['branch', 'count_date', 'counted_by']
+    search_fields = ['count_number', 'product__name', 'branch__name']
+    readonly_fields = ['discrepancy', 'discrepancy_value', 'count_date']
+    date_hierarchy = 'count_date'
+    
+    fieldsets = (
+        ('Count Information', {
+            'fields': ('count_number', 'branch', 'product')
+        }),
+        ('Stock Quantities', {
+            'fields': (
+                ('system_quantity', 'physical_quantity'),
+                ('discrepancy', 'discrepancy_value')
+            ),
+            'classes': ('wide',)
+        }),
+        ('Count Details', {
+            'fields': ('counted_by', 'count_date', 'notes')
+        }),
+    )
+    
+    def has_change_permission(self, request, obj=None):
+        # Prevent editing after creation to maintain audit trail
+        return False
+    
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # Editing existing object
+            return self.readonly_fields + ('count_number', 'branch', 'product', 'system_quantity', 'physical_quantity', 'counted_by', 'notes')
+        return self.readonly_fields

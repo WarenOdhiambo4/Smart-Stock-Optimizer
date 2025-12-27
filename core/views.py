@@ -13,7 +13,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import uuid
 
-from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote
+from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote, PhysicalStockCount
 
 
 def role_required(*roles):
@@ -782,19 +782,24 @@ def sale_create(request):
             
             sale.calculate_total()
             
-            # Add expense if provided
-            expense_amount = request.POST.get('expense_amount')
-            if expense_amount and Decimal(expense_amount) > 0:
-                Expense.objects.create(
-                    expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
-                    branch_id=branch_id,
-                    sale=sale,
-                    expense_type='SALE_RELATED',
-                    description=request.POST.get('expense_description', 'Sale related expense'),
-                    amount=Decimal(expense_amount),
-                    expense_date=timezone.now().date(),
-                    notes=request.POST.get('expense_notes', ''),
-                )
+            # Add multiple expenses if provided
+            expense_descriptions = request.POST.getlist('expense_description')
+            expense_amounts = request.POST.getlist('expense_amount')
+            expense_receipts = request.POST.getlist('expense_receipt')
+            
+            for i in range(len(expense_descriptions)):
+                if expense_descriptions[i] and expense_amounts[i] and Decimal(expense_amounts[i]) > 0:
+                    Expense.objects.create(
+                        expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
+                        branch_id=branch_id,
+                        sale=sale,
+                        expense_type='SALE_RELATED',
+                        description=expense_descriptions[i],
+                        amount=Decimal(expense_amounts[i]),
+                        expense_date=timezone.now().date(),
+                        receipt_number=expense_receipts[i] if i < len(expense_receipts) else '',
+                        notes=f"Sale related expense for {sale.sale_number}",
+                    )
             
             messages.success(request, f'Sale {sale.sale_number} created successfully!')
             return redirect('sale_list')
@@ -815,6 +820,7 @@ def get_branch_stocks(request, branch_id):
     data = [
         {
             'id': s.id,
+            'product_id': s.product.id,
             'product_name': s.product.name,
             'product_sku': s.product.sku,
             'quantity': s.quantity,
@@ -1648,3 +1654,68 @@ def analytics_dashboard(request):
     }
     
     return render(request, 'core/analytics_dashboard.html', context)
+
+
+@login_required
+@role_required('ADMIN', 'BOSS', 'MANAGER')
+def physical_count(request):
+    branches = Branch.objects.filter(is_active=True)
+    user_profile = request.user.profile if hasattr(request.user, 'profile') else None
+    
+    # Filter branches for managers
+    if user_profile and user_profile.role == 'MANAGER' and user_profile.branch:
+        branches = branches.filter(id=user_profile.branch.id)
+    
+    return render(request, 'core/physical_count.html', {'branches': branches})
+
+
+@login_required
+@role_required('ADMIN', 'BOSS', 'MANAGER')
+def physical_count_submit(request):
+    if request.method == 'POST':
+        branch_id = request.POST.get('branch')
+        product_id = request.POST.get('product')
+        physical_quantity = int(request.POST.get('physical_quantity', 0))
+        notes = request.POST.get('notes', '')
+        
+        branch = get_object_or_404(Branch, pk=branch_id)
+        product = get_object_or_404(Product, pk=product_id)
+        
+        # Get current stock
+        try:
+            stock = Stock.objects.get(branch=branch, product=product)
+            system_quantity = stock.quantity
+        except Stock.DoesNotExist:
+            system_quantity = 0
+        
+        # Create physical count record
+        count = PhysicalStockCount.objects.create(
+            count_number=f"COUNT-{uuid.uuid4().hex[:8].upper()}",
+            branch=branch,
+            product=product,
+            system_quantity=system_quantity,
+            physical_quantity=physical_quantity,
+            counted_by=getattr(request.user, 'employee', None),
+            notes=notes
+        )
+        
+        discrepancy_type = "shortage" if count.discrepancy < 0 else "excess" if count.discrepancy > 0 else "match"
+        
+        if count.discrepancy == 0:
+            messages.success(request, f'Stock count matches! No discrepancy found for {product.name}.')
+        else:
+            messages.warning(
+                request, 
+                f'Discrepancy found: {abs(count.discrepancy)} units {discrepancy_type} for {product.name}. '
+                f'Value: KES {count.discrepancy_value}. Stock adjusted automatically.'
+            )
+        
+        return JsonResponse({
+            'status': 'success',
+            'discrepancy': count.discrepancy,
+            'discrepancy_value': float(count.discrepancy_value),
+            'discrepancy_type': discrepancy_type,
+            'count_number': count.count_number
+        })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'})

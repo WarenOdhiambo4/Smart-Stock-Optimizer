@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}Physical Stock Count - Kabisa ERP{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #28a745; margin-bottom: 20px;">
+                Physical Stock Count
+            </h2>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <form id="countForm">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Branch</label>
+                                <select name="branch" id="branchSelect" class="form-select" required style="font-family: 'Nunito', sans-serif; font-size: 14px;">
+                                    <option value="">Select Branch</option>
+                                    {% for branch in branches %}
+                                    <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Product</label>
+                                <select name="product" id="productSelect" class="form-select" required style="font-family: 'Nunito', sans-serif; font-size: 14px;" disabled>
+                                    <option value="">Select Product</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row" id="stockInfo" style="display: none;">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">System Stock</label>
+                                <input type="text" id="systemStock" class="form-control" readonly style="font-family: 'Nunito', sans-serif; font-size: 14px; background: #f8f9fa;">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Physical Count</label>
+                                <input type="number" name="physical_quantity" id="physicalCount" class="form-control" required style="font-family: 'Nunito', sans-serif; font-size: 14px;" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Discrepancy</label>
+                                <input type="text" id="discrepancy" class="form-control" readonly style="font-family: 'Nunito', sans-serif; font-size: 14px; background: #f8f9fa;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="notesSection" style="display: none;">
+                        <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3" style="font-family: 'Nunito', sans-serif; font-size: 14px;" placeholder="Add any notes about the count..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success" id="submitBtn" style="font-family: 'Nunito', sans-serif; font-size: 14px; display: none;">
+                        Submit Count
+                    </button>
+                </form>
+            </div>
+            
+            <div id="resultSection" style="display: none; margin-top: 20px;">
+                <div class="alert" id="resultAlert" style="font-family: 'Nunito', sans-serif; font-size: 14px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const branchSelect = document.getElementById('branchSelect');
+    const productSelect = document.getElementById('productSelect');
+    const stockInfo = document.getElementById('stockInfo');
+    const systemStock = document.getElementById('systemStock');
+    const physicalCount = document.getElementById('physicalCount');
+    const discrepancy = document.getElementById('discrepancy');
+    const notesSection = document.getElementById('notesSection');
+    const submitBtn = document.getElementById('submitBtn');
+    const countForm = document.getElementById('countForm');
+    const resultSection = document.getElementById('resultSection');
+    const resultAlert = document.getElementById('resultAlert');
+    
+    // Load products when branch changes
+    branchSelect.addEventListener('change', function() {
+        const branchId = this.value;
+        productSelect.innerHTML = '<option value="">Select Product</option>';
+        productSelect.disabled = true;
+        stockInfo.style.display = 'none';
+        notesSection.style.display = 'none';
+        submitBtn.style.display = 'none';
+        
+        if (branchId) {
+            fetch(`/api/branch/${branchId}/stocks/`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(stock => {
+                        const option = document.createElement('option');
+                        option.value = stock.product_id || stock.id;
+                        option.textContent = `${stock.product_name} (${stock.quantity} units)`;
+                        option.dataset.quantity = stock.quantity;
+                        productSelect.appendChild(option);
+                    });
+                    productSelect.disabled = false;
+                });
+        }
+    });
+    
+    // Show stock info when product changes
+    productSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
+            const quantity = selectedOption.dataset.quantity || 0;
+            systemStock.value = quantity;
+            stockInfo.style.display = 'block';
+            notesSection.style.display = 'block';
+            submitBtn.style.display = 'block';
+            physicalCount.focus();
+        } else {
+            stockInfo.style.display = 'none';
+            notesSection.style.display = 'none';
+            submitBtn.style.display = 'none';
+        }
+    });
+    
+    // Calculate discrepancy
+    physicalCount.addEventListener('input', function() {
+        const system = parseInt(systemStock.value) || 0;
+        const physical = parseInt(this.value) || 0;
+        const diff = physical - system;
+        
+        discrepancy.value = diff;
+        discrepancy.style.color = diff === 0 ? '#28a745' : (diff > 0 ? '#007bff' : '#dc3545');
+    });
+    
+    // Submit form
+    countForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch('{% url "physical_count_submit" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                let alertClass = 'alert-success';
+                let message = `Count completed! Count #${data.count_number}`;
+                
+                if (data.discrepancy !== 0) {
+                    alertClass = 'alert-warning';
+                    const type = data.discrepancy < 0 ? 'shortage' : 'excess';
+                    message += ` - ${Math.abs(data.discrepancy)} units ${type} (KES ${data.discrepancy_value.toFixed(2)})`;
+                } else {
+                    message += ' - Stock matches perfectly!';
+                }
+                
+                resultAlert.className = `alert ${alertClass}`;
+                resultAlert.textContent = message;
+                resultSection.style.display = 'block';
+                
+                // Reset form
+                countForm.reset();
+                stockInfo.style.display = 'none';
+                notesSection.style.display = 'none';
+                submitBtn.style.display = 'none';
+                productSelect.disabled = true;
+            } else {
+                resultAlert.className = 'alert alert-danger';
+                resultAlert.textContent = data.message || 'Error submitting count';
+                resultSection.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            resultAlert.className = 'alert alert-danger';
+            resultAlert.textContent = 'Error submitting count';
+            resultSection.style.display = 'block';
+        });
+    });
+});
+</script>
+{% endblock %}

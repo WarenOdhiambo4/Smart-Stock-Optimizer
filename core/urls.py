@@ -100,6 +100,10 @@ urlpatterns = [
     path('notebook/', views.notebook, name='notebook'),
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
     
+    # Physical Stock Count
+    path('physical-count/', views.physical_count, name='physical_count'),
+    path('physical-count/submit/', views.physical_count_submit, name='physical_count_submit'),
+    
     # API
     path('api/branch/<int:branch_id>/stocks/', views.get_branch_stocks, name='get_branch_stocks'),
     

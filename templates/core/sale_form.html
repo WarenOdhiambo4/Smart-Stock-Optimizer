@@ -74,21 +74,26 @@
 
             <hr class="my-4">
             
-            <h6 class="mb-3">Sale Related Expense (Optional)</h6>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Expense Amount</label>
-                    <input type="number" name="expense_amount" id="expenseAmount" class="form-control" step="0.01" placeholder="0.00">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Expense Description</label>
-                    <input type="text" name="expense_description" id="expenseDescription" class="form-control" placeholder="e.g., Delivery charges">
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Expense Notes</label>
-                    <textarea name="expense_notes" id="expenseNotes" class="form-control" rows="2"></textarea>
+            <h6 class="mb-3">Sale Related Expenses (Optional)</h6>
+            <div id="expenseItems">
+                <div class="row g-2 mb-2 expense-item">
+                    <div class="col-md-4">
+                        <input type="text" name="expense_description" class="form-control form-control-sm" placeholder="Expense Description">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" name="expense_amount" step="0.01" class="form-control form-control-sm" placeholder="Amount">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" name="expense_receipt" class="form-control form-control-sm" placeholder="Receipt #">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-expense">Remove</button>
+                    </div>
                 </div>
             </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="addExpense">
+                <i class="bi bi-plus me-1"></i>Add Expense
+            </button>
 
             <div class="mt-4">
                 <button type="button" class="btn btn-primary" onclick="showConfirmation()">
@@ -183,6 +188,21 @@ document.getElementById('saleItems').addEventListener('click', function(e) {
     }
 });
 
+document.getElementById('addExpense').addEventListener('click', function() {
+    const template = document.querySelector('.expense-item').cloneNode(true);
+    template.querySelectorAll('input').forEach(input => input.value = '');
+    document.getElementById('expenseItems').appendChild(template);
+});
+
+document.getElementById('expenseItems').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-expense')) {
+        const items = document.querySelectorAll('.expense-item');
+        if (items.length > 1) {
+            e.target.closest('.expense-item').remove();
+        }
+    }
+});
+
 function showConfirmation() {
     const form = document.getElementById('saleForm');
     const branch = form.querySelector('[name="branch"]');
@@ -207,11 +227,22 @@ function showConfirmation() {
     });
     itemsHtml += '</ul>';
     
-    const expenseAmount = form.querySelector('[name="expense_amount"]').value;
+    const expenseAmounts = form.querySelectorAll('[name="expense_amount"]');
+    const expenseDescs = form.querySelectorAll('[name="expense_description"]');
     let expenseHtml = '';
-    if (expenseAmount && parseFloat(expenseAmount) > 0) {
-        const expenseDesc = form.querySelector('[name="expense_description"]').value || 'Sale related expense';
-        expenseHtml = `<h6 class="mb-2">Expense:</h6><p class="text-danger">KES ${parseFloat(expenseAmount).toFixed(2)} - ${expenseDesc}</p>`;
+    let totalExpenses = 0;
+    
+    expenseAmounts.forEach((amountInput, index) => {
+        const amount = parseFloat(amountInput.value || 0);
+        if (amount > 0) {
+            const desc = expenseDescs[index]?.value || 'Sale related expense';
+            totalExpenses += amount;
+            expenseHtml += `<li>KES ${amount.toFixed(2)} - ${desc}</li>`;
+        }
+    });
+    
+    if (totalExpenses > 0) {
+        expenseHtml = `<h6 class="mb-2">Expenses:</h6><ul class="text-danger mb-3">${expenseHtml}</ul><p class="text-danger"><strong>Total Expenses: KES ${totalExpenses.toFixed(2)}</strong></p>`;
     }
     
     const confirmHtml = `

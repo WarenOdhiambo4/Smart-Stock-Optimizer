@@ -1,37 +1,59 @@
 {% extends 'base.html' %}
 
-{% block title %}Business Notebook - Page {{ current_page }}{% endblock %}
+{% block title %}Business Notebook - Page {{ page_number }}{% endblock %}
 
 {% block content %}
-<div class="notebook-container">
-    <div class="notebook-header">
-        <h4>Business Notebook - Page {{ page_number }}</h4>
-        <div class="page-navigation">
-            <a href="?page={{ page_number|add:-1 }}" class="btn btn-sm btn-outline-secondary">← Previous</a>
-            <input type="number" id="pageInput" value="{{ page_number }}" min="1" class="form-control" style="width: 80px; display: inline-block; margin: 0 10px;">
-            <button type="button" id="goToPage" class="btn btn-sm btn-primary">Go</button>
-            <a href="?page={{ page_number|add:1 }}" class="btn btn-sm btn-outline-secondary">Next →</a>
-            <button type="button" id="saveBtn" class="btn btn-sm btn-success ms-2">Save</button>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="notebook-wrapper">
+                <div class="notebook-header">
+                    <h4 style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #28a745; margin: 0;">
+                        <i class="bi bi-journal-text me-2"></i>Business Notebook - Page {{ page_number }}
+                    </h4>
+                    <div class="page-controls">
+                        <button type="button" onclick="goToPage({{ page_number|add:-1 }})" class="btn btn-sm btn-outline-secondary">← Prev</button>
+                        <input type="number" id="pageInput" value="{{ page_number }}" min="1" class="form-control form-control-sm" style="width: 60px; display: inline-block; margin: 0 8px;">
+                        <button type="button" onclick="goToPageInput()" class="btn btn-sm btn-primary">Go</button>
+                        <button type="button" onclick="goToPage({{ page_number|add:1 }})" class="btn btn-sm btn-outline-secondary">Next →</button>
+                        <button type="button" id="saveBtn" onclick="saveNote()" class="btn btn-sm btn-success ms-2">
+                            <i class="bi bi-floppy me-1"></i>Save
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="notebook-page">
+                    <div class="pen-holder">
+                        <i class="bi bi-pen" style="color: #007bff; font-size: 18px;"></i>
+                    </div>
+                    
+                    <form method="post" id="notebookForm">
+                        {% csrf_token %}
+                        <div class="writing-area">
+                            <textarea 
+                                name="content" 
+                                id="notebookContent" 
+                                placeholder="Click here to start writing..."
+                                style="font-family: 'Nunito', sans-serif; font-size: 14px; line-height: 1.8; border: none; outline: none; background: transparent; width: 100%; resize: none; padding: 0; margin: 0; color: #333; z-index: 10; position: relative;"
+                                rows="15"
+                            >{{ content }}</textarea>
+                        </div>
+                    </form>
+                    
+                    <div class="page-footer">
+                        <small style="color: #666; font-family: 'Nunito', sans-serif; font-size: 12px;">
+                            Auto-saves as you type • Page {{ page_number }}
+                        </small>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    
-    <div class="notebook-page">
-        <form method="post" id="notebookForm">
-            {% csrf_token %}
-            <textarea 
-                name="content" 
-                id="notebookContent" 
-                class="notebook-textarea"
-                placeholder="Start writing..."
-                rows="7"
-            >{{ note.content }}</textarea>
-        </form>
     </div>
 </div>
 
 <style>
-.notebook-container {
-    max-width: 800px;
+.notebook-wrapper {
+    max-width: 900px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -41,47 +63,74 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #333;
+    padding: 15px 20px;
+    background: white;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.page-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .notebook-page {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    background: white;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     padding: 30px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    background-image: repeating-linear-gradient(
-        transparent,
-        transparent 39px,
-        #ccc 39px,
-        #ccc 40px
-    );
-    background-position: 0 0;
+    position: relative;
+    min-height: 500px;
+    background-image: 
+        linear-gradient(to right, #ff6b6b 30px, transparent 30px),
+        repeating-linear-gradient(
+            transparent,
+            transparent 27px,
+            #e0e0e0 27px,
+            #e0e0e0 28px
+        );
+    background-size: 100% 100%, 100% 28px;
 }
 
-.notebook-textarea {
-    width: 100%;
-    border: none;
+.pen-holder {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-5px); }
+    60% { transform: translateY(-3px); }
+}
+
+.writing-area {
+    margin-left: 40px;
+    padding-top: 10px;
+    position: relative;
+    z-index: 10;
+}
+
+.page-footer {
+    position: absolute;
+    bottom: 15px;
+    right: 20px;
+}
+
+#notebookContent:focus {
     outline: none;
-    background: transparent;
-    font-family: 'Courier New', monospace;
-    font-size: 16px;
-    line-height: 40px;
-    resize: none;
-    padding: 0;
-    margin-left: 30px;
-    vertical-align: bottom;
 }
 
-.notebook-textarea::placeholder {
+#notebookContent::placeholder {
     color: #999;
     font-style: italic;
 }
 
-.page-navigation {
-    display: flex;
-    align-items: center;
+.btn {
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
 }
 </style>
 
@@ -90,31 +139,18 @@ let saveTimeout;
 const textarea = document.getElementById('notebookContent');
 const form = document.getElementById('notebookForm');
 const saveBtn = document.getElementById('saveBtn');
-const pageInput = document.getElementById('pageInput');
-const goToPageBtn = document.getElementById('goToPage');
 
-// Manual save button
-saveBtn.addEventListener('click', function() {
-    saveNote();
-});
-
-// Go to specific page
-goToPageBtn.addEventListener('click', function() {
-    const pageNum = parseInt(pageInput.value);
-    if (pageNum && pageNum > 0) {
-        window.location.href = `?page=${pageNum}`;
-    }
-});
-
-// Enter key on page input
-pageInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        goToPageBtn.click();
-    }
+// Auto-save as user types
+textarea.addEventListener('input', function() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(function() {
+        saveNote();
+    }, 2000);
 });
 
 function saveNote() {
-    saveBtn.textContent = 'Saving...';
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Saving...';
     saveBtn.disabled = true;
     
     fetch(window.location.href, {
@@ -123,60 +159,53 @@ function saveNote() {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
-    }).then(response => response.json())
+    })
+    .then(response => response.json())
     .then(data => {
         if (data.status === 'saved') {
-            saveBtn.textContent = 'Saved!';
-            saveBtn.classList.remove('btn-success');
-            saveBtn.classList.add('btn-outline-success');
+            saveBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Saved!';
+            saveBtn.className = 'btn btn-sm btn-outline-success ms-2';
             setTimeout(() => {
-                saveBtn.textContent = 'Save';
-                saveBtn.classList.remove('btn-outline-success');
-                saveBtn.classList.add('btn-success');
+                saveBtn.innerHTML = originalText;
+                saveBtn.className = 'btn btn-sm btn-success ms-2';
                 saveBtn.disabled = false;
             }, 1500);
         }
-    }).catch(() => {
-        saveBtn.textContent = 'Error';
-        saveBtn.classList.add('btn-danger');
+    })
+    .catch(() => {
+        saveBtn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Error';
+        saveBtn.className = 'btn btn-sm btn-danger ms-2';
         setTimeout(() => {
-            saveBtn.textContent = 'Save';
-            saveBtn.classList.remove('btn-danger');
+            saveBtn.innerHTML = originalText;
+            saveBtn.className = 'btn btn-sm btn-success ms-2';
             saveBtn.disabled = false;
         }, 2000);
     });
 }
 
-textarea.addEventListener('input', function() {
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(function() {
-        // Auto-save after 3 seconds of no typing
-        saveNote();
-    }, 3000);
-});
-
-// Limit to 7 lines
-textarea.addEventListener('input', function() {
-    const lines = this.value.split('\n');
-    if (lines.length > 7) {
-        const limitedContent = lines.slice(0, 7).join('\n');
-        this.value = limitedContent;
+function goToPage(pageNum) {
+    if (pageNum > 0) {
+        window.location.href = `?page=${pageNum}`;
     }
-});
+}
 
-// Handle Enter key to go to next page when at line limit
-textarea.addEventListener('keydown', function(e) {
+function goToPageInput() {
+    const pageNum = parseInt(document.getElementById('pageInput').value);
+    if (pageNum && pageNum > 0) {
+        goToPage(pageNum);
+    }
+}
+
+// Enter key on page input
+document.getElementById('pageInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-        const lines = this.value.split('\n');
-        if (lines.length >= 7) {
-            e.preventDefault();
-            // Save current page and go to next
-            saveNote();
-            setTimeout(() => {
-                window.location.href = `?page={{ page_number|add:1 }}`;
-            }, 500);
-        }
+        goToPageInput();
     }
+});
+
+// Focus on textarea when page loads
+window.addEventListener('load', function() {
+    textarea.focus();
 });
 </script>
 {% endblock %}
