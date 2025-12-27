@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ document_type }} - {{ document_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #2c2c2c;
+            background: white;
+        }
+        
+        .receipt-container {
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+            padding: 0;
+        }
+        
+        /* Header Section */
+        .header {
+            background: #1e3a5f;
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .company-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .company-details {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        /* Document Title */
+        .document-title {
+            background: #2c2c2c;
+            color: white;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        /* Metadata Block */
+        .metadata-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding: 0 20px;
+        }
+        
+        .metadata-left, .metadata-right {
+            width: 48%;
+        }
+        
+        .metadata-item {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .metadata-label {
+            font-weight: bold;
+            color: #1e3a5f;
+            width: 120px;
+            flex-shrink: 0;
+        }
+        
+        .metadata-value {
+            color: #2c2c2c;
+        }
+        
+        /* Customer Section */
+        .customer-section {
+            background: #f8f9fa;
+            border-left: 4px solid #1e3a5f;
+            padding: 15px 20px;
+            margin: 0 20px 25px 20px;
+        }
+        
+        .customer-title {
+            font-weight: bold;
+            color: #1e3a5f;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        
+        .customer-details {
+            color: #2c2c2c;
+        }
+        
+        /* Items Table */
+        .items-section {
+            margin: 0 20px 25px 20px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .items-table th {
+            background: #1e3a5f;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .items-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            color: #2c2c2c;
+        }
+        
+        .items-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        /* Totals Section */
+        .totals-section {
+            margin: 0 20px 25px 20px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .totals-table {
+            width: 300px;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .totals-label {
+            font-weight: bold;
+            color: #1e3a5f;
+            text-align: right;
+        }
+        
+        .totals-value {
+            text-align: right;
+            color: #2c2c2c;
+            width: 120px;
+        }
+        
+        .grand-total {
+            background: #1e3a5f;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        /* Terms Section */
+        .terms-section {
+            margin: 0 20px 25px 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .terms-title {
+            font-weight: bold;
+            color: #1e3a5f;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        
+        .terms-content {
+            font-size: 10px;
+            line-height: 1.5;
+            color: #2c2c2c;
+        }
+        
+        /* Footer */
+        .footer {
+            margin: 0 20px;
+            padding: 20px 0;
+            border-top: 2px solid #1e3a5f;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .signature-section {
+            text-align: center;
+        }
+        
+        .signature-line {
+            width: 200px;
+            height: 1px;
+            background: #2c2c2c;
+            margin: 40px auto 10px auto;
+        }
+        
+        .signature-label {
+            font-size: 10px;
+            color: #2c2c2c;
+        }
+        
+        .footer-info {
+            font-size: 10px;
+            color: #666;
+            text-align: right;
+        }
+        
+        /* Print Styles */
+        @media print {
+            body { -webkit-print-color-adjust: exact; }
+            .no-print { display: none; }
+            .receipt-container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="company-info">
+                <div>
+                    <div class="company-name">{{ company.name }}</div>
+                    <div class="company-details">
+                        {{ company.address }}<br>
+                        Phone: {{ company.phone }} | Email: {{ company.email }}<br>
+                        {% if company.tax_id %}Tax ID: {{ company.tax_id }}{% endif %}
+                    </div>
+                </div>
+                <div class="logo">
+                    {% if company.logo %}
+                        <img src="{{ company.logo }}" alt="Logo" style="max-width: 80px; max-height: 80px;">
+                    {% else %}
+                        LOGO
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Document Title -->
+        <div class="document-title">
+            {{ document_type|upper }}
+        </div>
+        
+        <!-- Metadata Section -->
+        <div class="metadata-section">
+            <div class="metadata-left">
+                <div class="metadata-item">
+                    <span class="metadata-label">{{ document_type }} No:</span>
+                    <span class="metadata-value">{{ document_number }}</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Date:</span>
+                    <span class="metadata-value">{{ document_date }}</span>
+                </div>
+                {% if due_date %}
+                <div class="metadata-item">
+                    <span class="metadata-label">Due Date:</span>
+                    <span class="metadata-value">{{ due_date }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="metadata-right">
+                <div class="metadata-item">
+                    <span class="metadata-label">Prepared By:</span>
+                    <span class="metadata-value">{{ prepared_by }}</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Payment Terms:</span>
+                    <span class="metadata-value">{{ payment_terms }}</span>
+                </div>
+                {% if branch %}
+                <div class="metadata-item">
+                    <span class="metadata-label">Branch:</span>
+                    <span class="metadata-value">{{ branch }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Customer Section -->
+        <div class="customer-section">
+            <div class="customer-title">{{ customer_label|default:"BILL TO" }}</div>
+            <div class="customer-details">
+                <strong>{{ customer.name }}</strong><br>
+                {% if customer.address %}{{ customer.address }}<br>{% endif %}
+                {% if customer.phone %}Phone: {{ customer.phone }}<br>{% endif %}
+                {% if customer.email %}Email: {{ customer.email }}{% endif %}
+            </div>
+        </div>
+        
+        <!-- Items Table -->
+        <div class="items-section">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 45%;">Description</th>
+                        <th style="width: 10%;" class="text-center">Qty</th>
+                        <th style="width: 10%;" class="text-center">Unit</th>
+                        <th style="width: 15%;" class="text-right">Rate</th>
+                        <th style="width: 15%;" class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="text-center">{{ forloop.counter }}</td>
+                        <td>
+                            <strong>{{ item.description }}</strong>
+                            {% if item.details %}<br><small style="color: #666;">{{ item.details }}</small>{% endif %}
+                        </td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-center">{{ item.unit|default:"pcs" }}</td>
+                        <td class="text-right">{{ currency }}{{ item.rate|floatformat:2 }}</td>
+                        <td class="text-right">{{ currency }}{{ item.total|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Totals Section -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td class="totals-label">Subtotal:</td>
+                    <td class="totals-value">{{ currency }}{{ subtotal|floatformat:2 }}</td>
+                </tr>
+                {% if discount > 0 %}
+                <tr>
+                    <td class="totals-label">Discount:</td>
+                    <td class="totals-value">-{{ currency }}{{ discount|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+                {% if tax > 0 %}
+                <tr>
+                    <td class="totals-label">Tax ({{ tax_rate }}%):</td>
+                    <td class="totals-value">{{ currency }}{{ tax|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+                <tr class="grand-total">
+                    <td class="totals-label">GRAND TOTAL:</td>
+                    <td class="totals-value">{{ currency }}{{ grand_total|floatformat:2 }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Terms & Conditions -->
+        {% if terms_conditions %}
+        <div class="terms-section">
+            <div class="terms-title">Terms & Conditions</div>
+            <div class="terms-content">{{ terms_conditions|linebreaks }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="signature-section">
+                <div class="signature-line"></div>
+                <div class="signature-label">Authorized Signature</div>
+            </div>
+            <div class="footer-info">
+                Generated on {{ generated_date }}<br>
+                {{ document_type }} ID: {{ document_number }}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -87,10 +87,16 @@
                             {{ sale.created_at|date:"M d, H:i" }}
                         </td>
                         <td>
-                            <a href="{% url 'sale_detail' sale.pk %}" class="btn btn-outline-primary btn-sm" title="View Details">
-                                <i class="bi bi-eye"></i>
-                                <span class="d-none d-xl-inline ms-1">View</span>
-                            </a>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'sale_detail' sale.pk %}" class="btn btn-outline-primary btn-sm" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                    <span class="d-none d-xl-inline ms-1">View</span>
+                                </a>
+                                <a href="{% url 'sale_print' sale.pk %}" class="btn btn-outline-success btn-sm" title="Print PDF" target="_blank">
+                                    <i class="bi bi-printer"></i>
+                                    <span class="d-none d-xl-inline ms-1">Print</span>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

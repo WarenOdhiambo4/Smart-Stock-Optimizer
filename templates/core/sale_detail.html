@@ -5,7 +5,15 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Sale {{ sale.sale_number }}</h1>
-    <a href="{% url 'sale_list' %}" class="btn btn-secondary btn-sm">Back to Sales</a>
+    <div>
+        <a href="{% url 'sale_print' sale.pk %}" class="btn btn-primary btn-sm me-2" target="_blank">
+            <i class="bi bi-printer me-1"></i>Print PDF
+        </a>
+        <a href="{% url 'sale_print' sale.pk %}?format=html" class="btn btn-outline-primary btn-sm me-2" target="_blank">
+            <i class="bi bi-eye me-1"></i>Preview
+        </a>
+        <a href="{% url 'sale_list' %}" class="btn btn-secondary btn-sm">Back to Sales</a>
+    </div>
 </div>
 
 <div class="row g-3">
@@ -27,15 +35,15 @@
                         <tr>
                             <td><strong>{{ item.stock.product.name }}</strong></td>
                             <td>{{ item.quantity }}</td>
-                            <td>${{ item.unit_price }}</td>
-                            <td>${{ item.subtotal }}</td>
+                            <td>KES {{ item.unit_price }}</td>
+                            <td>KES {{ item.subtotal }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr>
                             <td colspan="3" class="text-end"><strong>Total:</strong></td>
-                            <td><strong>${{ sale.total_amount }}</strong></td>
+                            <td><strong>KES {{ sale.total_amount }}</strong></td>
                         </tr>
                     </tfoot>
                 </table>

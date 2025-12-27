@@ -5,33 +5,44 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Financial Reports - {{ month_name }} {{ year }}</h1>
-    <form method="get" class="d-flex gap-2">
-        <select name="month" class="form-select form-select-sm" style="width: auto;">
-            {% for m in "123456789101112" %}
-            <option value="{{ m }}" {% if m|add:0 == month %}selected{% endif %}>Month {{ m }}</option>
-            {% endfor %}
-        </select>
-        <input type="number" name="year" class="form-control form-control-sm" style="width: 100px;" value="{{ year }}">
-        <button type="submit" class="btn btn-primary btn-sm">View</button>
-    </form>
+    <div class="d-flex gap-2">
+        <a href="{% url 'financial_report_print' %}?month={{ month }}&year={{ year }}" class="btn btn-primary btn-sm" target="_blank">
+            <i class="bi bi-printer me-1"></i>Print PDF
+        </a>
+        <a href="{% url 'financial_report_print' %}?month={{ month }}&year={{ year }}&format=html" class="btn btn-outline-primary btn-sm" target="_blank">
+            <i class="bi bi-eye me-1"></i>Preview
+        </a>
+        <a href="{% url 'business_master_report' %}?month={{ month }}&year={{ year }}" class="btn btn-success btn-sm" target="_blank">
+            <i class="bi bi-file-earmark-text me-1"></i>Master Report
+        </a>
+        <form method="get" class="d-flex gap-2">
+            <select name="month" class="form-select form-select-sm" style="width: auto;">
+                {% for m in "123456789101112" %}
+                <option value="{{ m }}" {% if m|add:0 == month %}selected{% endif %}>Month {{ m }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" name="year" class="form-control form-control-sm" style="width: 100px;" value="{{ year }}">
+            <button type="submit" class="btn btn-primary btn-sm">View</button>
+        </form>
+    </div>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="card stat-card" style="border-left: 4px solid var(--success);">
-            <div class="stat-value" style="color: var(--success);">${{ total_sales|floatformat:2 }}</div>
+            <div class="stat-value" style="color: var(--success);">KES {{ total_sales|floatformat:2 }}</div>
             <div class="stat-label"><i class="bi bi-graph-up me-1"></i>Total Sales</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card stat-card" style="border-left: 4px solid var(--danger);">
-            <div class="stat-value" style="color: var(--danger);">${{ total_expenses|floatformat:2 }}</div>
+            <div class="stat-value" style="color: var(--danger);">KES {{ total_expenses|floatformat:2 }}</div>
             <div class="stat-label"><i class="bi bi-cash-stack me-1"></i>Total Expenses</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card stat-card" style="border-left: 4px solid var(--primary);">
-            <div class="stat-value" style="color: var(--primary);">${{ total_profit|floatformat:2 }}</div>
+            <div class="stat-value" style="color: var(--primary);">KES {{ business_net_profit|floatformat:2 }}</div>
             <div class="stat-label"><i class="bi bi-wallet2 me-1"></i>Net Profit</div>
         </div>
     </div>
@@ -50,16 +61,17 @@
                     <th>Expenses</th>
                     <th>Profit</th>
                     <th>Margin %</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for report in branch_reports %}
                 <tr>
                     <td><a href="{% url 'branch_detail' report.branch.pk %}">{{ report.branch.name }}</a></td>
-                    <td class="text-success"><strong>${{ report.sales|floatformat:2 }}</strong></td>
-                    <td class="text-danger">${{ report.expenses|floatformat:2 }}</td>
+                    <td class="text-success"><strong>KES {{ report.sales|floatformat:2 }}</strong></td>
+                    <td class="text-danger">KES {{ report.expenses|floatformat:2 }}</td>
                     <td class="{% if report.profit < 0 %}text-danger{% else %}text-primary{% endif %}">
-                        <strong>${{ report.profit|floatformat:2 }}</strong>
+                        <strong>KES {{ report.profit|floatformat:2 }}</strong>
                     </td>
                     <td>
                         {% if report.sales > 0 %}
@@ -67,6 +79,11 @@
                         {% else %}
                         0%
                         {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'branch_monthly_report' report.branch.pk %}?month={{ month }}&year={{ year }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                            <i class="bi bi-printer"></i> Print
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}

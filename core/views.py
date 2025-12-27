@@ -1719,3 +1719,153 @@ def physical_count_submit(request):
         })
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
+
+
+# PDF Generation Views
+@login_required
+def sale_print(request, pk):
+    """Generate PDF receipt for sale"""
+    from .receipt_generator import ReceiptGenerator
+    
+    sale = get_object_or_404(Sale, pk=pk)
+    generator = ReceiptGenerator()
+    
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_sale_receipt(sale, format=format_type)
+
+
+@login_required
+def order_print(request, pk):
+    """Generate PDF receipt for order"""
+    from .receipt_generator import ReceiptGenerator
+    
+    order = get_object_or_404(Order, pk=pk)
+    generator = ReceiptGenerator()
+    
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_order_receipt(order, format=format_type)
+
+
+@login_required
+def expense_print(request, pk):
+    """Generate PDF receipt for expense"""
+    from .receipt_generator import ReceiptGenerator
+    
+    expense = get_object_or_404(Expense, pk=pk)
+    generator = ReceiptGenerator()
+    
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_expense_receipt(expense, format=format_type)
+
+
+@login_required
+@role_required('ADMIN', 'BOSS', 'FINANCE', 'MANAGER')
+def financial_report_print(request):
+    """Generate PDF for financial report"""
+    from .receipt_generator import ReceiptGenerator
+    from .delivery_manager import DeliveryChargesManager
+    
+    # Get date range
+    year = int(request.GET.get('year', timezone.now().year))
+    month = int(request.GET.get('month', timezone.now().month))
+    
+    start_date = datetime(year, month, 1).date()
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1).date()
+    else:
+        end_date = datetime(year, month + 1, 1).date()
+    
+    # Get financial data
+    branches = Branch.objects.filter(is_active=True)
+    report_items = []
+    total_sales = Decimal('0.00')
+    total_expenses = Decimal('0.00')
+    
+    for branch in branches:
+        sales = Sale.objects.filter(
+            branch=branch,
+            created_at__gte=start_date,
+            created_at__lt=end_date
+        ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+        
+        expenses = Expense.objects.filter(
+            branch=branch,
+            expense_date__gte=start_date,
+            expense_date__lt=end_date
+        ).exclude(expense_type='DELIVERY').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        
+        profit = sales - expenses
+        
+        report_items.append({
+            'description': f'{branch.name} Branch Performance',
+            'details': f'Sales: KES {sales:,.2f} | Expenses: KES {expenses:,.2f}',
+            'quantity': 1,
+            'unit': 'branch',
+            'rate': profit,
+            'total': profit
+        })
+        
+        total_sales += sales
+        total_expenses += expenses
+    
+    # Add delivery expenses
+    delivery_expenses = DeliveryChargesManager.get_total_delivery_expenses(start_date, end_date)
+    total_expenses += delivery_expenses
+    
+    if delivery_expenses > 0:
+        report_items.append({
+            'description': 'Business Delivery Charges',
+            'details': 'Company-wide delivery expenses',
+            'quantity': 1,
+            'unit': 'total',
+            'rate': -delivery_expenses,
+            'total': -delivery_expenses
+        })
+    
+    net_profit = total_sales - total_expenses
+    
+    report_data = {
+        'prepared_by': request.user.get_full_name() or request.user.username,
+        'branch': 'All Branches',
+        'period': f'{datetime(year, month, 1).strftime("%B %Y")}',
+        'items': report_items,
+        'subtotal': total_sales,
+        'discount': total_expenses,
+        'tax': Decimal('0.00'),
+        'tax_rate': 0,
+        'grand_total': net_profit,
+        'notes': f'Financial summary for {datetime(year, month, 1).strftime("%B %Y")}. Net business profit after all expenses including delivery charges.'
+    }
+    
+    generator = ReceiptGenerator()
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_financial_report(report_data, format=format_type)
+
+
+@login_required
+@role_required('ADMIN', 'BOSS', 'MANAGER')
+def branch_monthly_report(request, branch_id):
+    """Generate monthly report for specific branch"""
+    from .receipt_generator import ReceiptGenerator
+    
+    branch = get_object_or_404(Branch, pk=branch_id)
+    year = int(request.GET.get('year', timezone.now().year))
+    month = int(request.GET.get('month', timezone.now().month))
+    
+    generator = ReceiptGenerator()
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_branch_monthly_receipt(branch, year, month, format=format_type)
+
+
+@login_required
+@role_required('ADMIN', 'BOSS')
+def business_master_report(request):
+    """Generate master business report with all calculations"""
+    from .receipt_generator import ReceiptGenerator
+    
+    year = int(request.GET.get('year', timezone.now().year))
+    month = int(request.GET.get('month', timezone.now().month))
+    
+    generator = ReceiptGenerator()
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_business_master_receipt(year, month, format=format_type)

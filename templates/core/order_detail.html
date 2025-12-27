@@ -6,6 +6,12 @@
 <div class="page-header">
     <h1 class="page-title">Order {{ order.order_number }}</h1>
     <div class="d-flex gap-2">
+        <a href="{% url 'order_print' order.pk %}" class="btn btn-primary btn-sm" target="_blank">
+            <i class="bi bi-printer me-1"></i>Print PDF
+        </a>
+        <a href="{% url 'order_print' order.pk %}?format=html" class="btn btn-outline-primary btn-sm" target="_blank">
+            <i class="bi bi-eye me-1"></i>Preview
+        </a>
         {% if order.status == 'PENDING' %}
         <form method="post" action="{% url 'order_complete' order.pk %}" onsubmit="return confirm('Mark this order as complete? This will add items to stock.')">
             {% csrf_token %}
@@ -37,15 +43,15 @@
                             <td><strong>{{ item.product_name }}</strong></td>
                             <td><code>{{ item.product_sku|default:'-' }}</code></td>
                             <td>{{ item.quantity }}</td>
-                            <td>${{ item.unit_price }}</td>
-                            <td>${{ item.subtotal }}</td>
+                            <td>KES {{ item.unit_price }}</td>
+                            <td>KES {{ item.subtotal }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr>
                             <td colspan="4" class="text-end"><strong>Total:</strong></td>
-                            <td><strong>${{ order.total_amount }}</strong></td>
+                            <td><strong>KES {{ order.total_amount }}</strong></td>
                         </tr>
                     </tfoot>
                 </table>

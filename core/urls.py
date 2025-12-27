@@ -104,6 +104,14 @@ urlpatterns = [
     path('physical-count/', views.physical_count, name='physical_count'),
     path('physical-count/submit/', views.physical_count_submit, name='physical_count_submit'),
     
+    # PDF Generation
+    path('sales/<int:pk>/print/', views.sale_print, name='sale_print'),
+    path('orders/<int:pk>/print/', views.order_print, name='order_print'),
+    path('expenses/<int:pk>/print/', views.expense_print, name='expense_print'),
+    path('reports/financial/print/', views.financial_report_print, name='financial_report_print'),
+    path('reports/branch/<int:branch_id>/monthly/', views.branch_monthly_report, name='branch_monthly_report'),
+    path('reports/business/master/', views.business_master_report, name='business_master_report'),
+    
     # API
     path('api/branch/<int:branch_id>/stocks/', views.get_branch_stocks, name='get_branch_stocks'),
     
