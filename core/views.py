@@ -13,7 +13,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import uuid
 
-from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote, PhysicalStockCount
+from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote
 
 
 def role_required(*roles):
@@ -1350,25 +1350,72 @@ def trip_create(request):
     sales = Sale.objects.all()[:50]
     
     if request.method == 'POST':
-        trip = Trip.objects.create(
-            trip_number=f"TRIP-{uuid.uuid4().hex[:8].upper()}",
-            vehicle_id=request.POST.get('vehicle'),
-            driver_id=request.POST.get('driver'),
-            trip_type=request.POST.get('trip_type'),
-            origin=request.POST.get('origin'),
-            destination=request.POST.get('destination'),
-            distance=Decimal(request.POST.get('distance', '0')),
-            sale_id=request.POST.get('sale') if request.POST.get('sale') else None,
-            scheduled_date=request.POST.get('scheduled_date'),
-            revenue=Decimal(request.POST.get('revenue', '0')),
-            fuel_cost=Decimal(request.POST.get('fuel_cost', '0')),
-            other_expenses=Decimal(request.POST.get('other_expenses', '0')),
-            customer_name=request.POST.get('customer_name', ''),
-            customer_phone=request.POST.get('customer_phone', ''),
-            notes=request.POST.get('notes', ''),
-        )
-        messages.success(request, f'Trip {trip.trip_number} created successfully!')
-        return redirect('trip_list')
+        try:
+            # Handle decimal fields safely
+            distance = request.POST.get('distance', '0')
+            revenue = request.POST.get('revenue', '0')
+            fuel_cost = request.POST.get('fuel_cost', '0')
+            other_expenses = request.POST.get('other_expenses', '0')
+            
+            # Convert to Decimal with error handling
+            try:
+                distance = Decimal(distance) if distance else Decimal('0')
+            except (ValueError, TypeError):
+                distance = Decimal('0')
+            
+            try:
+                revenue = Decimal(revenue) if revenue else Decimal('0')
+            except (ValueError, TypeError):
+                revenue = Decimal('0')
+            
+            try:
+                fuel_cost = Decimal(fuel_cost) if fuel_cost else Decimal('0')
+            except (ValueError, TypeError):
+                fuel_cost = Decimal('0')
+            
+            try:
+                other_expenses = Decimal(other_expenses) if other_expenses else Decimal('0')
+            except (ValueError, TypeError):
+                other_expenses = Decimal('0')
+            
+            # Handle date field
+            scheduled_date = request.POST.get('scheduled_date')
+            if not scheduled_date:
+                messages.error(request, 'Scheduled date is required')
+                return render(request, 'core/trip_form.html', {
+                    'vehicles': vehicles,
+                    'drivers': drivers,
+                    'sales': sales,
+                    'action': 'Create'
+                })
+            
+            trip = Trip.objects.create(
+                trip_number=f"TRIP-{uuid.uuid4().hex[:8].upper()}",
+                vehicle_id=request.POST.get('vehicle'),
+                driver_id=request.POST.get('driver') if request.POST.get('driver') else None,
+                trip_type=request.POST.get('trip_type', 'DELIVERY'),
+                origin=request.POST.get('origin', ''),
+                destination=request.POST.get('destination', ''),
+                distance=distance,
+                sale_id=request.POST.get('sale') if request.POST.get('sale') else None,
+                scheduled_date=scheduled_date,
+                revenue=revenue,
+                fuel_cost=fuel_cost,
+                other_expenses=other_expenses,
+                customer_name=request.POST.get('customer_name', ''),
+                customer_phone=request.POST.get('customer_phone', ''),
+                notes=request.POST.get('notes', ''),
+            )
+            messages.success(request, f'Trip {trip.trip_number} created successfully!')
+            return redirect('trip_list')
+        except Exception as e:
+            messages.error(request, f'Error creating trip: {str(e)}')
+            return render(request, 'core/trip_form.html', {
+                'vehicles': vehicles,
+                'drivers': drivers,
+                'sales': sales,
+                'action': 'Create'
+            })
     
     return render(request, 'core/trip_form.html', {
         'vehicles': vehicles,
@@ -1688,34 +1735,47 @@ def physical_count_submit(request):
         except Stock.DoesNotExist:
             system_quantity = 0
         
-        # Create physical count record
-        count = PhysicalStockCount.objects.create(
-            count_number=f"COUNT-{uuid.uuid4().hex[:8].upper()}",
-            branch=branch,
-            product=product,
-            system_quantity=system_quantity,
-            physical_quantity=physical_quantity,
-            counted_by=getattr(request.user, 'employee', None),
-            notes=notes
-        )
+        # Calculate discrepancy
+        discrepancy = physical_quantity - system_quantity
+        discrepancy_value = discrepancy * product.cost_price
         
-        discrepancy_type = "shortage" if count.discrepancy < 0 else "excess" if count.discrepancy > 0 else "match"
+        # Update stock if there's a discrepancy
+        if discrepancy != 0:
+            if stock:
+                stock.quantity = physical_quantity
+                stock.save()
+            else:
+                Stock.objects.create(
+                    branch=branch,
+                    product=product,
+                    quantity=physical_quantity
+                )
+            
+            # Create stock movement record
+            StockMovement.objects.create(
+                stock=stock if stock else Stock.objects.get(branch=branch, product=product),
+                movement_type='ADJUSTMENT',
+                quantity=discrepancy,
+                status='APPROVED',
+                notes=f'Physical count adjustment: {notes}'
+            )
         
-        if count.discrepancy == 0:
+        discrepancy_type = "shortage" if discrepancy < 0 else "excess" if discrepancy > 0 else "match"
+        
+        if discrepancy == 0:
             messages.success(request, f'Stock count matches! No discrepancy found for {product.name}.')
         else:
             messages.warning(
                 request, 
-                f'Discrepancy found: {abs(count.discrepancy)} units {discrepancy_type} for {product.name}. '
-                f'Value: KES {count.discrepancy_value}. Stock adjusted automatically.'
+                f'Discrepancy found: {abs(discrepancy)} units {discrepancy_type} for {product.name}. '
+                f'Value: KES {abs(discrepancy_value)}. Stock adjusted automatically.'
             )
         
         return JsonResponse({
             'status': 'success',
-            'discrepancy': count.discrepancy,
-            'discrepancy_value': float(count.discrepancy_value),
-            'discrepancy_type': discrepancy_type,
-            'count_number': count.count_number
+            'discrepancy': discrepancy,
+            'discrepancy_value': float(discrepancy_value),
+            'discrepancy_type': discrepancy_type
         })
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
