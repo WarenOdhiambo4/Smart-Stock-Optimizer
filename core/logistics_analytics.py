@@ -276,23 +276,11 @@ class KPISecretDashboard:
             
             for sale in sales:
 
+               
                 try:
-                    # Calculate actual gross profit from sale items
-                    sale_items = sale.items.all()
-                    
-                    for item in sale_items:
-                        # Get actual cost price and selling price
-                        cost_price = float(item.stock.product.cost_price or 0)
-                        selling_price = float(item.unit_price or 0)
-                        quantity = int(item.quantity or 0)
-                        
-                        # Calculate profit: (selling_price - cost_price) * quantity
-                        item_gross_profit = (selling_price - cost_price) * quantity
-                        gross_profit += item_gross_profit
-                # try:
-                #     # Simple profit calculation: 30% margin assumption
-                #     sale_profit = float(sale.total_amount or 0) * 0.3
-                #     gross_profit += sale_profit
+                    # Simple profit calculation: 30% margin assumption
+                    sale_profit = float(sale.total_amount or 0) * 0.3
+                    gross_profit += sale_profit
                 except (ValueError, TypeError):
                     continue
              
