@@ -36,7 +36,9 @@ urlpatterns = [
     # Stock
     path('stock/', views.stock_list, name='stock_list'),
     path('stock/add/', views.stock_create, name='stock_create'),
+    path('stock/print/', views.stock_print, name='stock_print'),
     path('stock/movements/', views.stock_movement_list, name='stock_movement_list'),
+    path('stock/movements/print/', views.stock_movements_print, name='stock_movements_print'),
     path('stock/transfer/', views.stock_transfer, name='stock_transfer'),
     path('stock/transfer/<int:pk>/approve/', views.approve_transfer, name='approve_transfer'),
     
@@ -67,6 +69,7 @@ urlpatterns = [
     path('expenses/create/', views.expense_create, name='expense_create'),
     path('expenses/<int:pk>/edit/', views.expense_update, name='expense_update'),
     path('expenses/<int:pk>/delete/', views.expense_delete, name='expense_delete'),
+    path('expenses/print/', views.expenses_print, name='expenses_print'),
     
     # Logistics
     path('logistics/', views.logistics_list, name='logistics_list'),
@@ -91,6 +94,7 @@ urlpatterns = [
     path('trips/create/', views.trip_create, name='trip_create'),
     path('trips/<int:pk>/edit/', views.trip_update, name='trip_update'),
     path('trips/<int:pk>/delete/', views.trip_delete, name='trip_delete'),
+    path('trips/print/', views.trips_print, name='trips_print'),
     
     # Maintenance
     path('maintenance/', views.maintenance_list, name='maintenance_list'),
@@ -98,6 +102,7 @@ urlpatterns = [
     
     # Business Notebook
     path('notebook/', views.notebook, name='notebook'),
+    path('notes/print/', views.notes_print, name='notes_print'),
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
     
     # Physical Stock Count
@@ -108,6 +113,9 @@ urlpatterns = [
     path('sales/<int:pk>/print/', views.sale_print, name='sale_print'),
     path('orders/<int:pk>/print/', views.order_print, name='order_print'),
     path('expenses/<int:pk>/print/', views.expense_print, name='expense_print'),
+    path('trips/<int:pk>/print/', views.trip_print, name='trip_print'),
+    path('logistics/<int:pk>/print/', views.logistics_print, name='logistics_print'),
+    path('maintenance/<int:pk>/print/', views.maintenance_print, name='maintenance_print'),
     path('reports/financial/print/', views.financial_report_print, name='financial_report_print'),
     path('reports/branch/<int:branch_id>/monthly/', views.branch_monthly_report, name='branch_monthly_report'),
     path('reports/business/master/', views.business_master_report, name='business_master_report'),
@@ -131,6 +139,7 @@ urlpatterns = [
     
     # KPI Secret Dashboard
     path('kpi-secret/', views_logistics.kpi_secret_dashboard, name='kpi_secret_dashboard'),
+    path('kpi-secret/print/', views_logistics.kpi_secret_print, name='kpi_secret_print'),
     path('api/kpi-dashboard/', views_logistics.kpi_dashboard_api, name='kpi_dashboard_api'),
     path('api/branch-performance/<int:branch_id>/', views_logistics.branch_performance_detail_api, name='branch_performance_detail_api'),
     

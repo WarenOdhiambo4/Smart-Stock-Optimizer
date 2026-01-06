@@ -110,6 +110,18 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
+# Session Configuration - 30 minute timeout for security
+SESSION_COOKIE_AGE = 1800  # 30 minutes (30 * 60 seconds)
+SESSION_SAVE_EVERY_REQUEST = False  # Don't refresh session on every request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Expire session when browser closes
+
+# Email Configuration for 2FA - Using Supabase
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Fallback to console
+# Supabase Email API Configuration
+SUPABASE_URL = 'https://bmbvkdzvdlgnncshpchw.supabase.co'
+SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtYnZrZHp2ZGxnbm5jc2hwY2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5OTU5NzcsImV4cCI6MjA1MTU3MTk3N30.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8'
+DEFAULT_FROM_EMAIL = 'warenodhiambo2@gmail.com'
+
 # REST Framework Configuration - Enterprise Grade
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',

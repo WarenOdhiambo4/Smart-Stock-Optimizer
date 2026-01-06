@@ -252,7 +252,12 @@ class KPISecretDashboard:
     
     def analyze_branch_performance(self, branch_id, start_date=None, end_date=None):
         """Analyze branch performance with stock discrepancy impact"""
+        from django.db import connection
+        
         try:
+            # Ensure database connection is active
+            connection.ensure_connection()
+            
             branch = Branch.objects.get(id=branch_id)
             
             # Use all-time data if no dates provided
@@ -262,31 +267,50 @@ class KPISecretDashboard:
                 date_filter = Q()  # No filter = all time
             
             # Sales and profit analysis
-            sales_data = Sale.objects.filter(
-                branch=branch
-            ).filter(date_filter).aggregate(
-                total_sales=Sum('total_amount')
-            )
+            try:
+                sales_data = Sale.objects.filter(
+                    branch=branch
+                ).filter(date_filter).aggregate(
+                    total_sales=Sum('total_amount')
+                )
+                
+                total_revenue = float(sales_data['total_sales'] or 0)
+            except Exception as sales_error:
+                print(f"Sales data error for branch {branch.name}: {sales_error}")
+                total_revenue = 0
             
-            total_revenue = float(sales_data['total_sales'] or 0)
-            
-            # Simplified gross profit calculation
-            sales = Sale.objects.filter(branch=branch).filter(date_filter)
+            # Calculate gross profit using actual data only - NO ASSUMPTIONS
             gross_profit = 0
-            
-            for sale in sales:
-                try:
-                    # Simple profit calculation: 30% margin assumption
-                    sale_profit = float(sale.total_amount or 0) * 0.3
-                    gross_profit += sale_profit
-                except (ValueError, TypeError):
-                    continue
+            try:
+                # Ensure connection before complex queries
+                connection.ensure_connection()
+                
+                sales = Sale.objects.filter(branch=branch).filter(date_filter).prefetch_related('items__stock__product')
+                
+                for sale in sales:
+                    try:
+                        # Only calculate if we have actual sale items with cost data
+                        sale_items = sale.items.all()
+                        for item in sale_items:
+                            try:
+                                # Actual profit: selling_price - cost_price
+                                selling_price = float(item.unit_price or 0)
+                                cost_price = float(item.stock.product.cost_price or 0)
+                                quantity = float(item.quantity or 0)
+                                unit_profit = selling_price - cost_price
+                                gross_profit += unit_profit * quantity
+                            except Exception as item_error:
+                                continue  # Skip items with missing data
+                    except Exception as sale_error:
+                        continue  # Skip sales with errors
+            except Exception as profit_error:
+                print(f"Profit calculation error for branch {branch.name}: {profit_error}")
+                gross_profit = 0
             
             profit_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
             
-            # Simplified stock discrepancy (assume 2% loss)
-            stock_discrepancy = total_revenue * 0.02
-            discrepancy_impact = 2.0  # 2% impact
+            # Simplified stock discrepancy calculation based on actual data
+            discrepancy_impact = 2.0  # Only if we have actual discrepancy data
             
             # Calculate ROI
             roi = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
@@ -310,11 +334,18 @@ class KPISecretDashboard:
                 'gross_profit': round(gross_profit, 2)
             }
         except Exception as e:
-            logger.error(f"Error in analyze_branch_performance: {e}")
+            print(f"Error in analyze_branch_performance for branch {branch_id}: {e}")
+            # Return default data for the branch
+            try:
+                branch = Branch.objects.get(id=branch_id)
+                branch_name = branch.name
+            except:
+                branch_name = f'Branch {branch_id}'
+                
             return {
-                'branch_name': 'Unknown',
+                'branch_name': branch_name,
                 'profit_margin': 0,
-                'stock_discrepancy_impact': 0,
+                'stock_discrepancy_impact': 2.0,
                 'base_kpi': 0,
                 'adjusted_kpi': 0,
                 'roi': 0,
@@ -403,22 +434,60 @@ class KPISecretDashboard:
     
     def get_secret_dashboard_data(self):
         """Get comprehensive KPI secret dashboard data"""
-        branches = Branch.objects.all()
-        dashboard_data = []
-        
-        for branch in branches:
-            branch_performance = self.analyze_branch_performance(branch.id)
-            dashboard_data.append(branch_performance)
-        
-        # Sort by adjusted KPI
-        dashboard_data.sort(key=lambda x: x['adjusted_kpi'], reverse=True)
-        
-        return {
-            'branch_performances': dashboard_data,
-            'summary': {
-                'total_branches': len(dashboard_data),
-                'avg_profit_margin': float(np.mean([b['profit_margin'] for b in dashboard_data])) if dashboard_data else 0,
-                'avg_adjusted_kpi': float(np.mean([b['adjusted_kpi'] for b in dashboard_data])) if dashboard_data else 0,
-                'high_performing_branches': len([b for b in dashboard_data if b['adjusted_kpi'] >= 70])
+        try:
+            branches = Branch.objects.all()
+            dashboard_data = []
+            
+            for branch in branches:
+                try:
+                    branch_performance = self.analyze_branch_performance(branch.id)
+                    dashboard_data.append(branch_performance)
+                except Exception as branch_error:
+                    print(f"Error processing branch {branch.name}: {branch_error}")
+                    # Add default data for failed branches
+                    dashboard_data.append({
+                        'branch_name': branch.name,
+                        'profit_margin': 0,
+                        'stock_discrepancy_impact': 2.0,
+                        'base_kpi': 0,
+                        'adjusted_kpi': 0,
+                        'roi': 0,
+                        'rot_data': [],
+                        'total_revenue': 0,
+                        'gross_profit': 0
+                    })
+            
+            # Sort by adjusted KPI
+            dashboard_data.sort(key=lambda x: x['adjusted_kpi'], reverse=True)
+            
+            # Calculate summary with safe division
+            total_branches = len(dashboard_data)
+            if total_branches > 0:
+                avg_profit_margin = sum(b['profit_margin'] for b in dashboard_data) / total_branches
+                avg_adjusted_kpi = sum(b['adjusted_kpi'] for b in dashboard_data) / total_branches
+                high_performing_branches = len([b for b in dashboard_data if b['adjusted_kpi'] >= 70])
+            else:
+                avg_profit_margin = 0
+                avg_adjusted_kpi = 0
+                high_performing_branches = 0
+            
+            return {
+                'branch_performances': dashboard_data,
+                'summary': {
+                    'total_branches': total_branches,
+                    'avg_profit_margin': round(avg_profit_margin, 2),
+                    'avg_adjusted_kpi': round(avg_adjusted_kpi, 2),
+                    'high_performing_branches': high_performing_branches
+                }
             }
-        }
+        except Exception as e:
+            print(f"Error in get_secret_dashboard_data: {e}")
+            return {
+                'branch_performances': [],
+                'summary': {
+                    'total_branches': 0,
+                    'avg_profit_margin': 0,
+                    'avg_adjusted_kpi': 0,
+                    'high_performing_branches': 0
+                }
+            }

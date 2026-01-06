@@ -20,6 +20,7 @@
         </div>
         <a href="{% url 'stock_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Stock</a>
         <a href="{% url 'stock_transfer' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-truck me-1"></i>Transfer</a>
+        <button onclick="printStock()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
     </div>
 </div>
 
@@ -68,4 +69,12 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+function printStock() {
+    const params = new URLSearchParams(window.location.search);
+    const url = '/stock/print/?' + params.toString();
+    window.open(url, '_blank');
+}
+</script>
 {% endblock %}

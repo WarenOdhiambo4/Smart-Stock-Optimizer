@@ -124,7 +124,7 @@ class ProfitCalculationEngine:
         }
     
     def _get_monthly_sales_data(self, stock):
-        """Get sales data for the month"""
+        """Get sales data for the month using correct average selling price calculation"""
         sale_items = SaleItem.objects.filter(
             stock=stock,
             sale__created_at__date__range=[self.month, self.month_end]
@@ -137,12 +137,16 @@ class ProfitCalculationEngine:
                 'avg_selling_price': Decimal('0.00')
             }
         
-        # Calculate average selling price (different prices throughout month)
-        total_quantity = sale_items.aggregate(total=Sum('quantity'))['total'] or 0
-        total_revenue = sale_items.aggregate(
-            total=Sum(F('quantity') * F('unit_price'))
-        )['total'] or Decimal('0.00')
+        # Calculate average selling price correctly: (price1*qty1 + price2*qty2 + ...) / total_qty
+        total_quantity = 0
+        total_revenue = Decimal('0.00')
         
+        for item in sale_items:
+            item_revenue = item.unit_price * item.quantity
+            total_revenue += item_revenue
+            total_quantity += item.quantity
+        
+        # Average selling price = total revenue / total quantity sold
         avg_selling_price = total_revenue / total_quantity if total_quantity > 0 else Decimal('0.00')
         
         return {

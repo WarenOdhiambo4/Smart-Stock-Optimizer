@@ -12,6 +12,7 @@
             {% csrf_token %}
         </form>
         <a href="{% url 'expense_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Expense</a>
+        <button onclick="printExpenses()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
     </div>
 </div>
 
@@ -48,6 +49,9 @@
                         {% endif %}
                     </td>
                     <td>
+                        <a href="{% url 'expense_print' expense.pk %}" class="btn btn-sm btn-outline-secondary me-1" title="Print" target="_blank">
+                            <i class="bi bi-printer"></i>
+                        </a>
                         {% if not expense.expense_number|slice:":5" == "TRIP-" and not expense.expense_number|slice:":6" == "MAINT-" and not expense.expense_number|slice:":5" == "LOSS-" %}
                         <a href="{% url 'expense_update' expense.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit">
                             <i class="bi bi-pencil"></i>
@@ -77,6 +81,14 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+function printExpenses() {
+    const params = new URLSearchParams(window.location.search);
+    const url = '/expenses/print/?' + params.toString();
+    window.open(url, '_blank');
+}
+</script>
 {% endblock %}
 
 

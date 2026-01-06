@@ -13,7 +13,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import uuid
 
-from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote
+from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote, TwoFactorAuth
 
 
 def role_required(*roles):
@@ -48,8 +48,8 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
         
+        user = authenticate(request, username=username, password=password)
         if user is not None:
             auth_login(request, user)
             messages.success(request, f'Welcome back, {user.username}!')
@@ -58,6 +58,129 @@ def login_view(request):
             messages.error(request, 'Invalid username or password.')
     
     return render(request, 'core/login.html')
+
+
+def generate_verification_code(user):
+    """Generate 6-digit verification code"""
+    import random
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    try:
+        from .models import TwoFactorAuth
+        
+        # Invalidate old codes
+        TwoFactorAuth.objects.filter(user=user, is_used=False).update(is_used=True)
+        
+        # Generate new code
+        code = str(random.randint(100000, 999999))
+        expires_at = timezone.now() + timedelta(minutes=5)  # 5 minute expiry
+        
+        TwoFactorAuth.objects.create(
+            user=user,
+            code=code,
+            expires_at=expires_at
+        )
+        
+        return code
+    except Exception as e:
+        print(f"Error generating verification code: {e}")
+        # Fallback: return a simple code
+        return str(random.randint(100000, 999999))
+
+
+def send_verification_email(user, code):
+    """Send verification code via Supabase email API"""
+    import requests
+    from django.conf import settings
+    
+    # Try Supabase email API first
+    try:
+        supabase_url = getattr(settings, 'SUPABASE_URL', None)
+        if supabase_url:
+            # Use Supabase email API
+            headers = {
+                'Authorization': f'Bearer {getattr(settings, "SUPABASE_ANON_KEY", "")}',
+                'Content-Type': 'application/json'
+            }
+            
+            email_data = {
+                'to': user.email,
+                'subject': 'Kabisa ERP - Login Verification Code',
+                'html': f'''
+                <h2>Kabisa ERP Login Verification</h2>
+                <p>Hello {user.get_full_name() or user.username},</p>
+                <p>Your verification code is: <strong>{code}</strong></p>
+                <p>This code will expire in 5 minutes.</p>
+                <p>If you did not request this code, please ignore this email.</p>
+                <p>Best regards,<br>Kabisa ERP Team</p>
+                '''
+            }
+            
+            response = requests.post(
+                f'{supabase_url}/auth/v1/admin/generate_link',
+                headers=headers,
+                json=email_data,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                print(f"Email sent successfully via Supabase to {user.email}")
+                return
+    except Exception as e:
+        print(f"Supabase email failed: {e}")
+    
+    # Fallback to Django email
+    try:
+        from django.core.mail import send_mail
+        
+        subject = 'Kabisa ERP - Login Verification Code'
+        message = f'''
+Hello {user.get_full_name() or user.username},
+
+Your verification code for Kabisa ERP login is: {code}
+
+This code will expire in 5 minutes.
+
+If you did not request this code, please ignore this email.
+
+Best regards,
+Kabisa ERP Team
+'''
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        print(f"Email sent successfully via Django to {user.email}")
+    except Exception as e:
+        print(f"Django email failed: {e}")
+        # Show code in console as final fallback
+        print(f"VERIFICATION CODE FOR {user.email}: {code}")
+
+
+def verify_code(user_id, code):
+    """Verify the provided code"""
+    from django.utils import timezone
+    
+    try:
+        from .models import TwoFactorAuth
+        
+        auth_code = TwoFactorAuth.objects.get(
+            user_id=user_id,
+            code=code,
+            is_used=False,
+            expires_at__gt=timezone.now()
+        )
+        auth_code.is_used = True
+        auth_code.save()
+        return True
+    except Exception as e:
+        print(f"Error verifying code: {e}")
+        return False
 
 
 def logout_view(request):
@@ -1028,15 +1151,22 @@ def financial_reports(request):
     from .delivery_manager import DeliveryChargesManager
     
     # Get date range from request or default to current month
-    year = int(request.GET.get('year', timezone.now().year))
-    month = int(request.GET.get('month', timezone.now().month))
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
     
-    # Calculate date range
-    start_date = datetime(year, month, 1).date()
-    if month == 12:
-        end_date = datetime(year + 1, 1, 1).date()
+    if date_from and date_to:
+        start_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+        end_date = datetime.strptime(date_to, '%Y-%m-%d').date() + timedelta(days=1)
     else:
-        end_date = datetime(year, month + 1, 1).date()
+        # Default to current month
+        today = timezone.now().date()
+        start_date = today.replace(day=1)
+        if today.month == 12:
+            end_date = today.replace(year=today.year + 1, month=1, day=1)
+        else:
+            end_date = today.replace(month=today.month + 1, day=1)
+        date_from = start_date.strftime('%Y-%m-%d')
+        date_to = (end_date - timedelta(days=1)).strftime('%Y-%m-%d')
     
     # Get all branches or filter by user
     user_profile = request.user.profile if hasattr(request.user, 'profile') else None
@@ -1091,9 +1221,8 @@ def financial_reports(request):
         'total_profit': total_profit,
         'delivery_expenses': delivery_expenses,
         'business_net_profit': business_net_profit,
-        'year': year,
-        'month': month,
-        'month_name': datetime(year, month, 1).strftime('%B'),
+        'date_from': date_from,
+        'date_to': date_to,
     }
     return render(request, 'core/financial_reports.html', context)
 
@@ -1826,14 +1955,19 @@ def financial_report_print(request):
     from .delivery_manager import DeliveryChargesManager
     
     # Get date range
-    year = int(request.GET.get('year', timezone.now().year))
-    month = int(request.GET.get('month', timezone.now().month))
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
     
-    start_date = datetime(year, month, 1).date()
-    if month == 12:
-        end_date = datetime(year + 1, 1, 1).date()
+    if date_from and date_to:
+        start_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+        end_date = datetime.strptime(date_to, '%Y-%m-%d').date() + timedelta(days=1)
     else:
-        end_date = datetime(year, month + 1, 1).date()
+        today = timezone.now().date()
+        start_date = today.replace(day=1)
+        if today.month == 12:
+            end_date = today.replace(year=today.year + 1, month=1, day=1)
+        else:
+            end_date = today.replace(month=today.month + 1, day=1)
     
     # Get financial data
     branches = Branch.objects.filter(is_active=True)
@@ -1894,7 +2028,7 @@ def financial_report_print(request):
         'tax': Decimal('0.00'),
         'tax_rate': 0,
         'grand_total': net_profit,
-        'notes': f'Financial summary for {datetime(year, month, 1).strftime("%B %Y")}. Net business profit after all expenses including delivery charges.'
+        'notes': f'Financial summary for {start_date} to {end_date - timedelta(days=1)}. Net business profit after all expenses including delivery charges.'
     }
     
     generator = ReceiptGenerator()
@@ -1909,12 +2043,23 @@ def branch_monthly_report(request, branch_id):
     from .receipt_generator import ReceiptGenerator
     
     branch = get_object_or_404(Branch, pk=branch_id)
-    year = int(request.GET.get('year', timezone.now().year))
-    month = int(request.GET.get('month', timezone.now().month))
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if date_from and date_to:
+        start_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+        end_date = datetime.strptime(date_to, '%Y-%m-%d').date() + timedelta(days=1)
+    else:
+        today = timezone.now().date()
+        start_date = today.replace(day=1)
+        if today.month == 12:
+            end_date = today.replace(year=today.year + 1, month=1, day=1)
+        else:
+            end_date = today.replace(month=today.month + 1, day=1)
     
     generator = ReceiptGenerator()
     format_type = request.GET.get('format', 'pdf')
-    return generator.generate_branch_monthly_receipt(branch, year, month, format=format_type)
+    return generator.generate_branch_monthly_receipt(branch, start_date, end_date, format=format_type)
 
 
 @login_required
@@ -1923,9 +2068,428 @@ def business_master_report(request):
     """Generate master business report with all calculations"""
     from .receipt_generator import ReceiptGenerator
     
-    year = int(request.GET.get('year', timezone.now().year))
-    month = int(request.GET.get('month', timezone.now().month))
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if date_from and date_to:
+        start_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+        end_date = datetime.strptime(date_to, '%Y-%m-%d').date() + timedelta(days=1)
+    else:
+        today = timezone.now().date()
+        start_date = today.replace(day=1)
+        if today.month == 12:
+            end_date = today.replace(year=today.year + 1, month=1, day=1)
+        else:
+            end_date = today.replace(month=today.month + 1, day=1)
     
     generator = ReceiptGenerator()
     format_type = request.GET.get('format', 'pdf')
-    return generator.generate_business_master_receipt(year, month, format=format_type)
+    return generator.generate_business_master_receipt(start_date, end_date, format=format_type)
+
+
+@login_required
+def trip_print(request, pk):
+    """Generate PDF receipt for single trip"""
+    from .receipt_generator import ReceiptGenerator
+    
+    trip = get_object_or_404(Trip, pk=pk)
+    generator = ReceiptGenerator()
+    
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_trip_receipt(trip=trip, format=format_type)
+
+
+@login_required
+def maintenance_print(request, pk):
+    """Generate PDF receipt for single maintenance"""
+    from .receipt_generator import ReceiptGenerator
+    
+    maintenance = get_object_or_404(VehicleMaintenance, pk=pk)
+    generator = ReceiptGenerator()
+    
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_maintenance_receipt(maintenance=maintenance, format=format_type)
+
+
+@login_required
+def logistics_print(request, pk):
+    """Generate PDF receipt for logistics"""
+    from .receipt_generator import ReceiptGenerator
+    
+    logistics = get_object_or_404(Logistics, pk=pk)
+    generator = ReceiptGenerator()
+    
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_expense_receipt(logistics, format=format_type)
+
+
+@login_required
+def trip_print(request, pk):
+    """Generate PDF receipt for trip"""
+    from .receipt_generator import ReceiptGenerator
+    
+    trip = get_object_or_404(Trip, pk=pk)
+    
+    context = {
+        'document_type': 'Trip Receipt',
+        'document_number': trip.trip_number,
+        'document_date': trip.scheduled_date.strftime('%d %B %Y'),
+        'prepared_by': trip.created_by.get_full_name() if trip.created_by else 'System',
+        'branch': trip.vehicle.branch.name if trip.vehicle else 'N/A',
+        'customer': {
+            'name': trip.customer_name or 'Company Trip',
+            'phone': trip.customer_phone,
+        },
+        'items': [{
+            'description': f'Trip: {trip.origin} → {trip.destination}',
+            'details': f'Vehicle: {trip.vehicle.registration_number if trip.vehicle else "N/A"} | Driver: {trip.driver.full_name if trip.driver else "N/A"}',
+            'quantity': 1,
+            'unit': 'trip',
+            'rate': trip.revenue,
+            'total': trip.revenue
+        }],
+        'subtotal': trip.revenue,
+        'discount': trip.fuel_cost + trip.other_expenses,
+        'grand_total': trip.net_profit,
+        'notes': f'Distance: {trip.distance}km | Fuel Cost: KES {trip.fuel_cost} | Other Expenses: KES {trip.other_expenses}'
+    }
+    
+    generator = ReceiptGenerator()
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_financial_report(context, format=format_type)
+
+
+@login_required
+def logistics_print(request, pk):
+    """Generate PDF receipt for logistics"""
+    from .receipt_generator import ReceiptGenerator
+    
+    logistics = get_object_or_404(Logistics, pk=pk)
+    
+    context = {
+        'document_type': 'Logistics Receipt',
+        'document_number': logistics.tracking_number,
+        'document_date': logistics.created_at.strftime('%d %B %Y'),
+        'prepared_by': logistics.created_by.get_full_name() if logistics.created_by else 'System',
+        'branch': logistics.from_branch.name,
+        'customer': {
+            'name': logistics.customer_name,
+            'phone': logistics.customer_phone,
+            'address': logistics.to_address
+        },
+        'items': [{
+            'description': f'Delivery Service - {logistics.get_status_display()}',
+            'details': f'From: {logistics.from_branch.name} | Vehicle: {logistics.vehicle_number or "TBD"} | Driver: {logistics.driver_name or "TBD"}',
+            'quantity': 1,
+            'unit': 'delivery',
+            'rate': logistics.delivery_cost,
+            'total': logistics.delivery_cost
+        }],
+        'subtotal': logistics.delivery_cost,
+        'grand_total': logistics.delivery_cost,
+        'notes': f'Delivery Date: {logistics.delivery_date or "TBD"} | Status: {logistics.get_status_display()}'
+    }
+    
+    generator = ReceiptGenerator()
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_financial_report(context, format=format_type)
+
+
+@login_required
+def maintenance_print(request, pk):
+    """Generate PDF receipt for maintenance"""
+    from .receipt_generator import ReceiptGenerator
+    
+    maintenance = get_object_or_404(VehicleMaintenance, pk=pk)
+    
+    context = {
+        'document_type': 'Maintenance Receipt',
+        'document_number': maintenance.maintenance_number,
+        'document_date': maintenance.service_date.strftime('%d %B %Y'),
+        'prepared_by': maintenance.created_by.get_full_name() if maintenance.created_by else 'System',
+        'branch': maintenance.vehicle.branch.name,
+        'customer': {
+            'name': maintenance.service_provider,
+            'address': f'Vehicle: {maintenance.vehicle.registration_number}'
+        },
+        'items': [{
+            'description': f'{maintenance.get_maintenance_type_display()} - {maintenance.description}',
+            'details': f'Mileage: {maintenance.mileage_at_service}km | Receipt: {maintenance.receipt_number or "N/A"}',
+            'quantity': 1,
+            'unit': 'service',
+            'rate': maintenance.total_cost,
+            'total': maintenance.total_cost
+        }],
+        'subtotal': maintenance.total_cost,
+        'grand_total': maintenance.total_cost,
+        'notes': f'Status: {maintenance.get_status_display()} | Next Service: {maintenance.next_service_mileage or "TBD"}km'
+    }
+    
+    generator = ReceiptGenerator()
+    format_type = request.GET.get('format', 'pdf')
+    return generator.generate_financial_report(context, format=format_type)
+
+@login_required
+def trips_print(request):
+    """Generate PDF for trips list"""
+    from .receipt_generator import ReceiptGenerator
+    
+    # Get filters
+    search = request.GET.get('search', '')
+    vehicle_id = request.GET.get('vehicle', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    trips = Trip.objects.select_related('vehicle', 'driver', 'sale').all()
+    
+    if search:
+        trips = trips.filter(
+            Q(trip_number__icontains=search) | 
+            Q(origin__icontains=search) | 
+            Q(destination__icontains=search)
+        )
+    if vehicle_id:
+        trips = trips.filter(vehicle_id=vehicle_id)
+    if date_from:
+        trips = trips.filter(scheduled_date__gte=date_from)
+    if date_to:
+        trips = trips.filter(scheduled_date__lte=date_to + ' 23:59:59')
+    
+    # Prepare report data
+    report_items = []
+    total_revenue = Decimal('0.00')
+    total_costs = Decimal('0.00')
+    
+    for trip in trips:
+        costs = trip.fuel_cost + trip.other_expenses
+        profit = trip.revenue - costs
+        
+        report_items.append({
+            'description': f'{trip.trip_number} - {trip.origin} → {trip.destination}',
+            'details': f'Vehicle: {trip.vehicle.registration_number if trip.vehicle else "N/A"} | Driver: {trip.driver.full_name if trip.driver else "N/A"} | Date: {trip.scheduled_date}',
+            'quantity': 1,
+            'unit': 'trip',
+            'rate': trip.revenue,
+            'total': profit
+        })
+        total_revenue += trip.revenue
+        total_costs += costs
+    
+    report_data = {
+        'document_type': 'Trips Report',
+        'document_number': f'TRIPS-{timezone.now().strftime("%Y%m%d-%H%M%S")}',
+        'document_date': timezone.now().strftime('%d %B %Y'),
+        'prepared_by': request.user.get_full_name() or request.user.username,
+        'branch': 'All Branches',
+        'items': report_items,
+        'subtotal': total_revenue,
+        'discount': total_costs,
+        'grand_total': total_revenue - total_costs,
+        'notes': f'Total Trips: {trips.count()} | Total Revenue: KES {total_revenue:,.2f} | Total Costs: KES {total_costs:,.2f} | Net Profit: KES {total_revenue - total_costs:,.2f}'
+    }
+    
+    generator = ReceiptGenerator()
+    return generator.generate_financial_report(report_data, format='pdf')
+
+
+@login_required
+def stock_print(request):
+    """Generate PDF for stock list"""
+    from .receipt_generator import ReceiptGenerator
+    from .models import StockMovement
+    
+    search = request.GET.get('search', '')
+    branch_id = request.GET.get('branch', '')
+    stocks = Stock.objects.select_related('product', 'branch').all()
+    
+    if search:
+        stocks = stocks.filter(
+            Q(product__name__icontains=search) | 
+            Q(product__sku__icontains=search)
+        )
+    if branch_id:
+        stocks = stocks.filter(branch_id=branch_id)
+    
+    # Determine branch name for header
+    if branch_id:
+        try:
+            branch = Branch.objects.get(id=branch_id)
+            branch_name = branch.name.upper()
+        except Branch.DoesNotExist:
+            branch_name = 'UNKNOWN BRANCH'
+    else:
+        branch_name = 'ALL BRANCHES'
+    
+    report_items = []
+    
+    for stock in stocks:
+        # Get recent stock movements to show how balance was reached
+        movements = StockMovement.objects.filter(
+            stock=stock
+        ).order_by('-created_at')[:5]
+        
+        movement_details = []
+        for mov in movements:
+            movement_details.append(f'{mov.get_movement_type_display()}: {mov.quantity} ({mov.created_at.strftime("%m/%d")})')
+        
+        report_items.append({
+            'description': f'{stock.product.name} ({stock.product.sku})',
+            'details': f'Branch: {stock.branch.name} | Min Qty: {stock.min_quantity} | Recent: {" | ".join(movement_details[:3]) if movement_details else "No movements"}',
+            'quantity': stock.quantity,
+            'unit': 'units',
+            'rate': 0,
+            'total': 0
+        })
+    
+    report_data = {
+        'document_type': 'STOCK BALANCE REPORT',
+        'document_number': f'STOCK-{timezone.now().strftime("%Y%m%d-%H%M%S")}',
+        'document_date': timezone.now().strftime('%d %B %Y'),
+        'prepared_by': request.user.get_full_name() or request.user.username,
+        'branch': branch_name,
+        'items': report_items,
+        'notes': f'Stock Balance Report - {stocks.count()} items. Shows current quantities and recent movements that led to current balance.'
+    }
+    
+    generator = ReceiptGenerator()
+    return generator.generate_stock_report(report_data, format='pdf')
+
+
+@login_required
+def stock_movements_print(request):
+    """Generate PDF for stock movements"""
+    from .receipt_generator import ReceiptGenerator
+    
+    search = request.GET.get('search', '')
+    branch_id = request.GET.get('branch', '')
+    movements = StockMovement.objects.select_related('stock__product', 'stock__branch', 'from_branch', 'to_branch').all()
+    
+    if branch_id:
+        movements = movements.filter(
+            Q(stock__branch_id=branch_id) | 
+            Q(from_branch_id=branch_id) | 
+            Q(to_branch_id=branch_id)
+        )
+    
+    if search:
+        movements = movements.filter(
+            Q(stock__product__name__icontains=search) | 
+            Q(notes__icontains=search)
+        )
+    
+    report_items = []
+    for movement in movements:
+        value = abs(movement.quantity) * movement.stock.product.cost_price
+        report_items.append({
+            'description': f'{movement.get_movement_type_display()} - {movement.stock.product.name}',
+            'details': f'From: {movement.from_branch.name if movement.from_branch else "N/A"} | To: {movement.to_branch.name if movement.to_branch else "N/A"} | Status: {movement.get_status_display()}',
+            'quantity': abs(movement.quantity),
+            'unit': 'units',
+            'rate': movement.stock.product.cost_price,
+            'total': value
+        })
+    
+    report_data = {
+        'document_type': 'Stock Movements Report',
+        'document_number': f'MOVEMENTS-{timezone.now().strftime("%Y%m%d-%H%M%S")}',
+        'document_date': timezone.now().strftime('%d %B %Y'),
+        'prepared_by': request.user.get_full_name() or request.user.username,
+        'branch': 'All Branches',
+        'items': report_items,
+        'notes': f'Total Movements: {movements.count()}'
+    }
+    
+    generator = ReceiptGenerator()
+    return generator.generate_financial_report(report_data, format='pdf')
+
+
+@login_required
+def expenses_print(request):
+    """Generate PDF for expenses list"""
+    from .receipt_generator import ReceiptGenerator
+    
+    search = request.GET.get('search', '')
+    expenses = Expense.objects.select_related('branch', 'sale', 'created_by').all()
+    
+    user_profile = request.user.profile if hasattr(request.user, 'profile') else None
+    if user_profile and user_profile.role == 'SALES' and user_profile.branch:
+        expenses = expenses.filter(branch=user_profile.branch)
+    
+    if search:
+        expenses = expenses.filter(
+            Q(expense_number__icontains=search) | 
+            Q(description__icontains=search)
+        )
+    
+    report_items = []
+    total_amount = Decimal('0.00')
+    
+    for expense in expenses:
+        report_items.append({
+            'description': f'{expense.expense_number} - {expense.description}',
+            'details': f'Branch: {expense.branch.name} | Type: {expense.get_expense_type_display()} | Date: {expense.expense_date}',
+            'quantity': 1,
+            'unit': 'expense',
+            'rate': expense.amount,
+            'total': expense.amount
+        })
+        total_amount += expense.amount
+    
+    report_data = {
+        'document_type': 'Expenses Report',
+        'document_number': f'EXPENSES-{timezone.now().strftime("%Y%m%d-%H%M%S")}',
+        'document_date': timezone.now().strftime('%d %B %Y'),
+        'prepared_by': request.user.get_full_name() or request.user.username,
+        'branch': 'All Branches',
+        'items': report_items,
+        'subtotal': total_amount,
+        'grand_total': total_amount,
+        'notes': f'Total Expenses: {expenses.count()} | Total Amount: KES {total_amount:,.2f}'
+    }
+    
+    generator = ReceiptGenerator()
+    return generator.generate_financial_report(report_data, format='pdf')
+
+
+@login_required
+def notes_print(request):
+    """Generate PDF for notes list"""
+    from .receipt_generator import ReceiptGenerator
+    
+    search = request.GET.get('search', '')
+    priority = request.GET.get('priority', '')
+    notes = BusinessNote.objects.select_related('created_by').all()
+    
+    if search:
+        notes = notes.filter(
+            Q(title__icontains=search) | 
+            Q(content__icontains=search) | 
+            Q(tags__icontains=search)
+        )
+    
+    if priority:
+        notes = notes.filter(priority=priority)
+    
+    report_items = []
+    for note in notes:
+        report_items.append({
+            'description': f'{note.title}',
+            'details': f'Priority: {note.get_priority_display()} | Tags: {note.tags or "None"} | Created: {note.created_at.strftime("%Y-%m-%d")}',
+            'quantity': 1,
+            'unit': 'note',
+            'rate': 0,
+            'total': 0
+        })
+    
+    report_data = {
+        'document_type': 'Business Notes Report',
+        'document_number': f'NOTES-{timezone.now().strftime("%Y%m%d-%H%M%S")}',
+        'document_date': timezone.now().strftime('%d %B %Y'),
+        'prepared_by': request.user.get_full_name() or request.user.username,
+        'branch': 'All Branches',
+        'items': report_items,
+        'notes': f'Total Notes: {notes.count()}'
+    }
+    
+    generator = ReceiptGenerator()
+    return generator.generate_financial_report(report_data, format='pdf')

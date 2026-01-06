@@ -538,6 +538,22 @@ class UserProfile(models.Model):
         return f"{self.user.username} - {self.get_role_display()}"
 
 
+class TwoFactorAuth(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='two_factor_codes')
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.code}"
+    
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
 class Expense(models.Model):
     EXPENSE_TYPES = [
         ('OPERATIONAL', 'Operational Expense'),
@@ -948,9 +964,14 @@ class MonthlyProfitAnalysis(models.Model):
         return f"{self.product.name} @ {self.branch.name} - {self.month.strftime('%Y-%m')}"
     
     def calculate_profit(self):
-        """Calculate all profit metrics"""
-        # Gross profit = Revenue - Cost of Goods Sold
-        self.gross_profit = self.total_revenue - self.total_purchase_cost
+        """Calculate all profit metrics using correct average selling price method"""
+        # Gross profit = (Average Selling Price - Cost Price) * Total Quantity Sold
+        if self.total_quantity_sold > 0 and self.average_selling_price > 0:
+            cost_per_unit = self.weighted_avg_purchase_price
+            profit_per_unit = self.average_selling_price - cost_per_unit
+            self.gross_profit = profit_per_unit * self.total_quantity_sold
+        else:
+            self.gross_profit = Decimal('0.00')
         
         # Net profit = Gross profit - Allocated expenses - Losses
         self.net_profit = self.gross_profit - self.allocated_expenses - self.broken_cost

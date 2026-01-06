@@ -6,6 +6,7 @@
 <div class="page-header">
     <h1 class="page-title">Trips</h1>
     <div class="page-actions">
+        <button onclick="printTrips()" class="btn btn-secondary me-2">Print Report</button>
         <a href="{% url 'trip_create' %}" class="btn btn-primary">Create Trip</a>
     </div>
 </div>
@@ -74,6 +75,9 @@
                         </td>
                         <td>{{ trip.scheduled_date|date:"M d, Y" }}</td>
                         <td>
+                            <a href="{% url 'trip_print' trip.pk %}" class="btn btn-sm btn-outline-secondary me-1" title="Print" target="_blank">
+                                <i class="bi bi-printer"></i>
+                            </a>
                             <a href="{% url 'trip_update' trip.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit">
                                 <i class="bi bi-pencil"></i>
                             </a>
@@ -130,4 +134,12 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+function printTrips() {
+    const params = new URLSearchParams(window.location.search);
+    const url = '/trips/print/?' + params.toString();
+    window.open(url, '_blank');
+}
+</script>
 {% endblock %}

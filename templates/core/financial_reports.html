@@ -4,24 +4,20 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Financial Reports - {{ month_name }} {{ year }}</h1>
+    <h1 class="page-title">Financial Reports - {{ date_from }} to {{ date_to }}</h1>
     <div class="d-flex gap-2">
-        <a href="{% url 'financial_report_print' %}?month={{ month }}&year={{ year }}" class="btn btn-primary btn-sm" target="_blank">
+        <a href="{% url 'financial_report_print' %}?date_from={{ date_from }}&date_to={{ date_to }}" class="btn btn-primary btn-sm" target="_blank">
             <i class="bi bi-printer me-1"></i>Print PDF
         </a>
-        <a href="{% url 'financial_report_print' %}?month={{ month }}&year={{ year }}&format=html" class="btn btn-outline-primary btn-sm" target="_blank">
+        <a href="{% url 'financial_report_print' %}?date_from={{ date_from }}&date_to={{ date_to }}&format=html" class="btn btn-outline-primary btn-sm" target="_blank">
             <i class="bi bi-eye me-1"></i>Preview
         </a>
-        <a href="{% url 'business_master_report' %}?month={{ month }}&year={{ year }}" class="btn btn-success btn-sm" target="_blank">
+        <a href="{% url 'business_master_report' %}?date_from={{ date_from }}&date_to={{ date_to }}" class="btn btn-success btn-sm" target="_blank">
             <i class="bi bi-file-earmark-text me-1"></i>Master Report
         </a>
         <form method="get" class="d-flex gap-2">
-            <select name="month" class="form-select form-select-sm" style="width: auto;">
-                {% for m in "123456789101112" %}
-                <option value="{{ m }}" {% if m|add:0 == month %}selected{% endif %}>Month {{ m }}</option>
-                {% endfor %}
-            </select>
-            <input type="number" name="year" class="form-control form-control-sm" style="width: 100px;" value="{{ year }}">
+            <input type="date" name="date_from" class="form-control form-control-sm" placeholder="From Date" value="{{ date_from }}">
+            <input type="date" name="date_to" class="form-control form-control-sm" placeholder="To Date" value="{{ date_to }}">
             <button type="submit" class="btn btn-primary btn-sm">View</button>
         </form>
     </div>
@@ -81,7 +77,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{% url 'branch_monthly_report' report.branch.pk %}?month={{ month }}&year={{ year }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                        <a href="{% url 'branch_monthly_report' report.branch.pk %}?date_from={{ date_from }}&date_to={{ date_to }}" class="btn btn-outline-primary btn-sm" target="_blank">
                             <i class="bi bi-printer"></i> Print
                         </a>
                     </td>
