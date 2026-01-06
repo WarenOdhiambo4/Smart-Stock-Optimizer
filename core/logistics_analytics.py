@@ -306,7 +306,6 @@ class KPISecretDashboard:
             except Exception as profit_error:
                 print(f"Profit calculation error for branch {branch.name}: {profit_error}")
                 gross_profit = 0
-            
             profit_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
             
             # Simplified stock discrepancy calculation based on actual data
