@@ -115,12 +115,18 @@ SESSION_COOKIE_AGE = 1800  # 30 minutes (30 * 60 seconds)
 SESSION_SAVE_EVERY_REQUEST = False  # Don't refresh session on every request
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Expire session when browser closes
 
-# Email Configuration for 2FA - Using Supabase
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Fallback to console
-# Supabase Email API Configuration
-SUPABASE_URL = 'https://bmbvkdzvdlgnncshpchw.supabase.co'
-SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtYnZrZHp2ZGxnbm5jc2hwY2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5OTU5NzcsImV4cCI6MjA1MTU3MTk3N30.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8'
-DEFAULT_FROM_EMAIL = 'warenodhiambo2@gmail.com'
+# Email Configuration for 2FA
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='kabisaerp@gmail.com')
+
+# Supabase Configuration (using environment variables)
+SUPABASE_URL = config('SUPABASE_URL', default='')
+SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default='')
 
 # REST Framework Configuration - Enterprise Grade
 REST_FRAMEWORK = {
