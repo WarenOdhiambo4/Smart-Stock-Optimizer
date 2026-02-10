@@ -46,9 +46,9 @@
                     <td class="text-muted">{{ log.delivery_date|date:"M d, Y"|default:"-" }}</td>
                     <td>${{ log.delivery_cost }}</td>
                     <td>
-                        <div class="action-btns">
+                        <div class="action-btns compact">
                             {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
-                            <a href="{% url 'logistics_edit' log.pk %}" class="btn btn-outline-primary btn-sm me-1">{{ content.cms_edit|default:'Edit' }}</a>
+                            <a href="{% url 'logistics_edit' log.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
                             {% endif %}
                             <form method="post" action="{% url 'logistics_update_status' log.pk %}" class="d-inline">
                                 {% csrf_token %}
@@ -60,18 +60,12 @@
                                     <option value="CANCELLED" {% if log.status == 'CANCELLED' %}selected{% endif %}>{{ content.cms_cancelled|default:'Cancelled' }}</option>
                                 </select>
                             </form>
-                            {% if log.status != 'DELIVERED' %}
-                            <form method="post" action="{% url 'logistics_update_status' log.pk %}" class="d-inline">
+                            {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
+                            <form method="post" action="{% url 'logistics_delete' log.pk %}" class="d-inline">
                                 {% csrf_token %}
-                                <input type="hidden" name="status" value="DELIVERED">
-                                <button type="submit" class="btn btn-primary btn-sm">Mark Complete</button>
-                            </form>
-                            {% endif %}
-                            {% if log.status != 'IN_TRANSIT' %}
-                            <form method="post" action="{% url 'logistics_update_status' log.pk %}" class="d-inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="status" value="IN_TRANSIT">
-                                <button type="submit" class="btn btn-primary btn-sm">In Transit</button>
+                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this logistics record?');">
+                                    {{ content.cms_delete|default:'Delete' }}
+                                </button>
                             </form>
                             {% endif %}
                         </div>

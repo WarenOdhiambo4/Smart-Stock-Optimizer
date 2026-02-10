@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import uuid
 
 from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, FuelConsumption, BusinessNote, TwoFactorAuth, BrokenProduct, SystemContent
+from .inventory_costing import consume_fifo_layers, restore_fifo_layers
 
 
 def role_required(*roles):
@@ -1006,82 +1007,87 @@ def sale_create(request):
                     'confirm_data': request.POST,
                     'show_confirmation': True
                 })
-            
-            # Confirmed submission
-            branch_id = request.POST.get('branch')
-            sale_date = request.POST.get('sale_date')
-            sale = Sale.objects.create(
-                sale_number=f"SALE-{uuid.uuid4().hex[:8].upper()}",
-                branch_id=branch_id,
-                customer_name=request.POST.get('customer_name', ''),
-                customer_phone=request.POST.get('customer_phone', ''),
-                payment_method=request.POST.get('payment_method', 'Cash'),
-                notes=request.POST.get('notes', ''),
-            )
-            
-            # Set created_at to the provided date
-            if sale_date:
-                from datetime import datetime
-                from django.utils import timezone
-                sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
-                sale.created_at = timezone.make_aware(sale_datetime)
-                sale.save()
-            
-            stock_ids = request.POST.getlist('stock_id')
-            quantities = request.POST.getlist('quantity')
-            broken_flags = request.POST.getlist('is_broken_sale')
-            unit_prices = request.POST.getlist('unit_price')
-            
-            for i in range(len(stock_ids)):
-                if stock_ids[i]:
-                    stock = get_object_or_404(Stock, pk=stock_ids[i])
-                    qty = parse_decimal(quantities[i] if i < len(quantities) else None, Decimal('1.00'))
-                    is_broken_sale = False
-                    if i < len(broken_flags):
-                        is_broken_sale = broken_flags[i] in ['on', 'true', '1']
 
-                    if qty <= 0:
-                        messages.error(request, 'Quantity must be greater than zero.')
-                        return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
+            with transaction.atomic():
+                # Confirmed submission
+                branch_id = request.POST.get('branch')
+                sale_date = request.POST.get('sale_date')
+                sale = Sale.objects.create(
+                    sale_number=f"SALE-{uuid.uuid4().hex[:8].upper()}",
+                    branch_id=branch_id,
+                    customer_name=request.POST.get('customer_name', ''),
+                    customer_phone=request.POST.get('customer_phone', ''),
+                    payment_method=request.POST.get('payment_method', 'Cash'),
+                    notes=request.POST.get('notes', ''),
+                )
 
-                    if not is_broken_sale:
-                        if qty > stock.quantity:
-                            messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
+                # Set created_at to the provided date
+                if sale_date:
+                    from datetime import datetime
+                    from django.utils import timezone
+                    sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
+                    sale.created_at = timezone.make_aware(sale_datetime)
+                    sale.save()
+
+                stock_ids = request.POST.getlist('stock_id')
+                quantities = request.POST.getlist('quantity')
+                broken_flags = request.POST.getlist('is_broken_sale')
+                unit_prices = request.POST.getlist('unit_price')
+
+                for i in range(len(stock_ids)):
+                    if stock_ids[i]:
+                        stock = get_object_or_404(Stock, pk=stock_ids[i])
+                        qty = parse_decimal(quantities[i] if i < len(quantities) else None, Decimal('1.00'))
+                        is_broken_sale = False
+                        if i < len(broken_flags):
+                            is_broken_sale = broken_flags[i] in ['on', 'true', '1']
+
+                        if qty <= 0:
+                            messages.error(request, 'Quantity must be greater than zero.')
                             return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
 
-                    price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
-                    unit_cost_at_sale = stock.weighted_avg_purchase_price or stock.product.cost_price
+                        if not is_broken_sale:
+                            if qty > stock.quantity:
+                                messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
+                                return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
 
-                    SaleItem.objects.create(
-                        sale=sale,
-                        stock=stock,
-                        quantity=qty,
-                        unit_price=price,
-                        unit_cost_at_sale=unit_cost_at_sale,
-                        is_broken_sale=is_broken_sale,
-                    )
-            
-            sale.calculate_total()
-            
-            # Add multiple expenses if provided
-            expense_descriptions = request.POST.getlist('expense_description')
-            expense_amounts = request.POST.getlist('expense_amount')
-            expense_receipts = request.POST.getlist('expense_receipt')
-            
-            for i in range(len(expense_descriptions)):
-                if expense_descriptions[i] and expense_amounts[i] and Decimal(expense_amounts[i]) > 0:
-                    Expense.objects.create(
-                        expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
-                        branch_id=branch_id,
-                        sale=sale,
-                        expense_type='SALE_RELATED',
-                        description=expense_descriptions[i],
-                        amount=Decimal(expense_amounts[i]),
-                        expense_date=timezone.now().date(),
-                        receipt_number=expense_receipts[i] if i < len(expense_receipts) else '',
-                        notes=f"Sale related expense for {sale.sale_number}",
-                    )
-            
+                        price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
+                        if is_broken_sale:
+                            unit_cost_at_sale = Decimal('0.00')
+                        else:
+                            _total_cost, avg_cost = consume_fifo_layers(stock, qty)
+                            unit_cost_at_sale = avg_cost
+
+                        SaleItem.objects.create(
+                            sale=sale,
+                            stock=stock,
+                            quantity=qty,
+                            unit_price=price,
+                            unit_cost_at_sale=unit_cost_at_sale,
+                            is_broken_sale=is_broken_sale,
+                        )
+
+                sale.calculate_total()
+
+                # Add multiple expenses if provided
+                expense_descriptions = request.POST.getlist('expense_description')
+                expense_amounts = request.POST.getlist('expense_amount')
+                expense_receipts = request.POST.getlist('expense_receipt')
+
+                for i in range(len(expense_descriptions)):
+                    if expense_descriptions[i] and expense_amounts[i] and Decimal(expense_amounts[i]) > 0:
+                        Expense.objects.create(
+                            expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
+                            branch_id=branch_id,
+                            sale=sale,
+                            expense_type='SALE_RELATED',
+                            description=expense_descriptions[i],
+                            amount=Decimal(expense_amounts[i]),
+                            expense_date=timezone.now().date(),
+                            receipt_number=expense_receipts[i] if i < len(expense_receipts) else '',
+                            notes=f"Sale related expense for {sale.sale_number}",
+                        )
+
             messages.success(request, f'Sale {sale.sale_number} created successfully!')
             return redirect('sale_list')
         except Exception as e:
@@ -1114,91 +1120,104 @@ def sale_edit(request, pk):
                     'confirm_data': request.POST,
                 })
 
-            sale.branch_id = request.POST.get('branch')
-            sale.customer_name = request.POST.get('customer_name', '')
-            sale.customer_phone = request.POST.get('customer_phone', '')
-            sale.payment_method = request.POST.get('payment_method', 'Cash')
-            sale.notes = request.POST.get('notes', '')
-            sale_date = request.POST.get('sale_date')
-            if sale_date:
-                sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
-                sale.created_at = timezone.make_aware(sale_datetime)
-            sale.save()
+            with transaction.atomic():
+                sale.branch_id = request.POST.get('branch')
+                sale.customer_name = request.POST.get('customer_name', '')
+                sale.customer_phone = request.POST.get('customer_phone', '')
+                sale.payment_method = request.POST.get('payment_method', 'Cash')
+                sale.notes = request.POST.get('notes', '')
+                sale_date = request.POST.get('sale_date')
+                if sale_date:
+                    sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
+                    sale.created_at = timezone.make_aware(sale_datetime)
+                sale.save()
 
-            # Reverse existing items and movements
-            old_items = list(sale.items.all())
-            for item in old_items:
-                if not item.is_broken_sale:
-                    StockMovement.objects.create(
+                # Reverse existing items and movements
+                old_items = list(sale.items.all())
+                for item in old_items:
+                    if not item.is_broken_sale:
+                        restore_cost = item.unit_cost_at_sale or item.stock.weighted_avg_purchase_price or item.stock.product.cost_price
+                        restore_fifo_layers(
+                            item.stock,
+                            item.quantity,
+                            restore_cost,
+                            source_type='ADJUSTMENT',
+                            source_id=sale.id,
+                        )
+                        StockMovement.objects.create(
+                            stock=item.stock,
+                            movement_type='ADJUSTMENT',
+                            quantity=item.quantity,
+                            status='APPROVED',
+                            notes=f"Reversal of {sale.sale_number} item {item.id}",
+                            created_by=get_employee_for_user(request.user),
+                        )
+                    StockMovement.objects.filter(
                         stock=item.stock,
-                        movement_type='ADJUSTMENT',
-                        quantity=item.quantity,
-                        status='APPROVED',
-                        notes=f"Reversal of {sale.sale_number} item {item.id}",
-                        created_by=get_employee_for_user(request.user),
-                    )
-                StockMovement.objects.filter(
-                    stock=item.stock,
-                    movement_type='SALE',
-                    notes=f"Sale #{sale.sale_number} | Item {item.id}"
-                ).delete()
-            sale.items.all().delete()
+                        movement_type='SALE',
+                        notes=f"Sale #{sale.sale_number} | Item {item.id}"
+                    ).delete()
+                sale.items.all().delete()
 
-            # Remove sale-related expenses and re-add from form
-            Expense.objects.filter(sale=sale, expense_type='SALE_RELATED').delete()
+                # Remove sale-related expenses and re-add from form
+                Expense.objects.filter(sale=sale, expense_type='SALE_RELATED').delete()
 
-            stock_ids = request.POST.getlist('stock_id')
-            quantities = request.POST.getlist('quantity')
-            broken_flags = request.POST.getlist('is_broken_sale')
-            unit_prices = request.POST.getlist('unit_price')
+                stock_ids = request.POST.getlist('stock_id')
+                quantities = request.POST.getlist('quantity')
+                broken_flags = request.POST.getlist('is_broken_sale')
+                unit_prices = request.POST.getlist('unit_price')
 
-            for i in range(len(stock_ids)):
-                if stock_ids[i]:
-                    stock = get_object_or_404(Stock, pk=stock_ids[i])
-                    qty = parse_decimal(quantities[i] if i < len(quantities) else None, Decimal('1.00'))
-                    is_broken_sale = False
-                    if i < len(broken_flags):
-                        is_broken_sale = broken_flags[i] in ['on', 'true', '1']
+                for i in range(len(stock_ids)):
+                    if stock_ids[i]:
+                        stock = get_object_or_404(Stock, pk=stock_ids[i])
+                        qty = parse_decimal(quantities[i] if i < len(quantities) else None, Decimal('1.00'))
+                        is_broken_sale = False
+                        if i < len(broken_flags):
+                            is_broken_sale = broken_flags[i] in ['on', 'true', '1']
 
-                    if qty <= 0:
-                        messages.error(request, 'Quantity must be greater than zero.')
-                        return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Update', 'sale': sale})
+                        if qty <= 0:
+                            messages.error(request, 'Quantity must be greater than zero.')
+                            return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Update', 'sale': sale})
 
-                    if not is_broken_sale and qty > stock.quantity:
-                        messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
-                        return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Update', 'sale': sale})
+                        if not is_broken_sale and qty > stock.quantity:
+                            messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
+                            return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Update', 'sale': sale})
 
-                    price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
-                    unit_cost_at_sale = stock.weighted_avg_purchase_price or stock.product.cost_price
+                        price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
+                        if is_broken_sale:
+                            unit_cost_at_sale = Decimal('0.00')
+                        else:
+                            _total_cost, avg_cost = consume_fifo_layers(stock, qty)
+                            unit_cost_at_sale = avg_cost
 
-                    SaleItem.objects.create(
-                        sale=sale,
-                        stock=stock,
-                        quantity=qty,
-                        unit_price=price,
-                        unit_cost_at_sale=unit_cost_at_sale,
-                        is_broken_sale=is_broken_sale,
-                    )
+                        SaleItem.objects.create(
+                            sale=sale,
+                            stock=stock,
+                            quantity=qty,
+                            unit_price=price,
+                            unit_cost_at_sale=unit_cost_at_sale,
+                            is_broken_sale=is_broken_sale,
+                        )
 
-            sale.calculate_total()
+                sale.calculate_total()
 
-            expense_descriptions = request.POST.getlist('expense_description')
-            expense_amounts = request.POST.getlist('expense_amount')
-            expense_receipts = request.POST.getlist('expense_receipt')
+                expense_descriptions = request.POST.getlist('expense_description')
+                expense_amounts = request.POST.getlist('expense_amount')
+                expense_receipts = request.POST.getlist('expense_receipt')
 
-            for i in range(len(expense_descriptions)):
-                if expense_descriptions[i] and expense_amounts[i] and Decimal(expense_amounts[i]) > 0:
-                    Expense.objects.create(
-                        expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
-                        branch_id=sale.branch_id,
-                        sale=sale,
-                        expense_type='SALE_RELATED',
-                        description=expense_descriptions[i],
-                        amount=Decimal(expense_amounts[i]),
-                        expense_date=timezone.now().date(),
-                        receipt_number=expense_receipts[i] if i < len(expense_receipts) else '',
-                        notes=f"Sale related expense for {sale.sale_number}",
-                    )
+                for i in range(len(expense_descriptions)):
+                    if expense_descriptions[i] and expense_amounts[i] and Decimal(expense_amounts[i]) > 0:
+                        Expense.objects.create(
+                            expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
+                            branch_id=sale.branch_id,
+                            sale=sale,
+                            expense_type='SALE_RELATED',
+                            description=expense_descriptions[i],
+                            amount=Decimal(expense_amounts[i]),
+                            expense_date=timezone.now().date(),
+                            receipt_number=expense_receipts[i] if i < len(expense_receipts) else '',
+                            notes=f"Sale related expense for {sale.sale_number}",
+                        )
 
             messages.success(request, f'Sale {sale.sale_number} updated successfully!')
             return redirect('sale_detail', pk=sale.pk)
@@ -1469,6 +1488,16 @@ def logistics_update_status(request, pk):
         logistics.status = request.POST.get('status')
         logistics.save()
         messages.success(request, f'Logistics status updated to {logistics.get_status_display()}!')
+    return redirect('logistics_list')
+
+
+@login_required
+@role_required('ADMIN', 'MANAGER')
+def logistics_delete(request, pk):
+    logistics = get_object_or_404(Logistics, pk=pk)
+    if request.method == 'POST':
+        logistics.delete()
+        messages.success(request, 'Logistics record deleted.')
     return redirect('logistics_list')
 
 
@@ -2723,7 +2752,7 @@ def content_management(request):
                     try:
                         with open(fpath, 'r', encoding='utf-8') as handle:
                             data = handle.read()
-                    except OSError:
+                    except (OSError, UnicodeDecodeError):
                         continue
                     for match in key_pattern.finditer(data):
                         key = match.group(1)
@@ -2782,7 +2811,10 @@ def content_management(request):
                     'is_active': True,
                 },
             )
-        discovered = discover_template_keys()
+        try:
+            discovered = discover_template_keys()
+        except Exception:
+            discovered = {}
         for key, default_value in discovered.items():
             if key in theme_keys:
                 continue

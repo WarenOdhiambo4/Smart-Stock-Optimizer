@@ -548,9 +548,13 @@ class SaleItem(models.Model):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         super().save(*args, **kwargs)
-        
-        if is_new and not self.is_broken_sale:
-            note = f"Sale #{self.sale.sale_number} | Item {self.id}"
+
+        note = f"Sale #{self.sale.sale_number} | Item {self.id}"
+        if self.is_broken_sale:
+            StockMovement.objects.filter(movement_type='SALE', stock=self.stock, notes=note).delete()
+            return
+
+        if is_new:
             if not StockMovement.objects.filter(movement_type='SALE', stock=self.stock, notes=note).exists():
                 StockMovement.objects.create(
                     stock=self.stock,
@@ -1679,7 +1683,8 @@ class InventoryLayer(models.Model):
     source_type = models.CharField(max_length=20, choices=[
         ('ORDER', 'From Order'),
         ('MANUAL', 'Manual Stock Addition'),
-        ('TRANSFER', 'Stock Transfer')
+        ('TRANSFER', 'Stock Transfer'),
+        ('ADJUSTMENT', 'Adjustment/Reversal'),
     ])
     source_id = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

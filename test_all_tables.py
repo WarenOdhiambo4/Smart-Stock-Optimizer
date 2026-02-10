@@ -10,6 +10,7 @@ django.setup()
 from core.models import *
 from decimal import Decimal
 from datetime import datetime, date
+from django.utils import timezone
 
 def test_all_syncs():
     """Test sync for all tables"""
@@ -106,7 +107,7 @@ def test_all_syncs():
             distance=Decimal('100.0'),
             revenue=Decimal('500.00'),
             fuel_cost=Decimal('50.00'),
-            scheduled_date=datetime.now()
+            scheduled_date=timezone.now()
         )
         print("✅ Trip created and should sync")
     except Exception as e:

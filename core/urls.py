@@ -79,10 +79,12 @@ urlpatterns = [
     path('logistics/create/', views.logistics_create, name='logistics_create'),
     path('logistics/<int:pk>/edit/', views.logistics_edit, name='logistics_edit'),
     path('logistics/<int:pk>/update/', views.logistics_update_status, name='logistics_update_status'),
+    path('logistics/<int:pk>/delete/', views.logistics_delete, name='logistics_delete'),
     
     # Finance
     path('finance/reports/', views.financial_reports, name='financial_reports'),
     path('finance/ledger/', views_finance.ledger_list, name='ledger_list'),
+    path('finance/ledger/print/', views_finance.ledger_print, name='ledger_print'),
     path('finance/accounts/', views_finance.chart_of_accounts, name='chart_of_accounts'),
     path('finance/accounts/create/', views_finance.chart_of_accounts_create, name='chart_of_accounts_create'),
     path('finance/accounts/<int:pk>/update/', views_finance.chart_of_accounts_update, name='chart_of_accounts_update'),
@@ -138,7 +140,6 @@ urlpatterns = [
     # Business Notebook
     path('notebook/', views.notebook, name='notebook'),
     path('notes/print/', views.notes_print, name='notes_print'),
-    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
 
     # Content Management
     path('content-management/', views.content_management, name='content_management'),

@@ -60,7 +60,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <div class="d-flex gap-1 flex-wrap">
+                        <div class="action-btns compact">
                             <a href="{% url 'stock_reduce' stock.id %}" class="btn btn-sm btn-outline-warning">
                                 <i class="bi bi-dash-circle me-1"></i>{{ content.cms_reduce|default:'Reduce' }}</a>
                             <a href="{% url 'report_broken_product_for_stock' stock.id %}" class="btn btn-sm btn-outline-danger">

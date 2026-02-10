@@ -274,7 +274,7 @@
 
                         {% if role == 'ADMIN' or role == 'BOSS' or role == 'MANAGER' or role == 'FINANCE' %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name == 'ledger_list' or request.resolver_match.url_name == 'chart_of_accounts' or request.resolver_match.url_name == 'income_register' or request.resolver_match.url_name == 'expense_register' or request.resolver_match.url_name == 'loans_register' or request.resolver_match.url_name == 'payroll_ledger' or request.resolver_match.url_name == 'allowances_register' or request.resolver_match.url_name == 'analytics_dashboard' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.finance|default:'Finance' }}</a>
+                            <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name == 'ledger_list' or request.resolver_match.url_name == 'chart_of_accounts' or request.resolver_match.url_name == 'income_register' or request.resolver_match.url_name == 'expense_register' or request.resolver_match.url_name == 'loans_register' or request.resolver_match.url_name == 'payroll_ledger' or request.resolver_match.url_name == 'allowances_register' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.finance|default:'Finance' }}</a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'ledger_list' %}">{{ content.nav.general_ledger|default:'General Ledger' }}</a></li>
                                 {% if role == 'ADMIN' %}
@@ -286,7 +286,6 @@
                                 <li><a class="dropdown-item" href="{% url 'payroll_ledger' %}">{{ content.nav.payroll_ledger|default:'Payroll Ledger' }}</a></li>
                                 <li><a class="dropdown-item" href="{% url 'allowances_register' %}">{{ content.nav.allowances_register|default:'Allowances Register' }}</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'analytics_dashboard' %}">{{ content.nav.live_analysis|default:'Live Analysis' }}</a></li>
                                 {% endif %}
                             </ul>
                         </li>

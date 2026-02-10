@@ -8,8 +8,6 @@
     <h1 class="page-title">{{ content.cms_general_ledger|default:'General Ledger' }}</h1>
 </div>
 
-{% include 'core/finance_nav.html' %}
-
 {# Finance note removed to save space #}
 
 <div class="finance-actions">
@@ -50,6 +48,7 @@
         </div>
         <div class="filter-actions">
             <button type="submit" class="btn btn-outline-secondary btn-sm">{{ content.cms_apply|default:'Apply' }}</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="printLedger()">{{ content.cms_print|default:'Print' }}</button>
         </div>
     </form>
 </div>
@@ -124,4 +123,11 @@
 
 {% block scripts %}
 <script src="{% static 'js/finance_tables.js' %}"></script>
+<script>
+function printLedger() {
+    const params = new URLSearchParams(window.location.search);
+    const url = '/finance/ledger/print/?' + params.toString();
+    window.open(url, '_blank');
+}
+</script>
 {% endblock %}

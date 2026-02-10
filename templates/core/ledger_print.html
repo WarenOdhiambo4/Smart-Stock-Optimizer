@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>General Ledger Report</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 12mm;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 9px;
+            color: #1f2937;
+            position: relative;
+        }
+        .bg-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.06;
+            z-index: 0;
+        }
+        .page-content {
+            position: relative;
+            z-index: 1;
+        }
+        h1 {
+            font-size: 14px;
+            margin: 0 0 6px 0;
+        }
+        .company {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .subtitle {
+            font-size: 10px;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .meta div {
+            font-size: 9px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        th, td {
+            border: 1px solid #9ca3af;
+            padding: 3px 4px;
+            vertical-align: top;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        th {
+            background: #f3f4f6;
+            font-weight: 700;
+        }
+        .num {
+            text-align: right;
+        }
+        .small {
+            color: #6b7280;
+        }
+        .totals {
+            margin-top: 8px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 20px;
+            font-size: 10px;
+        }
+        .profit {
+            color: #16a34a;
+            font-weight: 700;
+        }
+        .loss {
+            color: #dc2626;
+            font-weight: 700;
+        }
+        .policies {
+            margin-top: 10px;
+            font-size: 9px;
+            color: #4b5563;
+        }
+        .signature {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+            font-size: 10px;
+        }
+        .signature .line {
+            border-top: 1px solid #9ca3af;
+            width: 160px;
+            margin-top: 16px;
+            text-align: center;
+            padding-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    {% if background_image %}
+    <img class="bg-image" src="{{ background_image }}" alt="">
+    {% endif %}
+    <div class="page-content">
+        <div class="company">Paroha Hardware</div>
+        <div class="subtitle">Twyford • Micasso • Supply Chain Management System</div>
+        <h1>General Ledger Report</h1>
+    <div class="meta">
+        <div><strong>Date From:</strong> {{ filters.date_from|default:"All" }}</div>
+        <div><strong>Date To:</strong> {{ filters.date_to|default:"All" }}</div>
+        <div><strong>Account:</strong> {{ filters.account }}</div>
+        <div><strong>Branch:</strong> {{ filters.branch }}</div>
+        <div><strong>Entry Type:</strong> {{ filters.entry_type }}</div>
+        <div><strong>Generated:</strong> {{ generated_at|date:"Y-m-d H:i" }}</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Transaction ID</th>
+                <th>Month</th>
+                <th>Product</th>
+                <th class="num">Units Sold</th>
+                <th class="num">Avg Price</th>
+                <th class="num">Unit Cost</th>
+                <th class="num">Restocked</th>
+                <th class="num">Broken Units</th>
+                <th class="num">Utilization %</th>
+                <th>Branch</th>
+                <th>Account Name</th>
+                <th class="num">Debit</th>
+                <th class="num">Credit</th>
+                <th class="num">Running Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td>{{ entry.transaction.transaction_date }}</td>
+                <td>{{ entry.transaction.transaction_id }}</td>
+                <td>{% if entry.metric_month %}{{ entry.metric_month }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td>{% if entry.product_name %}{{ entry.product_name }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td class="num">{% if entry.units_sold is not None %}{{ entry.units_sold }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td class="num">{% if entry.avg_price is not None %}{{ entry.avg_price|floatformat:2 }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td class="num">{% if entry.unit_cost is not None %}{{ entry.unit_cost|floatformat:2 }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td class="num">{% if entry.restocked_units is not None %}{{ entry.restocked_units }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td class="num">{% if entry.broken_units is not None %}{{ entry.broken_units }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td class="num">{% if entry.utilization_rate %}{{ entry.utilization_rate }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td>{% if entry.transaction.branch %}{{ entry.transaction.branch.name }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td>{{ entry.account.account_name }}</td>
+                <td class="num">{% if entry.debit_amount > 0 %}{{ entry.debit_amount|floatformat:2 }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td class="num">{% if entry.credit_amount > 0 %}{{ entry.credit_amount|floatformat:2 }}{% else %}<span class="small">—</span>{% endif %}</td>
+                <td class="num">{% if entry.running_balance is not None %}{{ entry.running_balance|floatformat:2 }}{% else %}<span class="small">—</span>{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="15" class="small">No ledger entries found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <div><strong>Total Debit:</strong> KES {{ total_debit|floatformat:2 }}</div>
+        <div><strong>Total Credit:</strong> KES {{ total_credit|floatformat:2 }}</div>
+        <div>
+            <strong>Net Profit:</strong>
+            {% if net_profit >= 0 %}
+            <span class="profit">KES {{ net_profit|floatformat:2 }}</span>
+            {% else %}
+            <span class="loss">KES {{ net_profit|floatformat:2 }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="policies">
+        <strong>Policies:</strong> This report is generated from system records and is for internal use only.
+        Edits to posted transactions are restricted. All values are subject to audit.
+    </div>
+
+        <div class="signature">
+            <div class="line">Authorized Signature</div>
+        </div>
+    </div>
+</body>
+</html>

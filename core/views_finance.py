@@ -1,6 +1,6 @@
 import json
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date
 import re
 
 from django.contrib import messages
@@ -212,6 +212,163 @@ def ledger_list(request):
 
 
 @login_required
+@role_required('ADMIN', 'BOSS', 'MANAGER', 'FINANCE')
+def ledger_print(request):
+    from django.utils import timezone
+    from django.template.loader import render_to_string
+    from django.http import HttpResponse
+    from django.conf import settings
+    import os
+    import base64
+    try:
+        import weasyprint
+        weasyprint_available = True
+    except Exception:
+        weasyprint_available = False
+
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    parsed_date_from = _parse_date(date_from)
+    parsed_date_to = _parse_date(date_to)
+    account_id = request.GET.get('account')
+    entry_type = request.GET.get('entry_type')
+    branch_id = request.GET.get('branch')
+
+    resolved_account = None
+    if account_id:
+        if str(account_id).isdigit():
+            resolved_account = ChartOfAccount.objects.filter(id=account_id).first()
+        else:
+            resolved_account = ChartOfAccount.objects.filter(account_code=str(account_id)).first()
+            if not resolved_account:
+                resolved_account = ChartOfAccount.objects.filter(account_name__icontains=str(account_id)).first()
+        if resolved_account:
+            account_id = str(resolved_account.id)
+
+    resolved_branch = None
+    if branch_id:
+        if str(branch_id).isdigit():
+            resolved_branch = Branch.objects.filter(id=branch_id).first()
+        else:
+            resolved_branch = Branch.objects.filter(name__icontains=str(branch_id)).first()
+        if resolved_branch:
+            branch_id = str(resolved_branch.id)
+
+    entries = GeneralLedger.objects.select_related(
+        'transaction',
+        'account',
+        'transaction__branch',
+        'transaction__vehicle',
+    )
+
+    if parsed_date_from:
+        entries = entries.filter(transaction__transaction_date__gte=parsed_date_from)
+    if parsed_date_to:
+        entries = entries.filter(transaction__transaction_date__lte=parsed_date_to)
+    if account_id:
+        entries = entries.filter(account_id=account_id)
+    if branch_id:
+        entries = entries.filter(transaction__branch_id=branch_id)
+    if entry_type == 'debit':
+        entries = entries.filter(debit_amount__gt=0)
+    elif entry_type == 'credit':
+        entries = entries.filter(credit_amount__gt=0)
+
+    entries = entries.order_by('transaction__transaction_date', 'transaction__id', 'id')
+
+    entries_list = list(entries)
+    running_balances = {}
+    if account_id:
+        account = ChartOfAccount.objects.filter(id=account_id).first()
+        balance = account.opening_balance if account else Decimal('0.00')
+        for entry in entries_list:
+            if account and account.normal_balance == 'DEBIT':
+                balance += entry.debit_amount - entry.credit_amount
+            else:
+                balance += entry.credit_amount - entry.debit_amount
+            running_balances[entry.id] = balance
+
+    metrics_pattern = re.compile(
+        r"Product metrics (?P<month>\d{4}-\d{2}) - (?P<product>.+?) @ (?P<branch>.+?) "
+        r"\| Units Sold: (?P<units>\d+) \| Avg Price: (?P<avg>[\d\.]+) "
+        r"\| Unit Cost: (?P<cost>[\d\.]+) \| Restocked: (?P<restocked>\d+) "
+        r"\| Broken Units: (?P<broken>\d+) \| Utilization: (?P<util>[\d\.]+)%"
+    )
+
+    for entry in entries_list:
+        entry.running_balance = running_balances.get(entry.id) if account_id else None
+        entry.metric_month = None
+        entry.product_name = None
+        entry.units_sold = None
+        entry.avg_price = None
+        entry.unit_cost = None
+        entry.restocked_units = None
+        entry.broken_units = None
+        entry.utilization_rate = None
+
+        if entry.transaction and entry.transaction.source_type == 'PRODUCT_METRICS':
+            desc = entry.transaction.description or ''
+            match = metrics_pattern.search(desc)
+            if match:
+                entry.metric_month = match.group('month')
+                entry.product_name = match.group('product')
+                entry.units_sold = int(match.group('units'))
+                entry.avg_price = Decimal(match.group('avg'))
+                entry.unit_cost = Decimal(match.group('cost'))
+                entry.restocked_units = int(match.group('restocked'))
+                entry.broken_units = int(match.group('broken'))
+                entry.utilization_rate = match.group('util')
+            else:
+                ref = entry.transaction.reference or ''
+                parts = {}
+                for chunk in ref.split('|'):
+                    if ':' in chunk:
+                        key, value = chunk.split(':', 1)
+                        parts[key.strip()] = value.strip()
+                entry.units_sold = int(parts.get('US', '0') or 0)
+                entry.avg_price = _parse_decimal(parts.get('AP'))
+                entry.restocked_units = int(parts.get('RS', '0') or 0)
+                entry.broken_units = int(parts.get('BR', '0') or 0)
+                entry.utilization_rate = parts.get('UT', '').replace('%', '') or None
+
+    bg_data_uri = None
+    bg_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'scm_bg.svg')
+    if os.path.exists(bg_path):
+        with open(bg_path, 'rb') as bg_file:
+            encoded = base64.b64encode(bg_file.read()).decode('utf-8')
+            bg_data_uri = f"data:image/svg+xml;base64,{encoded}"
+
+    total_debit = sum((e.debit_amount or Decimal('0.00')) for e in entries_list)
+    total_credit = sum((e.credit_amount or Decimal('0.00')) for e in entries_list)
+    net_profit = total_credit - total_debit
+
+    context = {
+        'entries': entries_list,
+        'filters': {
+            'date_from': date_from or '',
+            'date_to': date_to or '',
+            'account': resolved_account.account_name if resolved_account else 'All Accounts',
+            'branch': resolved_branch.name if resolved_branch else 'All Branches',
+            'entry_type': entry_type or 'All',
+        },
+        'generated_at': timezone.now(),
+        'background_image': bg_data_uri,
+        'total_debit': total_debit,
+        'total_credit': total_credit,
+        'net_profit': net_profit,
+    }
+
+    html = render_to_string('core/ledger_print.html', context)
+    format_value = request.GET.get('format', 'pdf')
+    if format_value == 'pdf' and weasyprint_available:
+        pdf = weasyprint.HTML(string=html).write_pdf()
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = 'inline; filename="ledger-report.pdf"'
+        return response
+    return HttpResponse(html)
+
+
+@login_required
 @role_required('ADMIN', 'BOSS', 'FINANCE')
 def logistics_ledger(request):
     vehicles = Vehicle.objects.order_by('registration_number')
@@ -279,8 +436,13 @@ def chart_of_accounts_create(request):
     opening_balance = _parse_decimal(data.get('opening_balance'))
     is_active = str(data.get('is_active', 'true')).lower() == 'true'
 
-    if not account_code or not account_name or not account_type:
-        return JsonResponse({'error': 'Account code, name, and type are required.'}, status=400)
+    timestamp = timezone.now().strftime('%H%M%S')
+    if not account_code:
+        account_code = f"AUTO-{timestamp}"
+    if not account_name:
+        account_name = f"New Account {timestamp}"
+    if not account_type:
+        account_type = ChartOfAccount.ACCOUNT_TYPES[0][0]
 
     account = ChartOfAccount.objects.create(
         account_code=account_code,
@@ -523,19 +685,23 @@ def loans_register_create(request):
     data = json.loads(request.body or '{}')
     due_date = _parse_date(data.get('due_date'))
     if not due_date:
-        return JsonResponse({'error': 'Due date is required.'}, status=400)
+        due_date = date.today()
 
     _ensure_open_period(due_date)
 
     loan_id = data.get('loan_id') or f"LOAN-{timezone.now().strftime('%H%M%S')}"
-    lender = data.get('lender')
+    lender = data.get('lender') or 'Unknown Lender'
     account_id = data.get('account')
     principal = _parse_decimal(data.get('principal'))
     interest_rate = _parse_decimal(data.get('interest_rate'))
     amount_paid = _parse_decimal(data.get('amount_paid'))
 
-    if not lender or not account_id or principal <= 0:
-        return JsonResponse({'error': 'Lender, account, and principal are required.'}, status=400)
+    if not account_id:
+        fallback_account = ChartOfAccount.objects.filter(is_active=True).order_by('account_code').first()
+        if fallback_account:
+            account_id = fallback_account.id
+    if not account_id:
+        return JsonResponse({'error': 'Account is required.'}, status=400)
 
     entry = LoansRegister.objects.create(
         loan_id=loan_id,

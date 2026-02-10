@@ -11,6 +11,7 @@ from core.models import *
 from django.contrib.auth.models import User
 from decimal import Decimal
 from datetime import datetime, date
+from django.utils import timezone
 
 def test_all_16_tables():
     """Test sync for all 16 tables"""
@@ -123,7 +124,7 @@ def test_all_16_tables():
             distance=Decimal('100.0'),
             revenue=Decimal('500.00'),
             fuel_cost=Decimal('50.00'),
-            scheduled_date=datetime.now()
+            scheduled_date=timezone.now()
         )
         print("✅ 8. Trip created")
     except Exception as e:

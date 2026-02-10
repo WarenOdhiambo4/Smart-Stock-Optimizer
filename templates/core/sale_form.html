@@ -73,7 +73,10 @@
                         </div>
                         <div class="col-md-1 d-flex align-items-center">
                             <input type="hidden" name="is_broken_sale" value="{% if item.is_broken_sale %}1{% else %}0{% endif %}" class="broken-hidden">
-                            <input type="checkbox" class="form-check-input broken-flag" title="Broken Sale" {% if item.is_broken_sale %}checked{% endif %}>
+                            <div class="form-check broken-check">
+                                <input type="checkbox" class="form-check-input broken-flag" title="Broken Sale" {% if item.is_broken_sale %}checked{% endif %}>
+                                <label class="form-check-label">Broken</label>
+                            </div>
                         </div>
                         <div class="col-md-1">
                             <button type="button" class="btn btn-outline-danger btn-sm remove-item"><i class="bi bi-trash"></i></button>
@@ -98,7 +101,10 @@
                     </div>
                     <div class="col-md-1 d-flex align-items-center">
                         <input type="hidden" name="is_broken_sale" value="0" class="broken-hidden">
-                        <input type="checkbox" class="form-check-input broken-flag" title="Broken Sale">
+                        <div class="form-check broken-check">
+                            <input type="checkbox" class="form-check-input broken-flag" title="Broken Sale">
+                            <label class="form-check-label">Broken</label>
+                        </div>
                     </div>
                     <div class="col-md-1">
                         <button type="button" class="btn btn-outline-danger btn-sm remove-item"><i class="bi bi-trash"></i></button>
