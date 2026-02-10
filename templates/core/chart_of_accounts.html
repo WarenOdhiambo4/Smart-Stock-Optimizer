@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chart of Accounts{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ content.cms_chart_of_accounts|default:'Chart of Accounts' }}</h1>
+</div>
+
+{% include 'core/finance_nav.html' %}
+
+<div class="finance-actions" data-add-row-wrapper>
+    <button type="button" class="btn btn-primary" data-add-row>{{ content.cms_add_row|default:'Add Row' }}</button>
+</div>
+
+<div class="spreadsheet-wrap" data-add-row-wrapper>
+    <table class="spreadsheet-table">
+        <thead>
+            <tr>
+                <th class="freeze-col">{{ content.cms_account_code|default:'Account Code' }}</th>
+                <th>{{ content.cms_account_name|default:'Account Name' }}</th>
+                <th>{{ content.cms_account_type|default:'Account Type' }}</th>
+                <th class="num">{{ content.cms_opening_balance|default:'Opening Balance' }}</th>
+                <th class="num">{{ content.cms_current_balance|default:'Current Balance' }}</th>
+                <th>{{ content.cms_status|default:'Status' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for account in accounts %}
+            <tr data-update-url="{% url 'chart_of_accounts_update' account.id %}" data-locked="false">
+                <td class="freeze-col editable" contenteditable="true" data-editable="true" data-field="account_code">{{ account.account_code }}</td>
+                <td class="editable" contenteditable="true" data-editable="true" data-field="account_name">{{ account.account_name }}</td>
+                <td>
+                    <select class="cell-select" data-editable="true" data-field="account_type">
+                        {% for code, label in account_types %}
+                        <option value="{{ code }}" {% if account.account_type == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="num editable" contenteditable="true" data-editable="true" data-field="opening_balance">{{ account.opening_balance|floatformat:2 }}</td>
+                <td class="num">{{ account.current_balance|floatformat:2 }}</td>
+                <td>
+                    <select class="cell-select" data-editable="true" data-field="is_active">
+                        <option value="true" {% if account.is_active %}selected{% endif %}>{{ content.cms_active|default:'Active' }}</option>
+                        <option value="false" {% if not account.is_active %}selected{% endif %}>{{ content.cms_inactive|default:'Inactive' }}</option>
+                    </select>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted">{{ content.cms_no_accounts_found|default:"No accounts found" }}</td></tr>
+            {% endfor %}
+            <tr class="add-row" data-new-row="true" data-create-url="{% url 'chart_of_accounts_create' %}">
+                <td class="freeze-col"><input class="cell-input" data-field="account_code" placeholder="Code"></td>
+                <td><input class="cell-input" data-field="account_name" placeholder="Name"></td>
+                <td>
+                    <select class="cell-select" data-field="account_type">
+                        {% for code, label in account_types %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="num"><input class="cell-input" data-field="opening_balance" placeholder="0.00"></td>
+                <td class="num">—</td>
+                <td>
+                    <select class="cell-select" data-field="is_active">
+                        <option value="true">{{ content.cms_active|default:'Active' }}</option>
+                        <option value="false">{{ content.cms_inactive|default:'Inactive' }}</option>
+                    </select>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/finance_tables.js' %}"></script>
+{% endblock %}

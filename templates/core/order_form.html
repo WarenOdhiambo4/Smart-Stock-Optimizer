@@ -13,33 +13,33 @@
             {% csrf_token %}
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
-                    <label class="form-label">Branch *</label>
+                    <label class="form-label">{{ content.cms_branch|default:'Branch *' }}</label>
                     <select name="branch" class="form-select" required>
-                        <option value="">Select Branch</option>
+                        <option value="">{{ content.cms_select_branch|default:'Select Branch' }}</option>
                         {% for branch in branches %}
                         <option value="{{ branch.pk }}">{{ branch.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Order Date *</label>
+                    <label class="form-label">{{ content.cms_order_date|default:'Order Date *' }}</label>
                     <input type="date" name="order_date" class="form-control" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Supplier</label>
+                    <label class="form-label">{{ content.cms_supplier|default:'Supplier' }}</label>
                     <input type="text" name="supplier" class="form-control">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Delivery Charges (KES)</label>
+                    <label class="form-label">{{ content.cms_delivery_charges_kes|default:'Delivery Charges (KES)' }}</label>
                     <input type="number" name="delivery_charges" step="0.01" class="form-control" placeholder="0.00" min="0">
                 </div>
                 <div class="col-md-8">
-                    <label class="form-label">Notes</label>
+                    <label class="form-label">{{ content.cms_notes|default:'Notes' }}</label>
                     <input type="text" name="notes" class="form-control">
                 </div>
             </div>
 
-            <h6 class="mb-3">Order Items</h6>
+            <h6 class="mb-3">{{ content.cms_order_items|default:'Order Items' }}</h6>
             <div id="orderItems">
                 <div class="row g-2 mb-2 order-item">
                     <div class="col-md-4">
@@ -49,7 +49,7 @@
                         <input type="text" name="product_sku" class="form-control form-control-sm" placeholder="SKU">
                     </div>
                     <div class="col-md-2">
-                        <input type="number" name="quantity" class="form-control form-control-sm" placeholder="Qty" value="1" min="1" required>
+                        <input type="number" name="quantity" class="form-control form-control-sm" placeholder="Qty" value="1" min="0.01" step="0.01" required>
                     </div>
                     <div class="col-md-2">
                         <input type="number" name="unit_price" step="0.01" class="form-control form-control-sm" placeholder="Price" required>
@@ -60,12 +60,11 @@
                 </div>
             </div>
             <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">
-                <i class="bi bi-plus me-1"></i>Add Item
-            </button>
+                <i class="bi bi-plus me-1"></i>{{ content.cms_add_item|default:'Add Item' }}</button>
 
             <div class="mt-4">
-                <button type="submit" class="btn btn-primary">Create Order</button>
-                <a href="{% url 'order_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">{{ content.cms_create_order|default:'Create Order' }}</button>
+                <a href="{% url 'order_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
             </div>
         </form>
     </div>

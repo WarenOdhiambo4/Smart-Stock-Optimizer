@@ -105,31 +105,29 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-12 text-center">
-                <h1>Financial Analytics Dashboard</h1>
-                <p class="lead mb-0">Enterprise-grade financial intelligence powered by Fortune 500 algorithms</p>
+                <h1>{{ content.cms_financial_analytics_dashboard|default:'Financial Analytics Dashboard' }}</h1>
+                <p class="lead mb-0">{{ content.cms_enterprise_grade_financial_intelligence_powered_by_fortune_5|default:'Enterprise-grade financial intelligence powered by Fortune 500 algorithms' }}</p>
                 
                 <div class="row justify-content-center mt-4">
                     <div class="col-auto">
-                        <label class="form-label text-white-50">Branch</label>
+                        <label class="form-label text-white-50">{{ content.cms_branch|default:'Branch' }}</label>
                         <select id="branchSelect" class="form-select">
-                            <option value="">All Branches</option>
+                            <option value="">{{ content.cms_all_branches|default:'All Branches' }}</option>
                             {% for branch in branches %}
                             <option value="{{ branch.id }}">{{ branch.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-auto">
-                        <label class="form-label text-white-50">Period</label>
+                        <label class="form-label text-white-50">{{ content.cms_period|default:'Period' }}</label>
                         <select id="periodSelect" class="form-select">
-                            <option value="30">Last 30 Days</option>
-                            <option value="90">Last 3 Months</option>
-                            <option value="365" selected>Last Year</option>
+                            <option value="30">{{ content.cms_last_30_days|default:'Last 30 Days' }}</option>
+                            <option value="90">{{ content.cms_last_3_months|default:'Last 3 Months' }}</option>
+                            <option value="365" selected>{{ content.cms_last_year|default:'Last Year' }}</option>
                         </select>
                     </div>
                     <div class="col-auto align-self-end">
-                        <button id="refreshBtn" class="btn btn-modern">
-                            Refresh Analytics
-                        </button>
+                        <button id="refreshBtn" class="btn btn-modern">{{ content.cms_refresh_analytics|default:'Refresh Analytics' }}</button>
                     </div>
                 </div>
             </div>
@@ -145,7 +143,7 @@
                 <div class="metric-value" id="totalRevenue">
                     <span class="loading-spinner"></span>
                 </div>
-                <div class="metric-label">Total Revenue</div>
+                <div class="metric-label">{{ content.cms_total_revenue|default:"Total Revenue" }}</div>
             </div>
         </div>
         <div class="col-md-3">
@@ -153,7 +151,7 @@
                 <div class="metric-value" id="netProfit">
                     <span class="loading-spinner"></span>
                 </div>
-                <div class="metric-label">Net Profit</div>
+                <div class="metric-label">{{ content.cms_net_profit|default:"Net Profit" }}</div>
             </div>
         </div>
         <div class="col-md-3">
@@ -161,7 +159,7 @@
                 <div class="metric-value" id="profitMargin">
                     <span class="loading-spinner"></span>
                 </div>
-                <div class="metric-label">Profit Margin</div>
+                <div class="metric-label">{{ content.cms_profit_margin|default:"Profit Margin" }}</div>
             </div>
         </div>
         <div class="col-md-3">
@@ -169,7 +167,7 @@
                 <div class="metric-value" id="riskLevel">
                     <span class="loading-spinner"></span>
                 </div>
-                <div class="metric-label">Risk Level</div>
+                <div class="metric-label">{{ content.cms_risk_level|default:"Risk Level" }}</div>
             </div>
         </div>
     </div>
@@ -178,14 +176,14 @@
     <div class="row">
         <div class="col-md-6">
             <div class="analytics-card">
-                <h5>AI Sales Forecast <span class="badge bg-success">Prophet ML</span></h5>
+                <h5>AI Sales Forecast <span class="badge bg-success">{{ content.cms_prophet_ml|default:'Prophet ML' }}</span></h5>
                 <div id="forecastTable" class="data-table">
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th>Period</th>
-                                <th>Predicted Sales</th>
-                                <th>Confidence</th>
+                                <th>{{ content.cms_period|default:'Period' }}</th>
+                                <th>{{ content.cms_predicted_sales|default:'Predicted Sales' }}</th>
+                                <th>{{ content.cms_confidence|default:'Confidence' }}</th>
                             </tr>
                         </thead>
                         <tbody id="forecastTableBody">
@@ -197,20 +195,20 @@
                         </tbody>
                     </table>
                 </div>
-                <small class="text-muted mt-2 d-block">Powered by Facebook's Prophet Algorithm</small>
+                <small class="text-muted mt-2 d-block">{{ content.cms_powered_by_facebook_s_prophet_algorithm|default:"Powered by Facebook's Prophet Algorithm" }}</small>
             </div>
         </div>
         
         <div class="col-md-6">
             <div class="analytics-card">
-                <h5>Risk Assessment <span class="badge bg-warning">VaR Model</span></h5>
+                <h5>Risk Assessment <span class="badge bg-warning">{{ content.cms_var_model|default:'VaR Model' }}</span></h5>
                 <div id="riskTable" class="data-table">
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th>Risk Metric</th>
-                                <th>Value</th>
-                                <th>Status</th>
+                                <th>{{ content.cms_risk_metric|default:'Risk Metric' }}</th>
+                                <th>{{ content.cms_value|default:'Value' }}</th>
+                                <th>{{ content.cms_status|default:'Status' }}</th>
                             </tr>
                         </thead>
                         <tbody id="riskTableBody">
@@ -222,7 +220,7 @@
                         </tbody>
                     </table>
                 </div>
-                <small class="text-muted mt-2 d-block">Value at Risk (VaR) Analysis</small>
+                <small class="text-muted mt-2 d-block">{{ content.cms_value_at_risk_var_analysis|default:'Value at Risk (VaR) Analysis' }}</small>
             </div>
         </div>
     </div>
@@ -230,15 +228,15 @@
     <div class="row">
         <div class="col-md-6">
             <div class="analytics-card">
-                <h5>Smart Inventory <span class="badge bg-info">EOQ Model</span></h5>
+                <h5>Smart Inventory <span class="badge bg-info">{{ content.cms_eoq_model|default:'EOQ Model' }}</span></h5>
                 <div id="inventoryTable" class="data-table">
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th>Product</th>
-                                <th>Current Stock</th>
-                                <th>Reorder Point</th>
-                                <th>Status</th>
+                                <th>{{ content.cms_product|default:'Product' }}</th>
+                                <th>{{ content.cms_current_stock|default:'Current Stock' }}</th>
+                                <th>{{ content.cms_reorder_point|default:'Reorder Point' }}</th>
+                                <th>{{ content.cms_status|default:'Status' }}</th>
                             </tr>
                         </thead>
                         <tbody id="inventoryTableBody">
@@ -250,21 +248,21 @@
                         </tbody>
                     </table>
                 </div>
-                <small class="text-muted mt-2 d-block">Amazon & Walmart Algorithm</small>
+                <small class="text-muted mt-2 d-block">{{ content.cms_amazon_walmart_algorithm|default:'Amazon & Walmart Algorithm' }}</small>
             </div>
         </div>
         
         <div class="col-md-6">
             <div class="analytics-card">
-                <h5>Route Optimization <span class="badge bg-primary">Linear Programming</span></h5>
+                <h5>Route Optimization <span class="badge bg-primary">{{ content.cms_linear_programming|default:'Linear Programming' }}</span></h5>
                 <div id="routeTable" class="data-table">
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th>Route</th>
-                                <th>Distance (km)</th>
-                                <th>Profit</th>
-                                <th>Efficiency</th>
+                                <th>{{ content.cms_route|default:'Route' }}</th>
+                                <th>{{ content.cms_distance_km|default:'Distance (km)' }}</th>
+                                <th>{{ content.cms_profit|default:'Profit' }}</th>
+                                <th>{{ content.cms_efficiency|default:'Efficiency' }}</th>
                             </tr>
                         </thead>
                         <tbody id="routeTableBody">
@@ -276,26 +274,22 @@
                         </tbody>
                     </table>
                 </div>
-                <small class="text-muted mt-2 d-block">UPS & FedEx Algorithm</small>
+                <small class="text-muted mt-2 d-block">{{ content.cms_ups_fedex_algorithm|default:'UPS & FedEx Algorithm' }}</small>
             </div>
         </div>
     </div>
 
     <!-- Professional Reports -->
     <div class="analytics-card">
-        <h5>Professional Reports <span class="badge bg-secondary">Investment Grade</span></h5>
-        <p class="text-muted mb-3">Generate Fortune 500 quality financial reports with advanced analytics</p>
+        <h5>Professional Reports <span class="badge bg-secondary">{{ content.cms_investment_grade|default:'Investment Grade' }}</span></h5>
+        <p class="text-muted mb-3">{{ content.cms_generate_fortune_500_quality_financial_reports_with_advanced|default:'Generate Fortune 500 quality financial reports with advanced analytics' }}</p>
         
         <div class="row">
             <div class="col-md-6">
-                <button id="exportExcelBtn" class="btn btn-modern w-100">
-                    Excel Report
-                </button>
+                <button id="exportExcelBtn" class="btn btn-modern w-100">{{ content.cms_excel_report|default:'Excel Report' }}</button>
             </div>
             <div class="col-md-6">
-                <button class="btn btn-outline-secondary w-100" disabled>
-                    PDF Report (Coming Soon)
-                </button>
+                <button class="btn btn-outline-secondary w-100" disabled>{{ content.cms_pdf_report_coming_soon|default:'PDF Report (Coming Soon)' }}</button>
             </div>
         </div>
     </div>

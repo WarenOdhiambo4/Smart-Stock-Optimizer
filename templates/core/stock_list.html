@@ -4,38 +4,43 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Stock Inventory</h1>
+    <h1 class="page-title">{{ content.cms_stock_inventory|default:'Stock Inventory' }}</h1>
     <div class="d-flex gap-2 flex-wrap">
         <div class="search-box">
             <i class="bi bi-search search-icon"></i>
             <form method="get" class="d-flex gap-2">
                 <input type="text" name="search" class="form-control form-control-sm" placeholder="Search products..." value="{{ search }}">
                 <select name="branch" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
-                    <option value="">All Branches</option>
+                    <option value="">{{ content.cms_all_branches|default:'All Branches' }}</option>
                     {% for branch in branches %}
                     <option value="{{ branch.pk }}" {% if selected_branch == branch.pk|stringformat:"i" %}selected{% endif %}>{{ branch.name }}</option>
                     {% endfor %}
                 </select>
+                <input type="date" name="balance_date" class="form-control form-control-sm" value="{{ balance_date }}" title="Balance as of date">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">{{ content.cms_apply|default:'Apply' }}</button>
             </form>
         </div>
-        <a href="{% url 'stock_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Stock</a>
-        <a href="{% url 'stock_transfer' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-truck me-1"></i>Transfer</a>
-        <button onclick="printStock()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
+        <a href="{% url 'stock_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>{{ content.cms_add_stock|default:'Add Stock' }}</a>
+        <a href="{% url 'stock_transfer' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-truck me-1"></i>{{ content.cms_transfer|default:'Transfer' }}</a>
+        <button onclick="printStock()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>{{ content.cms_print|default:'Print' }}</button>
     </div>
 </div>
 
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
-        <table class="table">
+        <div class="table-responsive stock-table-wrap">
+        <table class="table stock-table">
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th>SKU</th>
-                    <th>Branch</th>
-                    <th>Quantity</th>
-                    <th>Min Qty</th>
-                    <th>Status</th>
+                    <th>{{ content.cms_product|default:'Product' }}</th>
+                    <th>{{ content.cms_sku|default:'SKU' }}</th>
+                    <th>{{ content.cms_branch|default:'Branch' }}</th>
+                    <th>{{ content.cms_quantity|default:'Quantity' }}</th>
+                    <th>{{ content.cms_balance_as_of|default:'Balance (As Of)' }}</th>
+                    <th>{{ content.cms_min_qty|default:'Min Qty' }}</th>
+                    <th>{{ content.cms_status|default:'Status' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -45,26 +50,41 @@
                     <td><code>{{ stock.product.sku }}</code></td>
                     <td>{{ stock.branch.name }}</td>
                     <td class="{% if stock.is_low_stock %}low-stock{% endif %}">{{ stock.quantity }}</td>
+                    <td>{% if balance_date %}{{ stock.balance_as_of|default:stock.quantity }}{% else %}—{% endif %}</td>
                     <td>{{ stock.min_quantity }}</td>
                     <td>
                         {% if stock.is_low_stock %}
-                            <span class="badge badge-danger">Low Stock</span>
+                            <span class="badge badge-danger">{{ content.cms_low_stock|default:'Low Stock' }}</span>
                         {% else %}
-                            <span class="badge badge-success">OK</span>
+                            <span class="badge badge-success">{{ content.cms_ok|default:'OK' }}</span>
                         {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <a href="{% url 'stock_reduce' stock.id %}" class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-dash-circle me-1"></i>{{ content.cms_reduce|default:'Reduce' }}</a>
+                            <a href="{% url 'report_broken_product_for_stock' stock.id %}" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-exclamation-triangle me-1"></i>{{ content.cms_report_broken|default:'Report Broken' }}</a>
+                            <form method="post" action="{% url 'stock_delete' stock.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-secondary" onclick="return confirm('Delete this stock record?');">
+                                    <i class="bi bi-trash me-1"></i>{{ content.cms_delete|default:'Delete' }}</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}
         <div class="empty-state">
             <i class="bi bi-boxes" style="font-size: 3rem;"></i>
-            <h5>No stock records found</h5>
-            <p>Add stock to your branches</p>
-            <a href="{% url 'stock_create' %}" class="btn btn-primary btn-sm">Add Stock</a>
+            <h5>{{ content.cms_no_stock_records_found|default:'No stock records found' }}</h5>
+            <p>{{ content.cms_add_stock_to_your_branches|default:'Add stock to your branches' }}</p>
+            <a href="{% url 'stock_create' %}" class="btn btn-primary btn-sm">{{ content.cms_add_stock|default:'Add Stock' }}</a>
         </div>
         {% endif %}
     </div>

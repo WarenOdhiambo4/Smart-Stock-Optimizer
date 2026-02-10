@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360">
+  <rect width="360" height="360" fill="#f5f3ee"/>
+
+  <!-- Base grid -->
+  <g stroke="#e1ded6" stroke-width="1" opacity="0.55">
+    <path d="M0 36 H360 M0 72 H360 M0 108 H360 M0 144 H360 M0 180 H360 M0 216 H360 M0 252 H360 M0 288 H360 M0 324 H360"/>
+    <path d="M36 0 V360 M72 0 V360 M108 0 V360 M144 0 V360 M180 0 V360 M216 0 V360 M252 0 V360 M288 0 V360 M324 0 V360"/>
+  </g>
+
+  <!-- Emphasized grid lines -->
+  <g stroke="#d7d2c8" stroke-width="1" opacity="0.6">
+    <path d="M0 120 H360 M0 240 H360"/>
+    <path d="M120 0 V360 M240 0 V360"/>
+  </g>
+
+  <!-- Subtle tile motif -->
+  <g stroke="#d6b166" stroke-width="1" opacity="0.35" fill="none">
+    <path d="M90 90 L110 70 L130 90 L110 110 Z"/>
+    <path d="M270 90 L290 70 L310 90 L290 110 Z"/>
+    <path d="M90 270 L110 250 L130 270 L110 290 Z"/>
+    <path d="M270 270 L290 250 L310 270 L290 290 Z"/>
+  </g>
+
+  <!-- Flow lines -->
+  <g stroke="#c9cdd6" stroke-width="1" opacity="0.3" fill="none">
+    <path d="M18 180 C90 140, 150 140, 222 180"/>
+    <path d="M138 18 C180 78, 180 120, 138 180"/>
+    <path d="M222 180 C282 220, 320 240, 342 300"/>
+  </g>
+
+  <!-- Small nodes -->
+  <g fill="#2b344a" opacity="0.15">
+    <circle cx="120" cy="120" r="3"/>
+    <circle cx="240" cy="120" r="3"/>
+    <circle cx="120" cy="240" r="3"/>
+    <circle cx="240" cy="240" r="3"/>
+  </g>
+</svg>

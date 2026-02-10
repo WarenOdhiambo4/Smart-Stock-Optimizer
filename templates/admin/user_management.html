@@ -27,7 +27,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>User Management</h1>
+        <h1>{{ content.cms_user_management|default:'User Management' }}</h1>
         
         <div class="messages">
             {% for message in messages %}
@@ -37,33 +37,33 @@
             {% endfor %}
         </div>
 
-        <h2>Create New User</h2>
+        <h2>{{ content.cms_create_new_user|default:'Create New User' }}</h2>
         <form method="post" id="userForm">
             {% csrf_token %}
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="first_name">First Name:</label>
+                    <label for="first_name">{{ content.cms_first_name|default:'First Name:' }}</label>
                     <input type="text" id="first_name" name="first_name" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="last_name">Last Name:</label>
+                    <label for="last_name">{{ content.cms_last_name|default:'Last Name:' }}</label>
                     <input type="text" id="last_name" name="last_name" required>
                 </div>
             </div>
             
             <div class="form-group">
-                <label for="email">Email:</label>
+                <label for="email">{{ content.cms_email|default:'Email:' }}</label>
                 <input type="email" id="email" name="email" required>
                 <div id="email-validation" class="email-validation"></div>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="role">Role:</label>
+                    <label for="role">{{ content.cms_role|default:'Role:' }}</label>
                     <select id="role" name="role" required>
-                        <option value="">Select Role</option>
+                        <option value="">{{ content.cms_select_role|default:'Select Role' }}</option>
                         {% for role in roles %}
                             <option value="{{ role }}">{{ role }}</option>
                         {% endfor %}
@@ -71,37 +71,42 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="branch_name">Branch:</label>
-                    <input type="text" id="branch_name" name="branch_name" placeholder="e.g., Main Branch">
+                    <label for="branch_id">{{ content.cms_branch|default:'Branch:' }}</label>
+                    <select id="branch_id" name="branch_id">
+                        <option value="">{{ content.cms_no_branch|default:'No Branch' }}</option>
+                        {% for branch in branches %}
+                            <option value="{{ branch.id }}">{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
             
-            <button type="submit" id="submitBtn">Create User</button>
+            <button type="submit" id="submitBtn">{{ content.cms_create_user|default:'Create User' }}</button>
         </form>
 
-        <h2>Existing Users</h2>
+        <h2>{{ content.cms_existing_users|default:'Existing Users' }}</h2>
         <table class="users-table">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Branch</th>
-                    <th>Status</th>
+                    <th>{{ content.cms_name|default:'Name' }}</th>
+                    <th>{{ content.cms_email|default:'Email' }}</th>
+                    <th>{{ content.cms_role|default:'Role' }}</th>
+                    <th>{{ content.cms_branch|default:'Branch' }}</th>
+                    <th>{{ content.cms_status|default:'Status' }}</th>
                 </tr>
             </thead>
             <tbody>
-                {% for user in airtable_users %}
+                {% for row in user_rows %}
                 <tr>
-                    <td>{{ user.fields.First_Name|default:"" }} {{ user.fields.Last_Name|default:"" }}</td>
-                    <td>{{ user.fields.Email|default:"" }}</td>
-                    <td>{{ user.fields.Role|default:"" }}</td>
-                    <td>{{ user.fields.Branch|default:"" }}</td>
-                    <td>{% if user.fields.Active %}Active{% else %}Inactive{% endif %}</td>
+                    <td>{{ row.user.get_full_name|default:row.user.username }}</td>
+                    <td>{{ row.user.email|default:"" }}</td>
+                    <td>{{ row.role|default:"" }}</td>
+                    <td>{{ row.branch|default:"" }}</td>
+                    <td>{% if row.is_active %}Active{% else %}Inactive{% endif %}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5">No users found. Create your first user above.</td>
+                    <td colspan="5">{{ content.cms_no_users_found_create_your_first_user_above|default:"No users found. Create your first user above." }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

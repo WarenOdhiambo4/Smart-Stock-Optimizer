@@ -3,12 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>{% block title %}Kabisa ERP{% endblock %}</title>
+    <title>{% block title %}{{ content.page_title_default|default:'Kabisa ERP' }}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     {% load static %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        :root {
+            --primary: {{ content.theme_primary_color|default:'#0077b6' }};
+            --heading-color: {{ content.theme_heading_color|default:'#0077b6' }};
+            --font-family: {{ content.theme_font_family|default:"'Nunito', Arial, sans-serif" }};
+            --body-font-size: {{ content.theme_body_font_size|default:'12px' }};
+            --table-font-size: {{ content.theme_table_font_size|default:'9px' }};
+            --nav-bg: {{ content.theme_nav_bg|default:'rgba(255,186,8,0.2)' }};
+            --nav-link-color: {{ content.theme_nav_link_color|default:'#0077b6' }};
+            --nav-link-size: {{ content.theme_nav_link_size|default:'17px' }};
+            --nav-link-weight: {{ content.theme_nav_link_weight|default:'800' }};
+            --gridline: {{ content.theme_table_grid_color|default:'#0096c7' }};
+        }
+    </style>
     <style>
         /* Mobile-First Responsive Design */
         :root {
@@ -19,17 +37,6 @@
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
         }
-        
-        /* Adaptive Typography */
-        body {
-            font-size: clamp(14px, 2.5vw, 16px);
-            line-height: 1.5;
-        }
-        
-        h1 { font-size: clamp(1.5rem, 4vw, 2.5rem); }
-        h2 { font-size: clamp(1.25rem, 3.5vw, 2rem); }
-        h3 { font-size: clamp(1.125rem, 3vw, 1.75rem); }
-        h4 { font-size: clamp(1rem, 2.5vw, 1.5rem); }
         
         /* Touch-Friendly Navigation */
         .navbar-nav .nav-link {
@@ -54,14 +61,15 @@
         
         @media (max-width: 768px) {
             .table-responsive table {
-                font-size: 0.875rem;
+                font-size: 0.75rem;
             }
-            
+
             .table th, .table td {
-                padding: var(--spacing-sm);
-                white-space: nowrap;
+                padding: var(--spacing-xs);
+                white-space: normal;
+                word-break: break-word;
             }
-            
+
             /* Hide less important columns on mobile */
             .table .d-none-mobile {
                 display: none !important;
@@ -70,14 +78,19 @@
         
         /* Responsive Forms */
         .form-control, .form-select {
-            min-height: var(--touch-target);
-            font-size: 16px; /* Prevents zoom on iOS */
+            min-height: 36px;
+            font-size: 12px;
+        }
+
+        .input-group-text {
+            min-height: 36px;
+            font-size: 12px;
         }
         
         .btn {
-            min-height: var(--touch-target);
-            padding: var(--spacing-sm) var(--spacing-md);
-            font-size: clamp(14px, 2.5vw, 16px);
+            min-height: 32px;
+            padding: 0.4rem 0.75rem;
+            font-size: 12px;
         }
         
         /* Responsive Cards */
@@ -94,7 +107,7 @@
         /* Mobile Navigation Improvements */
         @media (max-width: 991px) {
             .navbar-collapse {
-                background: var(--bs-success);
+                background: rgba(255, 210, 51, 0.2);
                 border-radius: 0.375rem;
                 box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
                 margin-top: var(--spacing-sm);
@@ -108,7 +121,7 @@
             .dropdown-menu {
                 border: none;
                 box-shadow: none;
-                background: rgba(255,255,255,0.1);
+                background: rgba(255,255,255,0.2);
                 margin-left: var(--spacing-md);
                 position: static !important;
             }
@@ -181,11 +194,10 @@
         }
     </style>
 </head>
-<body>
+<body class="antialiased">
     <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <i class="bi bi-box-seam me-2"></i>SaasApp
+            <a class="navbar-brand" href="{% url 'dashboard' %}">{{ content.site_name|default:'Paroha SCM' }}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -193,103 +205,122 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
-                            <i class="bi bi-speedometer2 me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    {% if user.profile.role in 'ADMIN,BOSS,MANAGER' %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-building me-1"></i>Organization
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'branch_list' %}"><i class="bi bi-shop me-2"></i>Branches</a></li>
-                            <li><a class="dropdown-item" href="{% url 'employee_list' %}"><i class="bi bi-people me-2"></i>Employees</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'physical_count' %}"><i class="bi bi-clipboard-data me-2"></i>Physical Stock Count</a></li>
-                            <li><a class="dropdown-item" href="{% url 'notebook' %}"><i class="bi bi-journal-text me-2"></i>Notebook</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-box me-1"></i>Inventory
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'product_list' %}"><i class="bi bi-tags me-2"></i>Products</a></li>
-                            <li><a class="dropdown-item" href="{% url 'stock_list' %}"><i class="bi bi-boxes me-2"></i>Stock</a></li>
-                            <li><a class="dropdown-item" href="{% url 'stock_movement_list' %}"><i class="bi bi-arrow-left-right me-2"></i>Stock Movements</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'stock_transfer' %}"><i class="bi bi-truck me-2"></i>Transfer Stock</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'order' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'order_list' %}">
-                            <i class="bi bi-clipboard-check me-1"></i>Orders
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'sale' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'sale_list' %}">
-                            <i class="bi bi-cart me-1"></i>Sales
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'expense' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'expense_list' %}">
-                            <i class="bi bi-cash-stack me-1"></i>Expenses
-                        </a>
-                    </li>
+                        {% with role=user.profile.role %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">{{ content.nav.dashboard|default:'Dashboard' }}
+                            </a>
+                        </li>
 
-                    {% if user.profile.role in 'ADMIN,BOSS,MANAGER,LOGISTICS' %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-truck me-1"></i>Logistics
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'logistics_list' %}"><i class="bi bi-box-seam me-2"></i>Deliveries</a></li>
-                            <li><a class="dropdown-item" href="{% url 'logistics_dashboard' %}"><i class="bi bi-speedometer2 me-2"></i>Performance Analytics</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'vehicle_list' %}"><i class="bi bi-truck me-2"></i>Vehicles</a></li>
-                            <li><a class="dropdown-item" href="{% url 'trip_list' %}"><i class="bi bi-geo-alt me-2"></i>Trips</a></li>
-                            <li><a class="dropdown-item" href="{% url 'maintenance_list' %}"><i class="bi bi-wrench me-2"></i>Maintenance</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                    {% if user.profile.role in 'ADMIN,BOSS,FINANCE,MANAGER' %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-graph-up me-1"></i>Finance
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'financial_reports' %}"><i class="bi bi-file-earmark-text me-2"></i>Reports</a></li>
-                            <li><a class="dropdown-item" href="{% url 'analytics_dashboard' %}"><i class="bi bi-graph-up-arrow me-2"></i>Analytics Dashboard</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                    {% if user.profile.role in 'ADMIN,BOSS' %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'user_list' %}">
-                            <i class="bi bi-person-gear me-1"></i>Users
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if user.profile.role == 'ADMIN' %}
-                    <li class="nav-item">
-                        <a class="nav-link text-danger" href="{% url 'kpi_secret_dashboard' %}">
-                            <i class="bi bi-shield-lock me-1"></i>🔒 KPI Secret
-                        </a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-1"></i>{{ user.username }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><span class="dropdown-item-text"><small class="text-muted">{{ user.profile.get_role_display }}</small></span></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                        </ul>
-                    </li>
+                        {% if role == 'ADMIN' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.organization|default:'Organization' }}</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'branch_list' %}">{{ content.nav.branches|default:'Branches' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'employee_list' %}">{{ content.nav.employees|default:'Employees' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'notebook' %}">{{ content.nav.notebook|default:'Notebook' }}</a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+
+                        {% if role == 'ADMIN' or role == 'BOSS' or role == 'SALES' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if 'product' in request.resolver_match.url_name or 'stock' in request.resolver_match.url_name or 'broken' in request.resolver_match.url_name or request.resolver_match.url_name == 'physical_count' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.inventory|default:'Inventory' }}</a>
+                            <ul class="dropdown-menu">
+                                {% if role == 'ADMIN' %}
+                                <li><a class="dropdown-item" href="{% url 'product_list' %}">{{ content.nav.products|default:'Products' }}</a></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{% url 'stock_list' %}">{{ content.nav.stock|default:'Stock' }}</a></li>
+                                {% if role == 'ADMIN' %}
+                                <li><a class="dropdown-item" href="{% url 'stock_movement_list' %}">{{ content.nav.stock_movements|default:'Stock Movements' }}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'stock_transfer' %}">{{ content.nav.transfer_stock|default:'Transfer Stock' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'physical_count' %}">{{ content.nav.physical_count|default:'Physical Stock Count' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'broken_products_list' %}">{{ content.nav.broken_products|default:'Broken Products' }}</a></li>
+                                {% endif %}
+                            </ul>
+                        </li>
+                        {% endif %}
+
+                        {% if role == 'ADMIN' or role == 'BOSS' or role == 'SALES' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if 'order' in request.resolver_match.url_name or 'sale' in request.resolver_match.url_name or 'expense' in request.resolver_match.url_name %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.operations|default:'Operations' }}</a>
+                            <ul class="dropdown-menu">
+                                {% if role == 'ADMIN' or role == 'BOSS' %}
+                                <li><a class="dropdown-item" href="{% url 'order_list' %}">{{ content.nav.orders|default:'Orders' }}</a></li>
+                                {% endif %}
+                                {% if role == 'ADMIN' or role == 'SALES' %}
+                                <li><a class="dropdown-item" href="{% url 'sale_list' %}">{{ content.nav.sales|default:'Sales' }}</a></li>
+                                {% endif %}
+                                {% if role == 'ADMIN' %}
+                                <li><a class="dropdown-item" href="{% url 'expense_list' %}">{{ content.nav.expenses|default:'Operational Expenses' }}</a></li>
+                                {% endif %}
+                            </ul>
+                        </li>
+                        {% endif %}
+
+                        {% if role == 'ADMIN' or role == 'LOGISTICS' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if 'logistics' in request.resolver_match.url_name or 'vehicle' in request.resolver_match.url_name or 'trip' in request.resolver_match.url_name or 'maintenance' in request.resolver_match.url_name %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.logistics|default:'Logistics' }}</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'logistics_list' %}">{{ content.nav.deliveries|default:'Deliveries' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'logistics_dashboard' %}">{{ content.nav.logistics_analytics|default:'Performance Analytics' }}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'vehicle_list' %}">{{ content.nav.vehicles|default:'Vehicles' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'trip_list' %}">{{ content.nav.trips|default:'Trips' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'maintenance_list' %}">{{ content.nav.maintenance|default:'Maintenance' }}</a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+
+                        {% if role == 'ADMIN' or role == 'BOSS' or role == 'MANAGER' or role == 'FINANCE' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name == 'ledger_list' or request.resolver_match.url_name == 'chart_of_accounts' or request.resolver_match.url_name == 'income_register' or request.resolver_match.url_name == 'expense_register' or request.resolver_match.url_name == 'loans_register' or request.resolver_match.url_name == 'payroll_ledger' or request.resolver_match.url_name == 'allowances_register' or request.resolver_match.url_name == 'analytics_dashboard' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.finance|default:'Finance' }}</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'ledger_list' %}">{{ content.nav.general_ledger|default:'General Ledger' }}</a></li>
+                                {% if role == 'ADMIN' %}
+                                <li><a class="dropdown-item" href="{% url 'chart_of_accounts' %}">{{ content.nav.chart_of_accounts|default:'Chart of Accounts' }}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'income_register' %}">{{ content.nav.income_register|default:'Income Register' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'expense_register' %}">{{ content.nav.expense_register|default:'Expense Register' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'loans_register' %}">{{ content.nav.loans_register|default:'Loans Register' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'payroll_ledger' %}">{{ content.nav.payroll_ledger|default:'Payroll Ledger' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'allowances_register' %}">{{ content.nav.allowances_register|default:'Allowances Register' }}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'analytics_dashboard' %}">{{ content.nav.live_analysis|default:'Live Analysis' }}</a></li>
+                                {% endif %}
+                            </ul>
+                        </li>
+                        {% endif %}
+
+                        {% if role == 'FINANCE' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.settings|default:'Settings' }}</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'content_management' %}">{{ content.nav.content_management|default:'Content Management' }}</a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+
+                        {% if role == 'ADMIN' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ content.nav.admin|default:'Admin' }}</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'user_list' %}">{{ content.nav.users|default:'Users' }}</a></li>
+                                <li><a class="dropdown-item" href="{% url 'content_management' %}">{{ content.nav.content_management|default:'Content Management' }}</a></li>
+                                <li><a class="dropdown-item text-danger" href="{% url 'kpi_secret_dashboard' %}">{{ content.nav.kpi_secret|default:'KPI Secret' }}</a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ user.username }}</a>
+                            <ul class="dropdown-menu">
+                                <li><span class="dropdown-item-text"><small class="text-muted">{{ user.profile.get_role_display }}</small></span></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'logout' %}">{{ content.nav.logout|default:'Logout' }}</a></li>
+                            </ul>
+                        </li>
+                        {% endwith %}
                     {% endif %}
                 </ul>
             </div>

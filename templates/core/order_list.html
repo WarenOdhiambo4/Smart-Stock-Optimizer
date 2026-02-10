@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Orders</h1>
+    <h1 class="page-title">{{ content.cms_orders|default:'Orders' }}</h1>
     <div class="d-flex gap-2">
         <div class="search-box">
             <i class="bi bi-search search-icon"></i>
@@ -12,7 +12,7 @@
                 <input type="text" name="search" class="form-control form-control-sm" placeholder="Search orders..." value="{{ search }}">
             </form>
         </div>
-        <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>New Order</a>
+        <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>{{ content.cms_new_order|default:'New Order' }}</a>
     </div>
 </div>
 
@@ -21,45 +21,45 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Order Management Overview</h5>
-                <a href="{% url 'bulk_order_operations' %}" class="btn btn-sm btn-outline-secondary">Bulk Actions</a>
+                <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>{{ content.cms_order_management_overview|default:'Order Management Overview' }}</h5>
+                <a href="{% url 'bulk_order_operations' %}" class="btn btn-sm btn-outline-secondary">{{ content.cms_bulk_actions|default:'Bulk Actions' }}</a>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-6 col-md-2">
                         <div class="text-center">
                             <div class="h4 mb-1 text-primary">{{ total_orders }}</div>
-                            <small class="text-muted">Total Orders</small>
+                            <small class="text-muted">{{ content.cms_total_orders|default:'Total Orders' }}</small>
                         </div>
                     </div>
                     <div class="col-6 col-md-2">
                         <div class="text-center">
                             <div class="h4 mb-1 text-warning">{{ pending_orders }}</div>
-                            <small class="text-muted">Pending</small>
+                            <small class="text-muted">{{ content.cms_pending|default:'Pending' }}</small>
                         </div>
                     </div>
                     <div class="col-6 col-md-2">
                         <div class="text-center">
                             <div class="h4 mb-1 text-info">{{ processing_orders }}</div>
-                            <small class="text-muted">Processing</small>
+                            <small class="text-muted">{{ content.cms_processing|default:'Processing' }}</small>
                         </div>
                     </div>
                     <div class="col-6 col-md-2">
                         <div class="text-center">
                             <div class="h4 mb-1 text-secondary">{{ partially_completed_orders }}</div>
-                            <small class="text-muted">Partial</small>
+                            <small class="text-muted">{{ content.cms_partial|default:'Partial' }}</small>
                         </div>
                     </div>
                     <div class="col-6 col-md-2">
                         <div class="text-center">
                             <div class="h4 mb-1 text-success">{{ completed_orders }}</div>
-                            <small class="text-muted">Completed</small>
+                            <small class="text-muted">{{ content.cms_completed|default:'Completed' }}</small>
                         </div>
                     </div>
                     <div class="col-6 col-md-2">
                         <div class="text-center">
                             <div class="h4 mb-1 text-primary">${{ total_order_value|floatformat:0 }}</div>
-                            <small class="text-muted">Total Value</small>
+                            <small class="text-muted">{{ content.cms_total_value|default:'Total Value' }}</small>
                         </div>
                     </div>
                 </div>
@@ -74,14 +74,14 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Order #</th>
-                    <th>Branch</th>
-                    <th>Supplier</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+                    <th>{{ content.cms_order|default:'Order #' }}</th>
+                    <th>{{ content.cms_branch|default:'Branch' }}</th>
+                    <th>{{ content.cms_supplier|default:'Supplier' }}</th>
+                    <th>{{ content.cms_items|default:'Items' }}</th>
+                    <th>{{ content.cms_total|default:'Total' }}</th>
+                    <th>{{ content.cms_status|default:'Status' }}</th>
+                    <th>{{ content.cms_date|default:'Date' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -122,9 +122,9 @@
         {% else %}
         <div class="empty-state">
             <i class="bi bi-clipboard-check" style="font-size: 3rem;"></i>
-            <h5>No orders found</h5>
-            <p>Create purchase orders to restock inventory</p>
-            <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm">Create Order</a>
+            <h5>{{ content.cms_no_orders_found|default:'No orders found' }}</h5>
+            <p>{{ content.cms_create_purchase_orders_to_restock_inventory|default:'Create purchase orders to restock inventory' }}</p>
+            <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm">{{ content.cms_create_order|default:'Create Order' }}</a>
         </div>
         {% endif %}
     </div>

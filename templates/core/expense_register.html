@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Expense Register{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ content.cms_expense_register|default:'Expense Register' }}</h1>
+</div>
+
+{% include 'core/finance_nav.html' %}
+
+{% if not manual_allowed %}
+<div class="finance-note">{{ content.cms_expense_register_is_auto_synced_from_expenses_edit_in_expens|default:"Expense Register is auto-synced from Expenses. Edit in Expenses module." }}</div>
+{% endif %}
+
+<div class="spreadsheet-wrap">
+    <table class="spreadsheet-table">
+        <thead>
+            <tr>
+                <th class="freeze-col">{{ content.cms_date|default:'Date' }}</th>
+                <th>{{ content.cms_voucher_no|default:'Voucher No' }}</th>
+                <th>{{ content.cms_expense_category|default:'Expense Category' }}</th>
+                <th>{{ content.cms_account_debited|default:'Account Debited' }}</th>
+                <th class="num">{{ content.cms_amount|default:'Amount' }}</th>
+                <th>{{ content.cms_payment_method|default:'Payment Method' }}</th>
+                <th>{{ content.cms_reference|default:'Reference' }}</th>
+                <th>{{ content.cms_approved|default:'Approved' }}</th>
+                <th>{{ content.cms_posted|default:'Posted' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td class="freeze-col">{{ entry.date }}</td>
+                <td>{{ entry.voucher_no }}</td>
+                <td>{{ entry.category }}</td>
+                <td>{{ entry.account_debited.account_code }} - {{ entry.account_debited.account_name }}</td>
+                <td class="num">{{ entry.amount|floatformat:2 }}</td>
+                <td>{{ entry.get_payment_method_display }}</td>
+                <td>{{ entry.reference }}</td>
+                <td>
+                    {% if entry.approved %}
+                        <span class="row-status posted">{{ content.cms_yes|default:'Yes' }}</span>
+                    {% else %}
+                        <span class="row-status pending">{{ content.cms_no|default:'No' }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if entry.posted %}
+                        <span class="row-status posted">{{ content.cms_yes|default:'Yes' }}</span>
+                    {% else %}
+                        <span class="row-status pending">{{ content.cms_no|default:'No' }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center text-muted">{{ content.cms_no_expense_entries_found|default:"No expense entries found" }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/finance_tables.js' %}"></script>
+{% endblock %}

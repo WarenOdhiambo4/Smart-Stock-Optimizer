@@ -1,0 +1,10 @@
+<div class="finance-nav">
+    <a href="{% url 'ledger_list' %}" class="{% if request.resolver_match.url_name == 'ledger_list' %}active{% endif %}">{{ content.cms_general_ledger|default:'General Ledger' }}</a>
+    <a href="{% url 'chart_of_accounts' %}" class="{% if request.resolver_match.url_name == 'chart_of_accounts' %}active{% endif %}">{{ content.cms_chart_of_accounts|default:'Chart of Accounts' }}</a>
+    <a href="{% url 'income_register' %}" class="{% if request.resolver_match.url_name == 'income_register' %}active{% endif %}">{{ content.cms_income_register|default:'Income Register' }}</a>
+    <a href="{% url 'expense_register' %}" class="{% if request.resolver_match.url_name == 'expense_register' %}active{% endif %}">{{ content.cms_expense_register|default:'Expense Register' }}</a>
+    <a href="{% url 'loans_register' %}" class="{% if request.resolver_match.url_name == 'loans_register' %}active{% endif %}">{{ content.cms_loans_credits|default:'Loans & Credits' }}</a>
+    <a href="{% url 'logistics_ledger' %}" class="{% if request.resolver_match.url_name == 'logistics_ledger' %}active{% endif %}">{{ content.cms_logistics_ledger|default:'Logistics Ledger' }}</a>
+    <a href="{% url 'payroll_ledger' %}" class="{% if request.resolver_match.url_name == 'payroll_ledger' %}active{% endif %}">{{ content.cms_payroll_ledger|default:'Payroll Ledger' }}</a>
+    <a href="{% url 'allowances_register' %}" class="{% if request.resolver_match.url_name == 'allowances_register' %}active{% endif %}">{{ content.cms_allowances|default:'Allowances' }}</a>
+</div>

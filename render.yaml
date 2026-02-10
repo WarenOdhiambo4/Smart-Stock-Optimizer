@@ -7,9 +7,19 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: AIRTABLE_API_KEY
-        value: YOUR_AIRTABLE_API_KEY_HERE
-      - key: AIRTABLE_BASE_ID
-        value: YOUR_AIRTABLE_BASE_ID_HERE
+      - key: DATABASE_NAME
+        value: postgres
+      - key: DATABASE_USER
+        value: YOUR_SUPABASE_USER
+      - key: DATABASE_PASSWORD
+        value: YOUR_SUPABASE_PASSWORD
+      - key: DATABASE_HOST
+        value: YOUR_SUPABASE_POOLER_HOST
+      - key: DATABASE_PORT
+        value: 5432
+      - key: SUPABASE_URL
+        value: YOUR_SUPABASE_URL
+      - key: SUPABASE_ANON_KEY
+        value: YOUR_SUPABASE_ANON_KEY
       - key: DEBUG
         value: False

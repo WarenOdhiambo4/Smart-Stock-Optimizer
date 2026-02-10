@@ -7,34 +7,32 @@
     <h1 class="page-title">Order {{ order.order_number }}</h1>
     <div class="d-flex gap-2">
         <a href="{% url 'order_print' order.pk %}" class="btn btn-primary btn-sm" target="_blank">
-            <i class="bi bi-printer me-1"></i>Print PDF
-        </a>
+            <i class="bi bi-printer me-1"></i>{{ content.cms_print_pdf|default:'Print PDF' }}</a>
         <a href="{% url 'order_print' order.pk %}?format=html" class="btn btn-outline-primary btn-sm" target="_blank">
-            <i class="bi bi-eye me-1"></i>Preview
-        </a>
+            <i class="bi bi-eye me-1"></i>{{ content.cms_preview|default:'Preview' }}</a>
         {% if order.status == 'PENDING' %}
         <form method="post" action="{% url 'order_complete' order.pk %}" onsubmit="return confirm('Mark this order as complete? This will add items to stock.')">
             {% csrf_token %}
-            <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check me-1"></i>Complete Order</button>
+            <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check me-1"></i>{{ content.cms_complete_order|default:'Complete Order' }}</button>
         </form>
         {% endif %}
-        <a href="{% url 'order_list' %}" class="btn btn-secondary btn-sm">Back to Orders</a>
+        <a href="{% url 'order_list' %}" class="btn btn-secondary btn-sm">{{ content.cms_back_to_orders|default:'Back to Orders' }}</a>
     </div>
 </div>
 
 <div class="row g-3">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">Order Items</div>
+            <div class="card-header">{{ content.cms_order_items|default:"Order Items" }}</div>
             <div class="card-body p-0">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Product</th>
-                            <th>SKU</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Subtotal</th>
+                            <th>{{ content.cms_product|default:'Product' }}</th>
+                            <th>{{ content.cms_sku|default:'SKU' }}</th>
+                            <th>{{ content.cms_quantity|default:'Quantity' }}</th>
+                            <th>{{ content.cms_unit_price|default:'Unit Price' }}</th>
+                            <th>{{ content.cms_subtotal|default:'Subtotal' }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -60,7 +58,7 @@
     </div>
     <div class="col-md-4">
         <div class="card">
-            <div class="card-header">Order Details</div>
+            <div class="card-header">{{ content.cms_order_details|default:"Order Details" }}</div>
             <div class="card-body">
                 <p class="mb-2"><strong>Status:</strong> 
                     <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% else %}badge-secondary{% endif %}">

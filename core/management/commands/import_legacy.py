@@ -123,8 +123,9 @@ class Command(BaseCommand):
                         SaleItem.objects.create(
                             sale=sale,
                             stock=stock,
-                            quantity=int(quantity),
-                            unit_price=Decimal(str(unit_price))
+                            quantity=Decimal(str(quantity)),
+                            unit_price=Decimal(str(unit_price)),
+                            unit_cost_at_sale=stock.weighted_avg_purchase_price or product.cost_price,
                         )
                         
                         # Handle expenses if present

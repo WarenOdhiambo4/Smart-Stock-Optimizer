@@ -4,10 +4,10 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Trips</h1>
+    <h1 class="page-title">{{ content.cms_trips|default:'Trips' }}</h1>
     <div class="page-actions">
-        <button onclick="printTrips()" class="btn btn-secondary me-2">Print Report</button>
-        <a href="{% url 'trip_create' %}" class="btn btn-primary">Create Trip</a>
+        <button onclick="printTrips()" class="btn btn-secondary me-2">{{ content.cms_print_report|default:'Print Report' }}</button>
+        <a href="{% url 'trip_create' %}" class="btn btn-primary">{{ content.cms_create_trip|default:'Create Trip' }}</a>
     </div>
 </div>
 
@@ -20,7 +20,7 @@
                 </div>
                 <div class="col-md-3">
                     <select name="vehicle" class="form-select">
-                        <option value="">All Vehicles</option>
+                        <option value="">{{ content.cms_all_vehicles|default:'All Vehicles' }}</option>
                         {% for vehicle in vehicles %}
                         <option value="{{ vehicle.id }}" {% if selected_vehicle == vehicle.id|stringformat:"s" %}selected{% endif %}>
                             {{ vehicle.registration_number }} - {{ vehicle.make }} {{ vehicle.model }}
@@ -35,7 +35,7 @@
                     <input type="date" name="date_to" class="form-control" placeholder="To" value="{{ date_to }}">
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-secondary w-100">Filter</button>
+                    <button type="submit" class="btn btn-outline-secondary w-100">{{ content.cms_filter|default:'Filter' }}</button>
                 </div>
             </div>
         </form>
@@ -44,16 +44,16 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>Trip #</th>
-                        <th>Vehicle</th>
-                        <th>Driver</th>
-                        <th>Route</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Revenue</th>
-                        <th>Profit</th>
-                        <th>Date</th>
-                        <th>Actions</th>
+                        <th>{{ content.cms_trip|default:'Trip #' }}</th>
+                        <th>{{ content.cms_vehicle|default:'Vehicle' }}</th>
+                        <th>{{ content.cms_driver|default:'Driver' }}</th>
+                        <th>{{ content.cms_route|default:'Route' }}</th>
+                        <th>{{ content.cms_type|default:'Type' }}</th>
+                        <th>{{ content.cms_status|default:'Status' }}</th>
+                        <th>{{ content.cms_revenue|default:'Revenue' }}</th>
+                        <th>{{ content.cms_profit|default:'Profit' }}</th>
+                        <th>{{ content.cms_date|default:'Date' }}</th>
+                        <th>{{ content.cms_actions|default:'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,7 +91,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" class="text-center text-muted">No trips found</td>
+                        <td colspan="10" class="text-center text-muted">{{ content.cms_no_trips_found|default:"No trips found" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -104,10 +104,10 @@
             <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if selected_vehicle %}&vehicle={{ selected_vehicle }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">&laquo; First</a>
+                        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if selected_vehicle %}&vehicle={{ selected_vehicle }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">{{ content.cms_laquo_first|default:'&laquo; First' }}</a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_vehicle %}&vehicle={{ selected_vehicle }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Previous</a>
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_vehicle %}&vehicle={{ selected_vehicle }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">{{ content.cms_previous|default:'Previous' }}</a>
                     </li>
                 {% endif %}
                 
@@ -119,10 +119,10 @@
                 
                 {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_vehicle %}&vehicle={{ selected_vehicle }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Next</a>
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_vehicle %}&vehicle={{ selected_vehicle }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">{{ content.cms_next|default:'Next' }}</a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if selected_vehicle %}&vehicle={{ selected_vehicle }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Last &raquo;</a>
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if selected_vehicle %}&vehicle={{ selected_vehicle }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">{{ content.cms_last_raquo|default:'Last &raquo;' }}</a>
                     </li>
                 {% endif %}
             </ul>

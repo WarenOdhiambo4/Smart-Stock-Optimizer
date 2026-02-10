@@ -4,13 +4,13 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Logistics & Delivery</h1>
+    <h1 class="page-title">{{ content.cms_logistics_delivery|default:'Logistics & Delivery' }}</h1>
     <div class="quick-actions">
         <form method="get" class="search-box me-2">
             <i class="bi bi-search search-icon"></i>
             <input type="text" name="search" class="form-control form-control-sm" placeholder="Search logistics..." value="{{ search }}">
         </form>
-        <a href="{% url 'logistics_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>New Logistics</a>
+        <a href="{% url 'logistics_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>{{ content.cms_new_logistics|default:'New Logistics' }}</a>
     </div>
 </div>
 
@@ -20,13 +20,13 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Tracking #</th>
-                    <th>Customer</th>
-                    <th>From Branch</th>
-                    <th>Status</th>
-                    <th>Delivery Date</th>
-                    <th>Cost</th>
-                    <th>Actions</th>
+                    <th>{{ content.cms_tracking|default:'Tracking #' }}</th>
+                    <th>{{ content.cms_customer|default:'Customer' }}</th>
+                    <th>{{ content.cms_from_branch|default:'From Branch' }}</th>
+                    <th>{{ content.cms_status|default:'Status' }}</th>
+                    <th>{{ content.cms_delivery_date|default:'Delivery Date' }}</th>
+                    <th>{{ content.cms_cost|default:'Cost' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -47,16 +47,33 @@
                     <td>${{ log.delivery_cost }}</td>
                     <td>
                         <div class="action-btns">
+                            {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
+                            <a href="{% url 'logistics_edit' log.pk %}" class="btn btn-outline-primary btn-sm me-1">{{ content.cms_edit|default:'Edit' }}</a>
+                            {% endif %}
                             <form method="post" action="{% url 'logistics_update_status' log.pk %}" class="d-inline">
                                 {% csrf_token %}
                                 <select name="status" onchange="this.form.submit()" class="form-select form-select-sm" style="width: auto;">
-                                    <option value="PENDING" {% if log.status == 'PENDING' %}selected{% endif %}>Pending</option>
-                                    <option value="PROCESSING" {% if log.status == 'PROCESSING' %}selected{% endif %}>Processing</option>
-                                    <option value="IN_TRANSIT" {% if log.status == 'IN_TRANSIT' %}selected{% endif %}>In Transit</option>
-                                    <option value="DELIVERED" {% if log.status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
-                                    <option value="CANCELLED" {% if log.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                                    <option value="PENDING" {% if log.status == 'PENDING' %}selected{% endif %}>{{ content.cms_pending|default:'Pending' }}</option>
+                                    <option value="PROCESSING" {% if log.status == 'PROCESSING' %}selected{% endif %}>{{ content.cms_processing|default:'Processing' }}</option>
+                                    <option value="IN_TRANSIT" {% if log.status == 'IN_TRANSIT' %}selected{% endif %}>{{ content.cms_in_transit|default:'In Transit' }}</option>
+                                    <option value="DELIVERED" {% if log.status == 'DELIVERED' %}selected{% endif %}>{{ content.cms_delivered|default:'Delivered' }}</option>
+                                    <option value="CANCELLED" {% if log.status == 'CANCELLED' %}selected{% endif %}>{{ content.cms_cancelled|default:'Cancelled' }}</option>
                                 </select>
                             </form>
+                            {% if log.status != 'DELIVERED' %}
+                            <form method="post" action="{% url 'logistics_update_status' log.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="DELIVERED">
+                                <button type="submit" class="btn btn-primary btn-sm">Mark Complete</button>
+                            </form>
+                            {% endif %}
+                            {% if log.status != 'IN_TRANSIT' %}
+                            <form method="post" action="{% url 'logistics_update_status' log.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="IN_TRANSIT">
+                                <button type="submit" class="btn btn-primary btn-sm">In Transit</button>
+                            </form>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -67,9 +84,9 @@
         {% include 'core/pagination.html' %}
         {% else %}
         <div class="empty-state">
-            <h5>No Logistics Found</h5>
-            <p>Start managing deliveries by creating a new logistics entry.</p>
-            <a href="{% url 'logistics_create' %}" class="btn btn-primary btn-sm">New Logistics</a>
+            <h5>{{ content.cms_no_logistics_found|default:'No Logistics Found' }}</h5>
+            <p>{{ content.cms_start_managing_deliveries_by_creating_a_new_logistics_entry|default:'Start managing deliveries by creating a new logistics entry.' }}</p>
+            <a href="{% url 'logistics_create' %}" class="btn btn-primary btn-sm">{{ content.cms_new_logistics|default:'New Logistics' }}</a>
         </div>
         {% endif %}
     </div>

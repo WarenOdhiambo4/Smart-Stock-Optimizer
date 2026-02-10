@@ -3,17 +3,17 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Sum, Count, Q, F
+from django.db.models import Sum, Count, Q, F, Case, When, IntegerField
 from django.db import transaction
 from django.utils import timezone
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 from datetime import datetime, timedelta
 import uuid
 
-from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, BusinessNote, TwoFactorAuth
+from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, FuelConsumption, BusinessNote, TwoFactorAuth, BrokenProduct, SystemContent
 
 
 def role_required(*roles):
@@ -24,16 +24,29 @@ def role_required(*roles):
         def wrapped_view(request, *args, **kwargs):
             try:
                 profile = request.user.profile
-                if profile.role in roles or profile.role == 'ADMIN' or profile.role == 'BOSS':
+                if profile.role == 'ADMIN' or profile.role in roles:
                     return view_func(request, *args, **kwargs)
-                else:
-                    messages.error(request, 'You do not have permission to access this page.')
-                    return redirect('dashboard')
+                return render(request, 'core/access_denied.html', status=403)
             except UserProfile.DoesNotExist:
                 messages.error(request, 'User profile not found. Please contact administrator.')
                 return redirect('login')
         return wrapped_view
     return decorator
+
+
+def parse_decimal(value, default=Decimal('0.00')):
+    try:
+        return Decimal(str(value))
+    except (TypeError, ValueError, InvalidOperation):
+        return default
+
+
+def get_employee_for_user(user):
+    """Safely return the Employee linked to a User, if any."""
+    try:
+        return user.employee
+    except Employee.DoesNotExist:
+        return None
 
 
 def create_transfer_alert(stock_movement):
@@ -194,6 +207,15 @@ def dashboard(request):
     from .delivery_manager import DeliveryChargesManager
     
     user_profile = request.user.profile if hasattr(request.user, 'profile') else None
+
+    if user_profile:
+        role = user_profile.role
+        if role == 'LOGISTICS':
+            return redirect('logistics_list')
+        if role == 'FINANCE' or role == 'MANAGER':
+            return redirect('ledger_list')
+        if role == 'BOSS' or role == 'SALES':
+            return redirect('stock_list')
     
     # Filter data based on user role
     if user_profile and user_profile.role == 'SALES' and user_profile.branch:
@@ -265,7 +287,7 @@ def dashboard(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER')
+@role_required('ADMIN')
 def branch_list(request):
     search = request.GET.get('search', '')
     branches = Branch.objects.all()
@@ -283,6 +305,7 @@ def branch_list(request):
     })
 
 
+@role_required('ADMIN')
 def branch_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -296,6 +319,7 @@ def branch_create(request):
     return render(request, 'core/branch_form.html', {'action': 'Create'})
 
 
+@role_required('ADMIN')
 def branch_edit(request, pk):
     branch = get_object_or_404(Branch, pk=pk)
     if request.method == 'POST':
@@ -310,6 +334,7 @@ def branch_edit(request, pk):
     return render(request, 'core/branch_form.html', {'branch': branch, 'action': 'Edit'})
 
 
+@role_required('ADMIN')
 def branch_delete(request, pk):
     branch = get_object_or_404(Branch, pk=pk)
     if request.method == 'POST':
@@ -318,6 +343,7 @@ def branch_delete(request, pk):
     return redirect('branch_list')
 
 
+@role_required('ADMIN')
 def employee_list(request):
     search = request.GET.get('search', '')
     employees = Employee.objects.prefetch_related('branches').all()
@@ -339,6 +365,7 @@ def employee_list(request):
     })
 
 
+@role_required('ADMIN')
 def employee_create(request):
     branches = Branch.objects.filter(is_active=True)
     if request.method == 'POST':
@@ -356,6 +383,7 @@ def employee_create(request):
     return render(request, 'core/employee_form.html', {'branches': branches, 'action': 'Create'})
 
 
+@role_required('ADMIN')
 def employee_edit(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
     branches = Branch.objects.filter(is_active=True)
@@ -374,6 +402,7 @@ def employee_edit(request, pk):
     return render(request, 'core/employee_form.html', {'employee': employee, 'branches': branches, 'action': 'Edit'})
 
 
+@role_required('ADMIN')
 def employee_delete(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
     if request.method == 'POST':
@@ -382,6 +411,7 @@ def employee_delete(request, pk):
     return redirect('employee_list')
 
 
+@role_required('ADMIN', 'BOSS')
 def product_list(request):
     search = request.GET.get('search', '')
     products = Product.objects.all()
@@ -403,6 +433,7 @@ def product_list(request):
     })
 
 
+@role_required('ADMIN', 'BOSS')
 def product_create(request):
     if request.method == 'POST':
         Product.objects.create(
@@ -418,6 +449,7 @@ def product_create(request):
     return render(request, 'core/product_form.html', {'action': 'Create'})
 
 
+@role_required('ADMIN', 'BOSS')
 def product_edit(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == 'POST':
@@ -434,6 +466,7 @@ def product_edit(request, pk):
     return render(request, 'core/product_form.html', {'product': product, 'action': 'Edit'})
 
 
+@role_required('ADMIN', 'BOSS')
 def product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == 'POST':
@@ -442,10 +475,17 @@ def product_delete(request, pk):
     return redirect('product_list')
 
 
+@role_required('ADMIN', 'BOSS', 'SALES')
 def stock_list(request):
     search = request.GET.get('search', '')
     branch_id = request.GET.get('branch', '')
+    balance_date = request.GET.get('balance_date', '')
     stocks = Stock.objects.select_related('product', 'branch').all()
+
+    user_profile = request.user.profile if hasattr(request.user, 'profile') else None
+    if user_profile and user_profile.role == 'SALES' and user_profile.branch_id:
+        stocks = stocks.filter(branch_id=user_profile.branch_id)
+        branch_id = str(user_profile.branch_id)
     
     if search:
         stocks = stocks.filter(
@@ -454,29 +494,59 @@ def stock_list(request):
         )
     if branch_id:
         stocks = stocks.filter(branch_id=branch_id)
-    
+
+    balance_map = {}
+    if balance_date:
+        try:
+            from datetime import datetime
+            balance_as_of = datetime.strptime(balance_date, '%Y-%m-%d').date()
+            movement_sums = StockMovement.objects.filter(
+                created_at__date__gt=balance_as_of
+            ).values('stock_id').annotate(
+                delta=Sum(
+                    Case(
+                        When(movement_type__in=['OUT', 'SALE', 'TRANSFER'], then=F('quantity')),
+                        When(movement_type='IN', then=-F('quantity')),
+                        default=0,
+                        output_field=IntegerField(),
+                    )
+                )
+            )
+            balance_map = {item['stock_id']: item['delta'] or 0 for item in movement_sums}
+        except ValueError:
+            balance_date = ''
+
     paginator = Paginator(stocks, 5)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+
+    if balance_date:
+        for stock in page_obj:
+            stock.balance_as_of = stock.quantity + balance_map.get(stock.id, 0)
     
-    branches = Branch.objects.filter(is_active=True)
+    if user_profile and user_profile.role == 'SALES' and user_profile.branch_id:
+        branches = Branch.objects.filter(id=user_profile.branch_id, is_active=True)
+    else:
+        branches = Branch.objects.filter(is_active=True)
     return render(request, 'core/stock_list.html', {
         'page_obj': page_obj,
         'stocks': page_obj,
         'branches': branches,
         'search': search,
-        'selected_branch': branch_id
+        'selected_branch': branch_id,
+        'balance_date': balance_date
     })
 
 
+@role_required('ADMIN', 'BOSS')
 def stock_create(request):
     branches = Branch.objects.filter(is_active=True)
     products = Product.objects.filter(is_active=True)
     if request.method == 'POST':
         branch_id = request.POST.get('branch')
         product_id = request.POST.get('product')
-        quantity = int(request.POST.get('quantity', 0))
-        min_quantity = int(request.POST.get('min_quantity', 10))
+        quantity = parse_decimal(request.POST.get('quantity', 0))
+        min_quantity = parse_decimal(request.POST.get('min_quantity', 10))
         date_added = request.POST.get('date_added')
         
         stock, created = Stock.objects.get_or_create(
@@ -506,6 +576,67 @@ def stock_create(request):
     })
 
 
+@login_required
+@role_required('ADMIN', 'BOSS')
+def stock_delete(request, pk):
+    stock = get_object_or_404(Stock, pk=pk)
+    if request.method == 'POST':
+        has_history = (
+            stock.movements.exists()
+            or stock.saleitem_set.exists()
+            or stock.broken_items.exists()
+            or stock.batches.exists()
+            or stock.layers.exists()
+        )
+        if has_history:
+            messages.error(request, 'Cannot delete stock with history. Use adjustments instead.')
+            return redirect('stock_list')
+        stock.delete()
+        messages.success(request, 'Stock record deleted.')
+    return redirect('stock_list')
+
+
+@login_required
+@role_required('ADMIN', 'BOSS')
+def stock_reduce(request, pk):
+    stock = get_object_or_404(Stock, pk=pk)
+    if request.method == 'POST':
+        quantity = parse_decimal(request.POST.get('quantity', 0))
+        notes = request.POST.get('notes', '').strip()
+        date_value = request.POST.get('date', '').strip()
+
+        if quantity <= 0:
+            messages.error(request, 'Enter a valid quantity to reduce.')
+        elif quantity > stock.quantity:
+            messages.error(request, 'Quantity exceeds available stock.')
+        else:
+            note_text = 'Manual reduction'
+            if notes:
+                note_text = f'{note_text}: {notes}'
+            movement = StockMovement.objects.create(
+                stock=stock,
+                movement_type='OUT',
+                quantity=quantity,
+                status='APPROVED',
+                notes=note_text,
+                created_by=get_employee_for_user(request.user),
+            )
+            if date_value:
+                try:
+                    movement_date = datetime.strptime(date_value, '%Y-%m-%d')
+                    movement.created_at = timezone.make_aware(movement_date)
+                    movement.save(update_fields=['created_at'])
+                except ValueError:
+                    pass
+            messages.success(request, 'Stock reduced successfully.')
+            return redirect('stock_list')
+
+    return render(request, 'core/stock_reduce_form.html', {
+        'stock': stock,
+    })
+
+
+@role_required('ADMIN', 'BOSS')
 def stock_movement_list(request):
     search = request.GET.get('search', '')
     branch_id = request.GET.get('branch', '')
@@ -539,14 +670,15 @@ def stock_movement_list(request):
     })
 
 
+@role_required('ADMIN', 'BOSS')
 def stock_transfer(request):
     branches = Branch.objects.filter(is_active=True)
     if request.method == 'POST':
         from_branch_id = request.POST.get('from_branch')
         to_branch_id = request.POST.get('to_branch')
         product_id = request.POST.get('product')
-        quantity = int(request.POST.get('quantity', 0))
-        notes = request.POST.get('notes', '')
+        quantity = parse_decimal(request.POST.get('quantity', 0))
+        notes = request.POST.get('notes', '').strip()
         
         from_branch = get_object_or_404(Branch, pk=from_branch_id)
         to_branch = get_object_or_404(Branch, pk=to_branch_id)
@@ -558,6 +690,10 @@ def stock_transfer(request):
             messages.error(request, 'Insufficient stock for transfer!')
             return redirect('stock_transfer')
         
+        note_text = f'Transfer from {from_branch.name} to {to_branch.name}'
+        if notes:
+            note_text = f'{note_text}: {notes}'
+
         movement = StockMovement.objects.create(
             stock=stock,
             movement_type='TRANSFER',
@@ -565,7 +701,7 @@ def stock_transfer(request):
             from_branch=from_branch,
             to_branch=to_branch,
             status='PENDING',
-            notes=notes,
+            notes=note_text,
             created_by=None  # Will be fixed when Employee-User relationship is properly set up
         )
         
@@ -582,6 +718,7 @@ def stock_transfer(request):
     })
 
 
+@role_required('ADMIN', 'BOSS')
 def approve_transfer(request, pk):
     movement = get_object_or_404(StockMovement, pk=pk, movement_type='TRANSFER', status='PENDING')
     if request.method == 'POST':
@@ -605,6 +742,7 @@ def approve_transfer(request, pk):
     return redirect('stock_movement_list')
 
 
+@role_required('ADMIN', 'BOSS', 'SALES')
 def order_list(request):
     search = request.GET.get('search', '')
     orders = Order.objects.select_related('branch').prefetch_related('items').all()
@@ -651,6 +789,7 @@ def order_list(request):
     })
 
 
+@role_required('ADMIN', 'BOSS', 'SALES')
 def order_create(request):
     from .delivery_manager import DeliveryChargesManager
     
@@ -682,9 +821,9 @@ def order_create(request):
             
             # Set delivery charges using manager
             DeliveryChargesManager.set_delivery_charges(
-                order, 
-                delivery_charges, 
-                created_by=getattr(request.user, 'employee', None)
+                order,
+                delivery_charges,
+                created_by=get_employee_for_user(request.user)
             )
             
             product_names = request.POST.getlist('product_name')
@@ -719,6 +858,7 @@ def order_create(request):
     return render(request, 'core/order_form.html', {'branches': branches, 'action': 'Create'})
 
 
+@role_required('ADMIN', 'BOSS', 'SALES')
 def order_detail(request, pk):
     order = get_object_or_404(Order, pk=pk)
     
@@ -740,6 +880,7 @@ def order_detail(request, pk):
     return render(request, 'core/order_detail.html', context)
 
 
+@role_required('ADMIN', 'BOSS', 'SALES')
 def order_complete(request, pk):
     order = get_object_or_404(Order, pk=pk)
     branches = Branch.objects.filter(is_active=True)
@@ -791,7 +932,7 @@ def order_complete(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'FINANCE', 'SALES')
+@role_required('ADMIN', 'BOSS', 'SALES', 'MANAGER')
 def sale_list(request):
     from django.utils import timezone
     search = request.GET.get('search', '')
@@ -850,7 +991,7 @@ def sale_list(request):
 
 
 @login_required
-@role_required('ADMIN', 'MANAGER', 'BOSS', 'SALES')
+@role_required('ADMIN', 'BOSS', 'SALES')
 def sale_create(request):
     branches = Branch.objects.filter(is_active=True)
     
@@ -888,19 +1029,36 @@ def sale_create(request):
             
             stock_ids = request.POST.getlist('stock_id')
             quantities = request.POST.getlist('quantity')
+            broken_flags = request.POST.getlist('is_broken_sale')
             unit_prices = request.POST.getlist('unit_price')
             
             for i in range(len(stock_ids)):
                 if stock_ids[i]:
                     stock = get_object_or_404(Stock, pk=stock_ids[i])
-                    qty = int(quantities[i]) if i < len(quantities) else 1
+                    qty = parse_decimal(quantities[i] if i < len(quantities) else None, Decimal('1.00'))
+                    is_broken_sale = False
+                    if i < len(broken_flags):
+                        is_broken_sale = broken_flags[i] in ['on', 'true', '1']
+
+                    if qty <= 0:
+                        messages.error(request, 'Quantity must be greater than zero.')
+                        return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
+
+                    if not is_broken_sale:
+                        if qty > stock.quantity:
+                            messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
+                            return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
+
                     price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
-                    
+                    unit_cost_at_sale = stock.weighted_avg_purchase_price or stock.product.cost_price
+
                     SaleItem.objects.create(
                         sale=sale,
                         stock=stock,
                         quantity=qty,
                         unit_price=price,
+                        unit_cost_at_sale=unit_cost_at_sale,
+                        is_broken_sale=is_broken_sale,
                     )
             
             sale.calculate_total()
@@ -933,13 +1091,137 @@ def sale_create(request):
     return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
 
 
+@role_required('ADMIN', 'BOSS', 'SALES')
 def sale_detail(request, pk):
     sale = get_object_or_404(Sale, pk=pk)
     return render(request, 'core/sale_detail.html', {'sale': sale})
 
 
+@login_required
+@role_required('ADMIN', 'MANAGER')
+def sale_edit(request, pk):
+    sale = get_object_or_404(Sale, pk=pk)
+    branches = Branch.objects.filter(is_active=True)
+
+    if request.method == 'POST':
+        try:
+            if request.POST.get('confirm') != 'true':
+                return render(request, 'core/sale_form.html', {
+                    'branches': branches,
+                    'action': 'Update',
+                    'sale': sale,
+                    'show_confirmation': True,
+                    'confirm_data': request.POST,
+                })
+
+            sale.branch_id = request.POST.get('branch')
+            sale.customer_name = request.POST.get('customer_name', '')
+            sale.customer_phone = request.POST.get('customer_phone', '')
+            sale.payment_method = request.POST.get('payment_method', 'Cash')
+            sale.notes = request.POST.get('notes', '')
+            sale_date = request.POST.get('sale_date')
+            if sale_date:
+                sale_datetime = datetime.strptime(sale_date, '%Y-%m-%d')
+                sale.created_at = timezone.make_aware(sale_datetime)
+            sale.save()
+
+            # Reverse existing items and movements
+            old_items = list(sale.items.all())
+            for item in old_items:
+                if not item.is_broken_sale:
+                    StockMovement.objects.create(
+                        stock=item.stock,
+                        movement_type='ADJUSTMENT',
+                        quantity=item.quantity,
+                        status='APPROVED',
+                        notes=f"Reversal of {sale.sale_number} item {item.id}",
+                        created_by=get_employee_for_user(request.user),
+                    )
+                StockMovement.objects.filter(
+                    stock=item.stock,
+                    movement_type='SALE',
+                    notes=f"Sale #{sale.sale_number} | Item {item.id}"
+                ).delete()
+            sale.items.all().delete()
+
+            # Remove sale-related expenses and re-add from form
+            Expense.objects.filter(sale=sale, expense_type='SALE_RELATED').delete()
+
+            stock_ids = request.POST.getlist('stock_id')
+            quantities = request.POST.getlist('quantity')
+            broken_flags = request.POST.getlist('is_broken_sale')
+            unit_prices = request.POST.getlist('unit_price')
+
+            for i in range(len(stock_ids)):
+                if stock_ids[i]:
+                    stock = get_object_or_404(Stock, pk=stock_ids[i])
+                    qty = parse_decimal(quantities[i] if i < len(quantities) else None, Decimal('1.00'))
+                    is_broken_sale = False
+                    if i < len(broken_flags):
+                        is_broken_sale = broken_flags[i] in ['on', 'true', '1']
+
+                    if qty <= 0:
+                        messages.error(request, 'Quantity must be greater than zero.')
+                        return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Update', 'sale': sale})
+
+                    if not is_broken_sale and qty > stock.quantity:
+                        messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
+                        return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Update', 'sale': sale})
+
+                    price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
+                    unit_cost_at_sale = stock.weighted_avg_purchase_price or stock.product.cost_price
+
+                    SaleItem.objects.create(
+                        sale=sale,
+                        stock=stock,
+                        quantity=qty,
+                        unit_price=price,
+                        unit_cost_at_sale=unit_cost_at_sale,
+                        is_broken_sale=is_broken_sale,
+                    )
+
+            sale.calculate_total()
+
+            expense_descriptions = request.POST.getlist('expense_description')
+            expense_amounts = request.POST.getlist('expense_amount')
+            expense_receipts = request.POST.getlist('expense_receipt')
+
+            for i in range(len(expense_descriptions)):
+                if expense_descriptions[i] and expense_amounts[i] and Decimal(expense_amounts[i]) > 0:
+                    Expense.objects.create(
+                        expense_number=f"EXP-{uuid.uuid4().hex[:8].upper()}",
+                        branch_id=sale.branch_id,
+                        sale=sale,
+                        expense_type='SALE_RELATED',
+                        description=expense_descriptions[i],
+                        amount=Decimal(expense_amounts[i]),
+                        expense_date=timezone.now().date(),
+                        receipt_number=expense_receipts[i] if i < len(expense_receipts) else '',
+                        notes=f"Sale related expense for {sale.sale_number}",
+                    )
+
+            messages.success(request, f'Sale {sale.sale_number} updated successfully!')
+            return redirect('sale_detail', pk=sale.pk)
+        except Exception as e:
+            messages.error(request, f'Error updating sale: {str(e)}')
+            return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Update', 'sale': sale})
+
+    return render(request, 'core/sale_form.html', {
+        'branches': branches,
+        'action': 'Update',
+        'sale': sale,
+    })
+
+
 def get_branch_stocks(request, branch_id):
-    stocks = Stock.objects.filter(branch_id=branch_id, quantity__gt=0).select_related('product')
+    from django.db.models import Sum
+    stocks = Stock.objects.filter(branch_id=branch_id).select_related('product')
+    broken_map = {
+        item['stock_id']: item['total_qty']
+        for item in BrokenProduct.objects.filter(stock__branch_id=branch_id)
+        .values('stock_id')
+        .annotate(total_qty=Sum('quantity'))
+    }
     data = [
         {
             'id': s.id,
@@ -947,16 +1229,18 @@ def get_branch_stocks(request, branch_id):
             'product_name': s.product.name,
             'product_sku': s.product.sku,
             'quantity': s.quantity,
+            'broken_qty': float(broken_map.get(s.id, 0) or 0),
             'unit_price': str(s.product.unit_price)
         }
         for s in stocks
+        if s.quantity > 0 or broken_map.get(s.id, 0)
     ]
     return JsonResponse(data, safe=False)
 
 
 # Expense Management
 @login_required
-@role_required('ADMIN', 'MANAGER', 'BOSS', 'FINANCE', 'SALES')
+@role_required('ADMIN', 'MANAGER', 'BOSS', 'FINANCE')
 def expense_list(request):
     search = request.GET.get('search', '')
     expenses = Expense.objects.select_related('branch', 'sale', 'created_by').all()
@@ -984,7 +1268,7 @@ def expense_list(request):
 
 
 @login_required
-@role_required('ADMIN', 'MANAGER', 'BOSS', 'FINANCE', 'SALES')
+@role_required('ADMIN', 'MANAGER', 'BOSS', 'FINANCE')
 def expense_create(request):
     branches = Branch.objects.filter(is_active=True)
     sales = Sale.objects.select_related('branch').all()
@@ -1027,7 +1311,7 @@ def expense_create(request):
 
 
 @login_required
-@role_required('ADMIN', 'MANAGER', 'BOSS', 'FINANCE')
+@role_required('ADMIN', 'MANAGER')
 def expense_update(request, pk):
     expense = get_object_or_404(Expense, pk=pk)
     
@@ -1061,7 +1345,7 @@ def expense_update(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'MANAGER', 'BOSS', 'FINANCE')
+@role_required('ADMIN', 'BOSS')
 def expense_delete(request, pk):
     expense = get_object_or_404(Expense, pk=pk)
     
@@ -1081,7 +1365,7 @@ def expense_delete(request, pk):
 
 # Logistics Management
 @login_required
-@role_required('ADMIN', 'MANAGER', 'BOSS', 'LOGISTICS', 'SALES')
+@role_required('ADMIN', 'LOGISTICS', 'MANAGER')
 def logistics_list(request):
     search = request.GET.get('search', '')
     logistics = Logistics.objects.select_related('sale', 'from_branch', 'created_by').all()
@@ -1104,12 +1388,17 @@ def logistics_list(request):
 
 
 @login_required
-@role_required('ADMIN', 'MANAGER', 'BOSS', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS', 'MANAGER')
 def logistics_create(request):
     sales = Sale.objects.select_related('branch').all()
     branches = Branch.objects.filter(is_active=True)
     
     if request.method == 'POST':
+        vehicle_number = (request.POST.get('vehicle_number', '') or '').strip()
+        vehicle = None
+        if vehicle_number:
+            vehicle = Vehicle.objects.filter(registration_number__iexact=vehicle_number).first()
+
         logistics = Logistics.objects.create(
             tracking_number=f"TRK-{uuid.uuid4().hex[:8].upper()}",
             sale_id=request.POST.get('sale'),
@@ -1118,10 +1407,12 @@ def logistics_create(request):
             customer_name=request.POST.get('customer_name'),
             customer_phone=request.POST.get('customer_phone'),
             delivery_date=request.POST.get('delivery_date') if request.POST.get('delivery_date') else None,
+            vehicle=vehicle,
             driver_name=request.POST.get('driver_name', ''),
             vehicle_number=request.POST.get('vehicle_number', ''),
             delivery_cost=Decimal(request.POST.get('delivery_cost', '0')),
             notes=request.POST.get('notes', ''),
+            created_by=getattr(request.user, 'employee', None),
         )
         messages.success(request, f'Logistics {logistics.tracking_number} created!')
         return redirect('logistics_list')
@@ -1134,7 +1425,44 @@ def logistics_create(request):
 
 
 @login_required
-@role_required('ADMIN', 'MANAGER', 'BOSS', 'LOGISTICS')
+@role_required('ADMIN', 'MANAGER', 'LOGISTICS')
+def logistics_edit(request, pk):
+    logistics = get_object_or_404(Logistics, pk=pk)
+    sales = Sale.objects.select_related('branch').all()
+    branches = Branch.objects.filter(is_active=True)
+
+    if request.method == 'POST':
+        vehicle_number = (request.POST.get('vehicle_number', '') or '').strip()
+        vehicle = None
+        if vehicle_number:
+            vehicle = Vehicle.objects.filter(registration_number__iexact=vehicle_number).first()
+
+        logistics.sale_id = request.POST.get('sale')
+        logistics.from_branch_id = request.POST.get('from_branch')
+        logistics.to_address = request.POST.get('to_address')
+        logistics.customer_name = request.POST.get('customer_name')
+        logistics.customer_phone = request.POST.get('customer_phone')
+        logistics.delivery_date = request.POST.get('delivery_date') if request.POST.get('delivery_date') else None
+        logistics.vehicle = vehicle
+        logistics.driver_name = request.POST.get('driver_name', '')
+        logistics.vehicle_number = vehicle_number
+        logistics.delivery_cost = Decimal(request.POST.get('delivery_cost', '0'))
+        logistics.notes = request.POST.get('notes', '')
+        logistics.save()
+
+        messages.success(request, f'Logistics {logistics.tracking_number} updated!')
+        return redirect('logistics_list')
+
+    return render(request, 'core/logistics_form.html', {
+        'sales': sales,
+        'branches': branches,
+        'logistics': logistics,
+        'action': 'Update'
+    })
+
+
+@login_required
+@role_required('ADMIN', 'LOGISTICS', 'MANAGER')
 def logistics_update_status(request, pk):
     logistics = get_object_or_404(Logistics, pk=pk)
     if request.method == 'POST':
@@ -1146,7 +1474,7 @@ def logistics_update_status(request, pk):
 
 # Financial Reports
 @login_required
-@role_required('ADMIN', 'BOSS', 'FINANCE', 'MANAGER')
+@role_required('ADMIN')
 def financial_reports(request):
     from .delivery_manager import DeliveryChargesManager
     
@@ -1229,7 +1557,7 @@ def financial_reports(request):
 
 # Branch Detail Page
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER')
+@role_required('ADMIN')
 def branch_detail(request, pk):
     branch = get_object_or_404(Branch, pk=pk)
     
@@ -1274,7 +1602,7 @@ def branch_detail(request, pk):
 
 # User Management
 @login_required
-@role_required('ADMIN', 'BOSS')
+@role_required('ADMIN')
 def user_list(request):
     users = User.objects.select_related('profile').all()
     
@@ -1289,7 +1617,7 @@ def user_list(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS')
+@role_required('ADMIN')
 def user_create(request):
     branches = Branch.objects.filter(is_active=True)
     
@@ -1328,7 +1656,7 @@ def user_create(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS')
+@role_required('ADMIN')
 def user_edit(request, pk):
     user = get_object_or_404(User, pk=pk)
     profile = user.profile if hasattr(user, 'profile') else None
@@ -1372,7 +1700,7 @@ def user_edit(request, pk):
 
 # Vehicle Management Views
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS')
 def vehicle_list(request):
     search = request.GET.get('search', '')
     vehicles = Vehicle.objects.select_related('branch', 'assigned_driver').all()
@@ -1396,7 +1724,7 @@ def vehicle_list(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS')
 def vehicle_create(request):
     branches = Branch.objects.filter(is_active=True)
     drivers = Employee.objects.filter(is_active=True)
@@ -1430,7 +1758,7 @@ def vehicle_create(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS')
 def trip_list(request):
     search = request.GET.get('search', '')
     vehicle_id = request.GET.get('vehicle', '')
@@ -1472,7 +1800,7 @@ def trip_list(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS')
 def trip_create(request):
     vehicles = Vehicle.objects.filter(status='ACTIVE')
     drivers = Employee.objects.filter(is_active=True)
@@ -1555,7 +1883,7 @@ def trip_create(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS')
 def trip_update(request, pk):
     trip = get_object_or_404(Trip, pk=pk)
     vehicles = Vehicle.objects.filter(status='ACTIVE')
@@ -1591,7 +1919,7 @@ def trip_update(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS')
 def trip_delete(request, pk):
     trip = get_object_or_404(Trip, pk=pk)
     
@@ -1605,7 +1933,7 @@ def trip_delete(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS', 'MANAGER')
 def maintenance_list(request):
     search = request.GET.get('search', '')
     maintenance = VehicleMaintenance.objects.select_related('vehicle').all()
@@ -1630,7 +1958,7 @@ def maintenance_list(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS')
 def vehicle_edit(request, pk):
     vehicle = get_object_or_404(Vehicle, pk=pk)
     branches = Branch.objects.filter(is_active=True)
@@ -1666,32 +1994,180 @@ def vehicle_edit(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'LOGISTICS')
 def maintenance_create(request):
     vehicles = Vehicle.objects.all()
     
     if request.method == 'POST':
-        maintenance = VehicleMaintenance.objects.create(
-            maintenance_number=f"MAINT-{uuid.uuid4().hex[:8].upper()}",
-            vehicle_id=request.POST.get('vehicle'),
-            maintenance_type=request.POST.get('maintenance_type'),
-            description=request.POST.get('description'),
-            service_provider=request.POST.get('service_provider'),
-            service_date=request.POST.get('service_date'),
-            parts_cost=Decimal(request.POST.get('parts_cost', '0')),
-            labor_cost=Decimal(request.POST.get('labor_cost', '0')),
-            other_costs=Decimal(request.POST.get('other_costs', '0')),
-            mileage_at_service=int(request.POST.get('mileage_at_service', 0)),
-            next_service_mileage=int(request.POST.get('next_service_mileage', 0)) if request.POST.get('next_service_mileage') else None,
-            receipt_number=request.POST.get('receipt_number', ''),
-            notes=request.POST.get('notes', ''),
-        )
+        def parse_decimal(value, default=Decimal('0.00')):
+            if value is None or value == '':
+                return default
+            try:
+                return Decimal(str(value))
+            except (InvalidOperation, ValueError):
+                return default
+
+        def parse_int(value, default=0):
+            if value is None or value == '':
+                return default
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        vehicle_id = request.POST.get('vehicle')
+        maintenance_type = request.POST.get('maintenance_type')
+        service_provider = request.POST.get('service_provider')
+        service_date = request.POST.get('service_date')
+        mileage_at_service_raw = request.POST.get('mileage_at_service')
+
+        if not vehicle_id or not maintenance_type or not service_provider or not service_date:
+            messages.error(request, 'Please fill in all required fields.')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'action': 'Create'
+            })
+
+        if not mileage_at_service_raw:
+            messages.error(request, 'Mileage at service is required.')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'action': 'Create'
+            })
+
+        try:
+            vehicle = Vehicle.objects.get(pk=vehicle_id)
+        except Vehicle.DoesNotExist:
+            messages.error(request, 'Selected vehicle does not exist.')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'action': 'Create'
+            })
+
+        part_names = request.POST.getlist('part_name')
+        part_costs = request.POST.getlist('part_cost')
+        parts_total = Decimal('0.00')
+        parts_entries = []
+        max_len = max(len(part_names), len(part_costs))
+        for i in range(max_len):
+            name = part_names[i].strip() if i < len(part_names) and part_names[i] else ''
+            cost_val = parse_decimal(part_costs[i] if i < len(part_costs) else None, Decimal('0.00'))
+            if name or cost_val:
+                parts_total += cost_val
+                label = name if name else 'Part'
+                parts_entries.append(f"{label}={cost_val}")
+
+        description = f"Parts: {', '.join(parts_entries)}" if parts_entries else "Maintenance"
+
+        try:
+            maintenance = VehicleMaintenance.objects.create(
+                maintenance_number=f"MAINT-{uuid.uuid4().hex[:8].upper()}",
+                vehicle=vehicle,
+                maintenance_type=maintenance_type,
+                description=description,
+                service_provider=service_provider,
+                service_date=service_date,
+                parts_cost=parts_total,
+                labor_cost=parse_decimal(request.POST.get('labor_cost')),
+                other_costs=parse_decimal(request.POST.get('other_costs')),
+                mileage_at_service=parse_int(mileage_at_service_raw),
+                next_service_mileage=parse_int(request.POST.get('next_service_mileage')) if request.POST.get('next_service_mileage') else None,
+                receipt_number=request.POST.get('receipt_number', ''),
+                notes=request.POST.get('notes', ''),
+                created_by=get_employee_for_user(request.user),
+            )
+        except Exception as e:
+            messages.error(request, f'Error creating maintenance record: {str(e)}')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'action': 'Create'
+            })
+
         messages.success(request, f'Maintenance {maintenance.maintenance_number} created successfully!')
         return redirect('maintenance_list')
     
     return render(request, 'core/maintenance_form.html', {
         'vehicles': vehicles,
         'action': 'Create'
+    })
+
+
+@login_required
+@role_required('ADMIN', 'MANAGER', 'LOGISTICS')
+def maintenance_edit(request, pk):
+    maintenance = get_object_or_404(VehicleMaintenance, pk=pk)
+    vehicles = Vehicle.objects.all()
+
+    def parse_parts_description(value):
+        parts = []
+        if not value:
+            return parts
+        if value.lower().startswith('parts:'):
+            payload = value.split(':', 1)[1].strip()
+            for item in payload.split(','):
+                if '=' in item:
+                    name, cost = item.split('=', 1)
+                    parts.append({
+                        'name': name.strip(),
+                        'cost': cost.strip(),
+                    })
+        return parts
+
+    if request.method == 'POST':
+        def parse_decimal(value, default=Decimal('0.00')):
+            if value is None or value == '':
+                return default
+            try:
+                return Decimal(str(value))
+            except (InvalidOperation, ValueError):
+                return default
+
+        def parse_int(value, default=0):
+            if value is None or value == '':
+                return default
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        maintenance.vehicle_id = request.POST.get('vehicle')
+        maintenance.maintenance_type = request.POST.get('maintenance_type')
+        maintenance.service_provider = request.POST.get('service_provider')
+        maintenance.service_date = request.POST.get('service_date')
+        maintenance.receipt_number = request.POST.get('receipt_number', '')
+        maintenance.notes = request.POST.get('notes', '')
+
+        part_names = request.POST.getlist('part_name')
+        part_costs = request.POST.getlist('part_cost')
+        parts_total = Decimal('0.00')
+        parts_entries = []
+        max_len = max(len(part_names), len(part_costs))
+        for i in range(max_len):
+            name = part_names[i].strip() if i < len(part_names) and part_names[i] else ''
+            cost_val = parse_decimal(part_costs[i] if i < len(part_costs) else None, Decimal('0.00'))
+            if name or cost_val:
+                parts_total += cost_val
+                label = name if name else 'Part'
+                parts_entries.append(f"{label}={cost_val}")
+
+        maintenance.description = f"Parts: {', '.join(parts_entries)}" if parts_entries else "Maintenance"
+        maintenance.parts_cost = parts_total
+        maintenance.labor_cost = parse_decimal(request.POST.get('labor_cost'))
+        maintenance.other_costs = parse_decimal(request.POST.get('other_costs'))
+        maintenance.mileage_at_service = parse_int(request.POST.get('mileage_at_service'))
+        maintenance.next_service_mileage = parse_int(request.POST.get('next_service_mileage')) if request.POST.get('next_service_mileage') else None
+
+        maintenance.save()
+        messages.success(request, f'Maintenance {maintenance.maintenance_number} updated successfully!')
+        return redirect('maintenance_list')
+
+    parts_data = parse_parts_description(maintenance.description)
+
+    return render(request, 'core/maintenance_form.html', {
+        'vehicles': vehicles,
+        'maintenance': maintenance,
+        'parts_data': parts_data,
+        'action': 'Update'
     })
 
 
@@ -1731,7 +2207,7 @@ def note_create(request):
             content=request.POST.get('content'),
             priority=request.POST.get('priority', 'MEDIUM'),
             tags=request.POST.get('tags', ''),
-            created_by=getattr(request.user, 'employee', None)
+            created_by=get_employee_for_user(request.user)
         )
         messages.success(request, f'Note "{note.title}" created successfully!')
         return redirect('note_list')
@@ -1769,6 +2245,7 @@ def note_delete(request, pk):
 
 
 @login_required
+@role_required('ADMIN')
 def notebook(request):
     try:
         page_param = request.GET.get('page', '1')
@@ -1797,39 +2274,541 @@ def notebook(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'FINANCE', 'MANAGER')
+@role_required('ADMIN', 'FINANCE')
 def analytics_dashboard(request):
-    from .analytics import FinancialAnalytics
-    import json
-    
-    branch_id = request.GET.get('branch')
-    period_days = int(request.GET.get('period', 365))
-    
-    # Get financial metrics
-    metrics = FinancialAnalytics.get_revenue_metrics(branch_id, period_days)
-    
-    # Get analytics data
-    forecast_data = FinancialAnalytics.sales_forecast_data()
-    risk_data = FinancialAnalytics.risk_assessment()
-    inventory_data = FinancialAnalytics.inventory_analysis()
-    route_data = FinancialAnalytics.route_optimization()
-    chart_data = FinancialAnalytics.get_chart_data()
-    
+    from collections import defaultdict
+    from datetime import timedelta
+    from statistics import pstdev, mean
+    from django.db.models import (
+        Sum,
+        F,
+        DecimalField,
+        ExpressionWrapper,
+        Count,
+        Case,
+        When,
+        IntegerField,
+    )
+
+    branch_id = request.GET.get('branch', '')
+    analysis_scope = request.GET.get('analysis', 'all')
+    period_days = int(request.GET.get('period', 30))
+
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=max(period_days - 1, 0))
+    prev_start = start_date - timedelta(days=period_days)
+    prev_end = start_date - timedelta(days=1)
+
+    branch_filter = int(branch_id) if branch_id else None
     branches = Branch.objects.filter(is_active=True)
-    
+    display_branches = branches
+    if branch_filter:
+        display_branches = branches.filter(id=branch_filter)
+
+    sales_items = SaleItem.objects.select_related('sale', 'stock__product').filter(
+        sale__created_at__date__range=(start_date, end_date)
+    )
+    if branch_filter:
+        sales_items = sales_items.filter(sale__branch_id=branch_filter)
+
+    # Volatility per product per branch (coefficient of variation of daily sales)
+    dates = [start_date + timedelta(days=i) for i in range(period_days)]
+    date_index = {date_value: idx for idx, date_value in enumerate(dates)}
+    volatility_map = defaultdict(lambda: {'name': '', 'products': {}})
+
+    sales_daily = sales_items.values(
+        'sale__branch_id',
+        'sale__branch__name',
+        'stock__product_id',
+        'stock__product__name',
+        'sale__created_at__date'
+    ).annotate(qty=Sum('quantity'))
+
+    for row in sales_daily:
+        b_id = row['sale__branch_id']
+        if branch_filter and b_id != branch_filter:
+            continue
+        branch_bucket = volatility_map[b_id]
+        branch_bucket['name'] = row['sale__branch__name'] or 'Unknown'
+        product_bucket = branch_bucket['products'].setdefault(
+            row['stock__product_id'],
+            {
+                'name': row['stock__product__name'] or 'Unknown',
+                'daily': [0] * max(period_days, 1),
+                'total': 0,
+            }
+        )
+        idx = date_index.get(row['sale__created_at__date'])
+        if idx is not None and product_bucket['daily']:
+            product_bucket['daily'][idx] += row['qty'] or 0
+        product_bucket['total'] += row['qty'] or 0
+
+    volatility_cards = []
+    for b_id, branch_bucket in volatility_map.items():
+        product_rows = []
+        for product in branch_bucket['products'].values():
+            daily_values = product['daily'] or [0]
+            avg_daily = mean(daily_values) if daily_values else 0
+            std_daily = pstdev(daily_values) if len(daily_values) > 1 else 0
+            volatility_index = (std_daily / avg_daily * 100) if avg_daily > 0 else 0
+            product_rows.append({
+                'name': product['name'],
+                'volatility': volatility_index,
+                'avg_daily': avg_daily,
+                'total': product['total'],
+            })
+        product_rows.sort(key=lambda item: item['volatility'], reverse=True)
+        volatility_cards.append({
+            'branch_name': branch_bucket['name'],
+            'products': product_rows[:5],
+        })
+
+    if branch_filter:
+        volatility_cards = volatility_cards[:1]
+
+    # Product ranking per branch (by revenue)
+    revenue_expr = ExpressionWrapper(
+        F('quantity') * F('unit_price'),
+        output_field=DecimalField(max_digits=12, decimal_places=2)
+    )
+    ranking_qs = sales_items.values(
+        'sale__branch_id',
+        'sale__branch__name',
+        'stock__product__name',
+    ).annotate(
+        revenue=Sum(revenue_expr),
+        quantity=Sum('quantity'),
+    ).order_by('-revenue')
+
+    product_rankings = defaultdict(lambda: {'branch_name': '', 'items': []})
+    for row in ranking_qs:
+        b_id = row['sale__branch_id']
+        if branch_filter and b_id != branch_filter:
+            continue
+        bucket = product_rankings[b_id]
+        bucket['branch_name'] = row['sale__branch__name'] or 'Unknown'
+        bucket['items'].append({
+            'name': row['stock__product__name'] or 'Unknown',
+            'revenue': row['revenue'] or 0,
+            'quantity': row['quantity'] or 0,
+        })
+
+    ranking_cards = []
+    for b_id, bucket in product_rankings.items():
+        ranking_cards.append({
+            'branch_name': bucket['branch_name'],
+            'items': bucket['items'][:5],
+        })
+
+    # Restock rate per branch (StockMovement IN)
+    restock_base = StockMovement.objects.filter(
+        movement_type='IN',
+        created_at__date__range=(start_date, end_date),
+    )
+    restock_qs = restock_base
+    if branch_filter:
+        restock_qs = restock_base.filter(stock__branch_id=branch_filter)
+
+    restock_events = restock_qs.count()
+    restock_units = restock_qs.aggregate(total=Sum('quantity'))['total'] or 0
+    restock_rate = (restock_events / period_days) if period_days else 0
+
+    # Unavailability rate vs demand
+    stock_qs = Stock.objects.select_related('product', 'branch')
+    if branch_filter:
+        stock_qs = stock_qs.filter(branch_id=branch_filter)
+
+    active_products_count = Product.objects.filter(is_active=True).count() or 1
+    stockout_count = stock_qs.filter(quantity__lte=0).count()
+    low_stock_count = stock_qs.filter(quantity__lte=F('min_quantity')).count()
+    demand_units = sales_items.aggregate(total=Sum('quantity'))['total'] or 0
+
+    unavailability_rate = (stockout_count / active_products_count) * 100
+    low_stock_rate = (low_stock_count / active_products_count) * 100
+
+    # Utilization rate
+    on_hand_units = stock_qs.aggregate(total=Sum('quantity'))['total'] or 0
+    utilization_rate = (demand_units / (demand_units + on_hand_units) * 100) if (demand_units + on_hand_units) > 0 else 0
+
+    # Churn rates
+    prev_sales_items = SaleItem.objects.select_related('sale').filter(
+        sale__created_at__date__range=(prev_start, prev_end)
+    )
+    if branch_filter:
+        prev_sales_items = prev_sales_items.filter(sale__branch_id=branch_filter)
+
+    current_products = set(sales_items.values_list('stock__product_id', flat=True))
+    previous_products = set(prev_sales_items.values_list('stock__product_id', flat=True))
+    product_churn_rate = (len(previous_products - current_products) / len(previous_products) * 100) if previous_products else 0
+
+    current_customers_qs = Sale.objects.filter(created_at__date__range=(start_date, end_date))
+    previous_customers_qs = Sale.objects.filter(created_at__date__range=(prev_start, prev_end))
+    if branch_filter:
+        current_customers_qs = current_customers_qs.filter(branch_id=branch_filter)
+        previous_customers_qs = previous_customers_qs.filter(branch_id=branch_filter)
+
+    current_customers = set(current_customers_qs.values_list('customer_phone', 'customer_name'))
+    previous_customers = set(previous_customers_qs.values_list('customer_phone', 'customer_name'))
+    customer_churn_rate = (len(previous_customers - current_customers) / len(previous_customers) * 100) if previous_customers else 0
+
+    # Branch-level summary rows
+    branch_metrics = {
+        branch.id: {
+            'branch_name': branch.name,
+            'restock_events': 0,
+            'restock_units': 0,
+            'restock_rate': 0,
+            'stockout_rate': 0,
+            'low_stock_rate': 0,
+            'demand_units': 0,
+            'on_hand_units': 0,
+            'utilization_rate': 0,
+        }
+        for branch in display_branches
+    }
+
+    restock_branch_qs = restock_base
+    if branch_filter:
+        restock_branch_qs = restock_branch_qs.filter(stock__branch_id=branch_filter)
+
+    restock_branch_stats = restock_branch_qs.values('stock__branch_id').annotate(
+        restock_events=Count('id'),
+        restock_units=Sum('quantity'),
+    )
+
+    for row in restock_branch_stats:
+        branch_metrics_row = branch_metrics.get(row['stock__branch_id'])
+        if not branch_metrics_row:
+            continue
+        branch_metrics_row['restock_events'] = row['restock_events'] or 0
+        branch_metrics_row['restock_units'] = row['restock_units'] or 0
+        branch_metrics_row['restock_rate'] = (
+            (row['restock_events'] or 0) / period_days
+        ) if period_days else 0
+
+    stock_branch_qs = Stock.objects.select_related('branch')
+    if branch_filter:
+        stock_branch_qs = stock_branch_qs.filter(branch_id=branch_filter)
+
+    stock_branch_stats = stock_branch_qs.values('branch_id').annotate(
+        total_products=Count('id'),
+        stockout_count=Sum(
+            Case(
+                When(quantity__lte=0, then=1),
+                default=0,
+                output_field=IntegerField(),
+            )
+        ),
+        low_stock_count=Sum(
+            Case(
+                When(quantity__lte=F('min_quantity'), then=1),
+                default=0,
+                output_field=IntegerField(),
+            )
+        ),
+        on_hand_units=Sum('quantity'),
+    )
+
+    for row in stock_branch_stats:
+        branch_metrics_row = branch_metrics.get(row['branch_id'])
+        if not branch_metrics_row:
+            continue
+        total_products = row['total_products'] or 0
+        stockout_count = row['stockout_count'] or 0
+        low_stock_count = row['low_stock_count'] or 0
+        branch_metrics_row['stockout_rate'] = (
+            stockout_count / total_products * 100
+        ) if total_products else 0
+        branch_metrics_row['low_stock_rate'] = (
+            low_stock_count / total_products * 100
+        ) if total_products else 0
+        branch_metrics_row['on_hand_units'] = row['on_hand_units'] or 0
+
+    sales_branch_qs = SaleItem.objects.select_related('sale').filter(
+        sale__created_at__date__range=(start_date, end_date)
+    )
+    if branch_filter:
+        sales_branch_qs = sales_branch_qs.filter(sale__branch_id=branch_filter)
+
+    sales_branch_stats = sales_branch_qs.values('sale__branch_id').annotate(
+        demand_units=Sum('quantity'),
+    )
+
+    for row in sales_branch_stats:
+        branch_metrics_row = branch_metrics.get(row['sale__branch_id'])
+        if not branch_metrics_row:
+            continue
+        branch_metrics_row['demand_units'] = row['demand_units'] or 0
+
+    for branch_metrics_row in branch_metrics.values():
+        demand_units_branch = branch_metrics_row['demand_units']
+        on_hand_branch = branch_metrics_row['on_hand_units']
+        total_units = demand_units_branch + on_hand_branch
+        branch_metrics_row['utilization_rate'] = (
+            demand_units_branch / total_units * 100
+        ) if total_units else 0
+
+    branch_metrics_rows = sorted(branch_metrics.values(), key=lambda item: item['branch_name'])
+
+    # Logistics performance
+    trip_qs = Trip.objects.filter(
+        status='COMPLETED',
+        scheduled_date__date__range=(start_date, end_date),
+    ).select_related('vehicle')
+    if branch_filter:
+        trip_qs = trip_qs.filter(vehicle__branch_id=branch_filter)
+
+    maintenance_qs = VehicleMaintenance.objects.filter(
+        service_date__range=(start_date, end_date)
+    ).select_related('vehicle')
+    if branch_filter:
+        maintenance_qs = maintenance_qs.filter(vehicle__branch_id=branch_filter)
+
+    fuel_qs = FuelConsumption.objects.filter(
+        date__range=(start_date, end_date)
+    ).select_related('vehicle')
+    if branch_filter:
+        fuel_qs = fuel_qs.filter(vehicle__branch_id=branch_filter)
+
+    vehicle_stats = {}
+    for trip in trip_qs:
+        if not trip.vehicle:
+            continue
+        stats = vehicle_stats.setdefault(trip.vehicle_id, {
+            'vehicle': trip.vehicle,
+            'revenue': 0,
+            'trip_costs': 0,
+            'maintenance': 0,
+            'fuel': 0,
+            'trips': 0,
+        })
+        stats['revenue'] += float(trip.revenue or 0)
+        stats['trip_costs'] += float((trip.fuel_cost or 0) + (trip.other_expenses or 0))
+        stats['trips'] += 1
+
+    for maintenance in maintenance_qs:
+        stats = vehicle_stats.setdefault(maintenance.vehicle_id, {
+            'vehicle': maintenance.vehicle,
+            'revenue': 0,
+            'trip_costs': 0,
+            'maintenance': 0,
+            'fuel': 0,
+            'trips': 0,
+        })
+        stats['maintenance'] += float(maintenance.total_cost or 0)
+
+    for fuel in fuel_qs:
+        stats = vehicle_stats.setdefault(fuel.vehicle_id, {
+            'vehicle': fuel.vehicle,
+            'revenue': 0,
+            'trip_costs': 0,
+            'maintenance': 0,
+            'fuel': 0,
+            'trips': 0,
+        })
+        stats['fuel'] += float(fuel.total_cost or 0)
+
+    top_vehicles = []
+    for stats in vehicle_stats.values():
+        total_costs = stats['trip_costs'] + stats['maintenance'] + stats['fuel']
+        net_profit = stats['revenue'] - total_costs
+        efficiency = (stats['revenue'] / total_costs) if total_costs > 0 else None
+        top_vehicles.append({
+            'vehicle': stats['vehicle'],
+            'revenue': stats['revenue'],
+            'maintenance': stats['maintenance'],
+            'fuel': stats['fuel'],
+            'trip_costs': stats['trip_costs'],
+            'net_profit': net_profit,
+            'efficiency': efficiency,
+            'trips': stats['trips'],
+        })
+
+    top_vehicles.sort(key=lambda item: item['net_profit'], reverse=True)
+
     context = {
-        'metrics': metrics,
-        'forecast_data': forecast_data,
-        'risk_data': risk_data,
-        'inventory_data': inventory_data,
-        'route_data': route_data,
-        'chart_data': json.dumps(chart_data),
         'branches': branches,
         'selected_branch': branch_id,
-        'selected_period': period_days
+        'selected_period': period_days,
+        'selected_analysis': analysis_scope,
+        'date_from': start_date,
+        'date_to': end_date,
+        'volatility_cards': volatility_cards,
+        'ranking_cards': ranking_cards,
+        'restock_events': restock_events,
+        'restock_units': restock_units,
+        'restock_rate': restock_rate,
+        'unavailability_rate': unavailability_rate,
+        'low_stock_rate': low_stock_rate,
+        'demand_units': demand_units,
+        'utilization_rate': utilization_rate,
+        'on_hand_units': on_hand_units,
+        'product_churn_rate': product_churn_rate,
+        'customer_churn_rate': customer_churn_rate,
+        'branch_metrics_rows': branch_metrics_rows,
+        'top_vehicles': top_vehicles[:5],
+        'vehicle_performance': top_vehicles[:10],
     }
-    
+
     return render(request, 'core/analytics_dashboard.html', context)
+
+
+@login_required
+@role_required('ADMIN', 'FINANCE')
+def content_management(request):
+    from django.db.utils import OperationalError, ProgrammingError
+    from .context_processors import CONTENT_DEFAULTS
+    from django.conf import settings
+    import os
+    import re
+    theme_fields = [
+        ('theme_font_family', "Font family (e.g. 'Nunito', sans-serif)"),
+        ('theme_heading_color', 'Heading color'),
+        ('theme_body_font_size', 'Body font size (e.g. 12px)'),
+        ('theme_table_font_size', 'Table font size (e.g. 11px)'),
+        ('theme_nav_bg', 'Navbar background (e.g. rgba(255,186,8,0.2))'),
+        ('theme_nav_link_color', 'Navbar link color'),
+        ('theme_nav_link_size', 'Navbar link size (e.g. 17px)'),
+        ('theme_nav_link_weight', 'Navbar link weight (e.g. 800)'),
+        ('theme_table_grid_color', 'Table grid line color'),
+        ('theme_primary_color', 'Primary accent color'),
+    ]
+    theme_keys = {key for key, _label in theme_fields}
+    theme_defaults = {
+        'theme_font_family': "'Nunito', Arial, sans-serif",
+        'theme_heading_color': '#0077b6',
+        'theme_body_font_size': '12px',
+        'theme_table_font_size': '9px',
+        'theme_nav_bg': 'rgba(255,186,8,0.2)',
+        'theme_nav_link_color': '#0077b6',
+        'theme_nav_link_size': '17px',
+        'theme_nav_link_weight': '800',
+        'theme_table_grid_color': '#0096c7',
+        'theme_primary_color': '#0077b6',
+    }
+
+    def infer_module(key):
+        if not key:
+            return 'general'
+        if key.startswith('cms_'):
+            return 'ui'
+        if key.startswith('nav.'):
+            return 'navigation'
+        if key.startswith('login.'):
+            return 'login'
+        if key.startswith('theme_'):
+            return 'theme'
+        if key.startswith('site_') or key.startswith('page_'):
+            return 'branding'
+        return 'general'
+
+    def discover_template_keys():
+        keys = {}
+        template_dirs = []
+        try:
+            template_dirs.extend(settings.TEMPLATES[0].get('DIRS', []))
+        except Exception:
+            pass
+        base_templates = os.path.join(settings.BASE_DIR, 'templates')
+        if os.path.isdir(base_templates):
+            template_dirs.append(base_templates)
+        key_pattern = re.compile(r"content\.([A-Za-z0-9_.]+)")
+        default_pattern = re.compile(r"content\.([A-Za-z0-9_.]+)\\|default:(?P<q>['\\\"])(?P<val>.*?)(?P=q)")
+        for root_dir in template_dirs:
+            for root, _dirs, files in os.walk(root_dir):
+                for fname in files:
+                    if not fname.endswith('.html'):
+                        continue
+                    fpath = os.path.join(root, fname)
+                    try:
+                        with open(fpath, 'r', encoding='utf-8') as handle:
+                            data = handle.read()
+                    except OSError:
+                        continue
+                    for match in key_pattern.finditer(data):
+                        key = match.group(1)
+                        if not key:
+                            continue
+                        keys.setdefault(key, '')
+                    for match in default_pattern.finditer(data):
+                        key = match.group(1)
+                        default_val = match.group('val')
+                        if not key:
+                            continue
+                        if key not in keys or not keys[key]:
+                            keys[key] = default_val
+        return keys
+
+    if request.method == 'POST':
+        try:
+            for key, _label in theme_fields:
+                if key in request.POST:
+                    SystemContent.objects.update_or_create(
+                        key=key,
+                        defaults={'value': request.POST.get(key, '').strip(), 'module': 'theme', 'is_active': True},
+                    )
+
+            for row in SystemContent.objects.exclude(key__in=list(theme_keys)):
+                field_name = f'content_{row.id}'
+                if field_name in request.POST:
+                    row.value = request.POST.get(field_name, '').strip()
+                    row.save(update_fields=['value', 'updated_at'])
+
+            messages.success(request, 'Content settings updated.')
+        except (OperationalError, ProgrammingError):
+            messages.error(request, 'Content table is not available. Run migrations to enable content management.')
+        return redirect('content_management')
+
+    theme_values = {key: '' for key, _label in theme_fields}
+    other_content = []
+    try:
+        for key, default_value in theme_defaults.items():
+            SystemContent.objects.get_or_create(
+                key=key,
+                defaults={
+                    'value': default_value,
+                    'module': 'theme',
+                    'is_active': True,
+                },
+            )
+        for key, default_value in CONTENT_DEFAULTS.items():
+            if key in theme_keys:
+                continue
+            SystemContent.objects.get_or_create(
+                key=key,
+                defaults={
+                    'value': default_value,
+                    'module': infer_module(key),
+                    'is_active': True,
+                },
+            )
+        discovered = discover_template_keys()
+        for key, default_value in discovered.items():
+            if key in theme_keys:
+                continue
+            SystemContent.objects.get_or_create(
+                key=key,
+                defaults={
+                    'value': default_value or '',
+                    'module': infer_module(key),
+                    'is_active': True,
+                },
+            )
+        for key, _label in theme_fields:
+            existing = SystemContent.objects.filter(key=key).first()
+            if existing and existing.value:
+                theme_values[key] = existing.value
+            else:
+                theme_values[key] = theme_defaults.get(key, '')
+        other_content = list(SystemContent.objects.exclude(key__in=list(theme_keys)).order_by('key'))
+    except (OperationalError, ProgrammingError):
+        messages.error(request, 'Content table is not available. Run migrations to enable content management.')
+
+    return render(request, 'core/content_management.html', {
+        'theme_fields': theme_fields,
+        'theme_values': theme_values,
+        'content_rows': other_content,
+    })
 
 
 @login_required
@@ -1851,8 +2830,8 @@ def physical_count_submit(request):
     if request.method == 'POST':
         branch_id = request.POST.get('branch')
         product_id = request.POST.get('product')
-        physical_quantity = int(request.POST.get('physical_quantity', 0))
-        notes = request.POST.get('notes', '')
+        physical_quantity = parse_decimal(request.POST.get('physical_quantity', 0))
+        notes = request.POST.get('notes', '').strip()
         
         branch = get_object_or_404(Branch, pk=branch_id)
         product = get_object_or_404(Product, pk=product_id)
@@ -1862,7 +2841,7 @@ def physical_count_submit(request):
             stock = Stock.objects.get(branch=branch, product=product)
             system_quantity = stock.quantity
         except Stock.DoesNotExist:
-            system_quantity = 0
+            system_quantity = Decimal('0.00')
         
         # Calculate discrepancy
         discrepancy = physical_quantity - system_quantity
@@ -1881,12 +2860,15 @@ def physical_count_submit(request):
                 )
             
             # Create stock movement record
+            note_text = 'Physical count adjustment'
+            if notes:
+                note_text = f'{note_text}: {notes}'
             StockMovement.objects.create(
                 stock=stock if stock else Stock.objects.get(branch=branch, product=product),
                 movement_type='ADJUSTMENT',
                 quantity=discrepancy,
                 status='APPROVED',
-                notes=f'Physical count adjustment: {notes}'
+                notes=note_text
             )
         
         discrepancy_type = "shortage" if discrepancy < 0 else "excess" if discrepancy > 0 else "match"
@@ -1912,6 +2894,7 @@ def physical_count_submit(request):
 
 # PDF Generation Views
 @login_required
+@role_required('ADMIN', 'BOSS', 'SALES')
 def sale_print(request, pk):
     """Generate PDF receipt for sale"""
     from .receipt_generator import ReceiptGenerator
@@ -1924,6 +2907,7 @@ def sale_print(request, pk):
 
 
 @login_required
+@role_required('ADMIN', 'BOSS', 'SALES')
 def order_print(request, pk):
     """Generate PDF receipt for order"""
     from .receipt_generator import ReceiptGenerator
@@ -1936,6 +2920,7 @@ def order_print(request, pk):
 
 
 @login_required
+@role_required('ADMIN', 'BOSS')
 def expense_print(request, pk):
     """Generate PDF receipt for expense"""
     from .receipt_generator import ReceiptGenerator
@@ -1948,7 +2933,7 @@ def expense_print(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'FINANCE', 'MANAGER')
+@role_required('ADMIN', 'FINANCE')
 def financial_report_print(request):
     """Generate PDF for financial report"""
     from .receipt_generator import ReceiptGenerator
@@ -2037,7 +3022,7 @@ def financial_report_print(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER')
+@role_required('ADMIN')
 def branch_monthly_report(request, branch_id):
     """Generate monthly report for specific branch"""
     from .receipt_generator import ReceiptGenerator
@@ -2063,7 +3048,7 @@ def branch_monthly_report(request, branch_id):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS')
+@role_required('ADMIN')
 def business_master_report(request):
     """Generate master business report with all calculations"""
     from .receipt_generator import ReceiptGenerator
@@ -2088,6 +3073,7 @@ def business_master_report(request):
 
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def trip_print(request, pk):
     """Generate PDF receipt for single trip"""
     from .receipt_generator import ReceiptGenerator
@@ -2100,6 +3086,7 @@ def trip_print(request, pk):
 
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def maintenance_print(request, pk):
     """Generate PDF receipt for single maintenance"""
     from .receipt_generator import ReceiptGenerator
@@ -2112,6 +3099,7 @@ def maintenance_print(request, pk):
 
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def logistics_print(request, pk):
     """Generate PDF receipt for logistics"""
     from .receipt_generator import ReceiptGenerator
@@ -2124,6 +3112,7 @@ def logistics_print(request, pk):
 
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def trip_print(request, pk):
     """Generate PDF receipt for trip"""
     from .receipt_generator import ReceiptGenerator
@@ -2160,6 +3149,7 @@ def trip_print(request, pk):
 
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def logistics_print(request, pk):
     """Generate PDF receipt for logistics"""
     from .receipt_generator import ReceiptGenerator
@@ -2196,6 +3186,7 @@ def logistics_print(request, pk):
 
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def maintenance_print(request, pk):
     """Generate PDF receipt for maintenance"""
     from .receipt_generator import ReceiptGenerator
@@ -2293,6 +3284,7 @@ def trips_print(request):
 
 
 @login_required
+@role_required('ADMIN', 'BOSS')
 def stock_print(request):
     """Generate PDF for stock list"""
     from .receipt_generator import ReceiptGenerator
@@ -2356,6 +3348,7 @@ def stock_print(request):
 
 
 @login_required
+@role_required('ADMIN', 'BOSS')
 def stock_movements_print(request):
     """Generate PDF for stock movements"""
     from .receipt_generator import ReceiptGenerator
@@ -2380,9 +3373,10 @@ def stock_movements_print(request):
     report_items = []
     for movement in movements:
         value = abs(movement.quantity) * movement.stock.product.cost_price
+        note_text = movement.notes or '—'
         report_items.append({
             'description': f'{movement.get_movement_type_display()} - {movement.stock.product.name}',
-            'details': f'From: {movement.from_branch.name if movement.from_branch else "N/A"} | To: {movement.to_branch.name if movement.to_branch else "N/A"} | Status: {movement.get_status_display()}',
+            'details': f'From: {movement.from_branch.name if movement.from_branch else "N/A"} | To: {movement.to_branch.name if movement.to_branch else "N/A"} | Status: {movement.get_status_display()} | Notes: {note_text}',
             'quantity': abs(movement.quantity),
             'unit': 'units',
             'rate': movement.stock.product.cost_price,
@@ -2404,6 +3398,7 @@ def stock_movements_print(request):
 
 
 @login_required
+@role_required('ADMIN', 'BOSS')
 def expenses_print(request):
     """Generate PDF for expenses list"""
     from .receipt_generator import ReceiptGenerator

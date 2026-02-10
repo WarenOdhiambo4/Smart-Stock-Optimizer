@@ -1,9 +1,9 @@
 from django.urls import path, include
 from . import views
 from . import views_logistics
-from . import webhook_views
-from . import views_sync_test
 from . import order_management_views
+from . import views_finance
+from . import views_broken_products
 # from . import analytics_views
 
 urlpatterns = [
@@ -36,6 +36,8 @@ urlpatterns = [
     # Stock
     path('stock/', views.stock_list, name='stock_list'),
     path('stock/add/', views.stock_create, name='stock_create'),
+    path('stock/<int:pk>/reduce/', views.stock_reduce, name='stock_reduce'),
+    path('stock/<int:pk>/delete/', views.stock_delete, name='stock_delete'),
     path('stock/print/', views.stock_print, name='stock_print'),
     path('stock/movements/', views.stock_movement_list, name='stock_movement_list'),
     path('stock/movements/print/', views.stock_movements_print, name='stock_movements_print'),
@@ -62,6 +64,7 @@ urlpatterns = [
     # Sales
     path('sales/', views.sale_list, name='sale_list'),
     path('sales/create/', views.sale_create, name='sale_create'),
+    path('sales/<int:pk>/edit/', views.sale_edit, name='sale_edit'),
     path('sales/<int:pk>/', views.sale_detail, name='sale_detail'),
     
     # Expenses
@@ -74,10 +77,36 @@ urlpatterns = [
     # Logistics
     path('logistics/', views.logistics_list, name='logistics_list'),
     path('logistics/create/', views.logistics_create, name='logistics_create'),
+    path('logistics/<int:pk>/edit/', views.logistics_edit, name='logistics_edit'),
     path('logistics/<int:pk>/update/', views.logistics_update_status, name='logistics_update_status'),
     
     # Finance
     path('finance/reports/', views.financial_reports, name='financial_reports'),
+    path('finance/ledger/', views_finance.ledger_list, name='ledger_list'),
+    path('finance/accounts/', views_finance.chart_of_accounts, name='chart_of_accounts'),
+    path('finance/accounts/create/', views_finance.chart_of_accounts_create, name='chart_of_accounts_create'),
+    path('finance/accounts/<int:pk>/update/', views_finance.chart_of_accounts_update, name='chart_of_accounts_update'),
+    path('finance/income/', views_finance.income_register, name='income_register'),
+    path('finance/income/create/', views_finance.income_register_create, name='income_register_create'),
+    path('finance/income/<int:pk>/update/', views_finance.income_register_update, name='income_register_update'),
+    path('finance/income/<int:pk>/post/', views_finance.income_register_post, name='income_register_post'),
+    path('finance/expenses/', views_finance.expense_register, name='expense_register'),
+    path('finance/expenses/create/', views_finance.expense_register_create, name='expense_register_create'),
+    path('finance/expenses/<int:pk>/update/', views_finance.expense_register_update, name='expense_register_update'),
+    path('finance/expenses/<int:pk>/post/', views_finance.expense_register_post, name='expense_register_post'),
+    path('finance/loans/', views_finance.loans_register, name='loans_register'),
+    path('finance/loans/create/', views_finance.loans_register_create, name='loans_register_create'),
+    path('finance/loans/<int:pk>/update/', views_finance.loans_register_update, name='loans_register_update'),
+    path('finance/loans/<int:pk>/post/', views_finance.loans_register_post, name='loans_register_post'),
+    path('finance/logistics-ledger/', views_finance.logistics_ledger, name='logistics_ledger'),
+    path('finance/payroll/', views_finance.payroll_ledger, name='payroll_ledger'),
+    path('finance/payroll/create/', views_finance.payroll_ledger_create, name='payroll_ledger_create'),
+    path('finance/payroll/<int:pk>/update/', views_finance.payroll_ledger_update, name='payroll_ledger_update'),
+    path('finance/payroll/<int:pk>/post/', views_finance.payroll_ledger_post, name='payroll_ledger_post'),
+    path('finance/allowances/', views_finance.allowances_register, name='allowances_register'),
+    path('finance/allowances/create/', views_finance.allowances_register_create, name='allowances_register_create'),
+    path('finance/allowances/<int:pk>/update/', views_finance.allowances_register_update, name='allowances_register_update'),
+    path('finance/ledger/<int:pk>/reverse/', views_finance.ledger_reverse, name='ledger_reverse'),
     
     # Users
     path('users/', views.user_list, name='user_list'),
@@ -99,11 +128,20 @@ urlpatterns = [
     # Maintenance
     path('maintenance/', views.maintenance_list, name='maintenance_list'),
     path('maintenance/create/', views.maintenance_create, name='maintenance_create'),
+    path('maintenance/<int:pk>/edit/', views.maintenance_edit, name='maintenance_edit'),
+    
+    # Broken Products
+    path('broken-products/', views_broken_products.broken_products_list, name='broken_products_list'),
+    path('broken-products/report/', views_broken_products.report_broken_product, name='report_broken_product'),
+    path('broken-products/report/<int:stock_id>/', views_broken_products.report_broken_product, name='report_broken_product_for_stock'),
     
     # Business Notebook
     path('notebook/', views.notebook, name='notebook'),
     path('notes/print/', views.notes_print, name='notes_print'),
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+
+    # Content Management
+    path('content-management/', views.content_management, name='content_management'),
     
     # Physical Stock Count
     path('physical-count/', views.physical_count, name='physical_count'),
@@ -123,12 +161,6 @@ urlpatterns = [
     # API
     path('api/branch/<int:branch_id>/stocks/', views.get_branch_stocks, name='get_branch_stocks'),
     
-    # Webhook
-    path('webhook/', webhook_views.webhook_receiver, name='webhook_receiver'),
-    
-    # Manual sync test
-    path('manual-sync/', views_sync_test.manual_sync, name='manual_sync'),
-    
     # Enterprise Price Management
     path('pricing/', include('core.urls_pricing')),
     
@@ -145,7 +177,7 @@ urlpatterns = [
     
     # Financial Analytics API
     # path('analytics/', analytics_views.analytics_dashboard, name='analytics_dashboard'),
-    path('modern-analytics/', include('core.urls_analytics')),
+    # path('modern-analytics/', include('core.urls_analytics')),
     # path('api/analytics/dashboard/', analytics_views.financial_dashboard_api, name='financial_dashboard_api'),
     # path('api/analytics/forecast/', analytics_views.sales_forecast_api, name='sales_forecast_api'),
     # path('api/analytics/inventory/', analytics_views.inventory_optimization_api, name='inventory_optimization_api'),

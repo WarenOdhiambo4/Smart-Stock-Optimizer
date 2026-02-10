@@ -13,34 +13,34 @@
             {% csrf_token %}
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Branch Name *</label>
+                    <label class="form-label">{{ content.cms_branch_name|default:'Branch Name *' }}</label>
                     <input type="text" name="name" class="form-control" value="{{ branch.name|default:'' }}" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Phone</label>
+                    <label class="form-label">{{ content.cms_phone|default:'Phone' }}</label>
                     <input type="text" name="phone" class="form-control" value="{{ branch.phone|default:'' }}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">{{ content.cms_email|default:'Email' }}</label>
                     <input type="email" name="email" class="form-control" value="{{ branch.email|default:'' }}">
                 </div>
                 <div class="col-md-6">
                     {% if branch %}
-                    <label class="form-label">Status</label>
+                    <label class="form-label">{{ content.cms_status|default:'Status' }}</label>
                     <div class="form-check mt-2">
                         <input type="checkbox" name="is_active" class="form-check-input" {% if branch.is_active %}checked{% endif %}>
-                        <label class="form-check-label">Active</label>
+                        <label class="form-check-label">{{ content.cms_active|default:'Active' }}</label>
                     </div>
                     {% endif %}
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Address</label>
+                    <label class="form-label">{{ content.cms_address|default:'Address' }}</label>
                     <textarea name="address" class="form-control" rows="2">{{ branch.address|default:'' }}</textarea>
                 </div>
             </div>
             <div class="mt-4">
-                <button type="submit" class="btn btn-primary">Save Branch</button>
-                <a href="{% url 'branch_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">{{ content.cms_save_branch|default:'Save Branch' }}</button>
+                <a href="{% url 'branch_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
             </div>
         </form>
     </div>

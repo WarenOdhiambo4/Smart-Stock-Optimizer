@@ -6,9 +6,7 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <h2 style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #28a745; margin-bottom: 20px;">
-                Physical Stock Count
-            </h2>
+            <h2 style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #28a745; margin-bottom: 20px;">{{ content.cms_physical_stock_count|default:'Physical Stock Count' }}</h2>
             
             <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <form id="countForm">
@@ -16,9 +14,9 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Branch</label>
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">{{ content.cms_branch|default:'Branch' }}</label>
                                 <select name="branch" id="branchSelect" class="form-select" required style="font-family: 'Nunito', sans-serif; font-size: 14px;">
-                                    <option value="">Select Branch</option>
+                                    <option value="">{{ content.cms_select_branch|default:'Select Branch' }}</option>
                                     {% for branch in branches %}
                                     <option value="{{ branch.id }}">{{ branch.name }}</option>
                                     {% endfor %}
@@ -27,9 +25,9 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Product</label>
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">{{ content.cms_product|default:'Product' }}</label>
                                 <select name="product" id="productSelect" class="form-select" required style="font-family: 'Nunito', sans-serif; font-size: 14px;" disabled>
-                                    <option value="">Select Product</option>
+                                    <option value="">{{ content.cms_select_product|default:'Select Product' }}</option>
                                 </select>
                             </div>
                         </div>
@@ -38,32 +36,30 @@
                     <div class="row" id="stockInfo" style="display: none;">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">System Stock</label>
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">{{ content.cms_system_stock|default:'System Stock' }}</label>
                                 <input type="text" id="systemStock" class="form-control" readonly style="font-family: 'Nunito', sans-serif; font-size: 14px; background: #f8f9fa;">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Physical Count</label>
-                                <input type="number" name="physical_quantity" id="physicalCount" class="form-control" required style="font-family: 'Nunito', sans-serif; font-size: 14px;" min="0">
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">{{ content.cms_physical_count|default:'Physical Count' }}</label>
+                                <input type="number" name="physical_quantity" id="physicalCount" class="form-control" required style="font-family: 'Nunito', sans-serif; font-size: 14px;" min="0" step="0.01">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Discrepancy</label>
+                                <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">{{ content.cms_discrepancy|default:'Discrepancy' }}</label>
                                 <input type="text" id="discrepancy" class="form-control" readonly style="font-family: 'Nunito', sans-serif; font-size: 14px; background: #f8f9fa;">
                             </div>
                         </div>
                     </div>
                     
                     <div class="mb-3" id="notesSection" style="display: none;">
-                        <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">Notes</label>
+                        <label style="font-family: 'Nunito', sans-serif; font-size: 14px; color: #333;">{{ content.cms_notes|default:'Notes' }}</label>
                         <textarea name="notes" class="form-control" rows="3" style="font-family: 'Nunito', sans-serif; font-size: 14px;" placeholder="Add any notes about the count..."></textarea>
                     </div>
                     
-                    <button type="submit" class="btn btn-success" id="submitBtn" style="font-family: 'Nunito', sans-serif; font-size: 14px; display: none;">
-                        Submit Count
-                    </button>
+                    <button type="submit" class="btn btn-success" id="submitBtn" style="font-family: 'Nunito', sans-serif; font-size: 14px; display: none;">{{ content.cms_submit_count|default:'Submit Count' }}</button>
                 </form>
             </div>
             

@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Dashboard - SaasApp{% endblock %}
 
 {% block content %}
 <style>
     body { font-family: 'Nunito', sans-serif; font-size: 14px; }
-    .page-header { background: #10b981; color: white; padding: 1rem; margin-bottom: 1rem; }
     .page-title { font-size: 14px; font-weight: 600; margin: 0; }
-    .quick-actions .btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 14px; }
-    .stat-box { background: #f9f9f9; padding: 0.8rem; margin-bottom: 0.8rem; border-left: 3px solid #10b981; }
-    .stat-value { font-size: 14px; font-weight: 700; color: #059669; }
+    .quick-actions .btn { font-size: 12px; }
+    .stat-box { background: #ffffff; padding: 0.8rem; margin-bottom: 0.8rem; border-left: 3px solid var(--accent); border-radius: 8px; border: 1px solid var(--border); }
+    .stat-value { font-size: 14px; font-weight: 700; color: var(--primary); }
     .stat-label { font-size: 12px; color: #6b7280; margin-top: 0.2rem; }
-    .section { background: #f9f9f9; padding: 1rem; margin-bottom: 1rem; }
-    .section-title { font-size: 14px; font-weight: 600; color: #059669; margin-bottom: 1rem; }
+    .section { }
+    .section-title { }
     .table { font-size: 14px; }
     .table th { background: #f0fdf4; color: #059669; font-weight: 600; font-size: 12px; }
     .badge { font-size: 11px; }
@@ -24,10 +24,10 @@
 </style>
 
 <div class="page-header">
-    <h1 class="page-title">Dashboard</h1>
+    <h1 class="page-title">{{ content.cms_dashboard|default:'Dashboard' }}</h1>
     <div class="quick-actions mt-2">
-        <a href="{% url 'sale_create' %}" class="btn btn-sm me-2">New Sale</a>
-        <a href="{% url 'order_create' %}" class="btn btn-sm">New Order</a>
+        <a href="{% url 'sale_create' %}" class="btn btn-primary btn-sm me-2">{{ content.cms_new_sale|default:'New Sale' }}</a>
+        <a href="{% url 'order_create' %}" class="btn btn-outline-primary btn-sm">{{ content.cms_new_order|default:'New Order' }}</a>
     </div>
 </div>
 
@@ -35,25 +35,25 @@
     <div class="col-6 col-md-3">
         <div class="stat-box">
             <div class="stat-value">KES {{ monthly_sales|floatformat:2 }}</div>
-            <div class="stat-label">Monthly Sales</div>
+            <div class="stat-label">{{ content.cms_monthly_sales|default:"Monthly Sales" }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-box">
             <div class="stat-value">KES {{ monthly_expenses|floatformat:2 }}</div>
-            <div class="stat-label">Monthly Expenses</div>
+            <div class="stat-label">{{ content.cms_monthly_expenses|default:"Monthly Expenses" }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-box">
             <div class="stat-value">KES {{ monthly_profit|floatformat:2 }}</div>
-            <div class="stat-label">Monthly Profit</div>
+            <div class="stat-label">{{ content.cms_monthly_profit|default:"Monthly Profit" }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-box">
             <div class="stat-value">KES {{ total_sales|floatformat:2 }}</div>
-            <div class="stat-label">Total Sales</div>
+            <div class="stat-label">{{ content.cms_total_sales|default:"Total Sales" }}</div>
         </div>
     </div>
 </div>
@@ -62,25 +62,25 @@
     <div class="col-6 col-md-3">
         <div class="stat-box">
             <div class="stat-value">{{ total_branches }}</div>
-            <div class="stat-label">Branches</div>
+            <div class="stat-label">{{ content.cms_branches|default:"Branches" }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-box">
             <div class="stat-value">{{ total_products }}</div>
-            <div class="stat-label">Products</div>
+            <div class="stat-label">{{ content.cms_products|default:"Products" }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-box">
             <div class="stat-value">{{ pending_logistics }}</div>
-            <div class="stat-label">Pending Logistics</div>
+            <div class="stat-label">{{ content.cms_pending_logistics|default:"Pending Logistics" }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-box">
             <div class="stat-value">{{ low_stock_items|length }}</div>
-            <div class="stat-label">Low Stock Items</div>
+            <div class="stat-label">{{ content.cms_low_stock_items|default:"Low Stock Items" }}</div>
         </div>
     </div>
 </div>
@@ -89,7 +89,7 @@
     <div class="col-md-4">
         <div class="stat-box">
             <div class="d-flex justify-content-between">
-                <span>Pending Orders</span>
+                <span>{{ content.cms_pending_orders|default:'Pending Orders' }}</span>
                 <span class="badge badge-warning">{{ pending_orders }}</span>
             </div>
         </div>
@@ -97,7 +97,7 @@
     <div class="col-md-4">
         <div class="stat-box">
             <div class="d-flex justify-content-between">
-                <span>Pending Transfers</span>
+                <span>{{ content.cms_pending_transfers|default:'Pending Transfers' }}</span>
                 <span class="badge badge-info">{{ pending_transfers }}</span>
             </div>
         </div>
@@ -105,7 +105,7 @@
     <div class="col-md-4">
         <div class="stat-box">
             <div class="d-flex justify-content-between">
-                <span>Low Stock Items</span>
+                <span>{{ content.cms_low_stock_items|default:'Low Stock Items' }}</span>
                 <span class="badge badge-danger">{{ low_stock_items|length }}</span>
             </div>
         </div>
@@ -115,15 +115,15 @@
 <div class="row g-2">
     <div class="col-lg-6">
         <div class="section">
-            <h6 class="section-title">Recent Sales</h6>
+            <h6 class="section-title">{{ content.cms_recent_sales|default:'Recent Sales' }}</h6>
             {% if recent_sales %}
             <table class="table table-sm">
                 <thead>
                     <tr>
-                        <th>Sale #</th>
-                        <th>Branch</th>
-                        <th>Amount</th>
-                        <th>Date</th>
+                        <th>{{ content.cms_sale|default:'Sale #' }}</th>
+                        <th>{{ content.cms_branch|default:'Branch' }}</th>
+                        <th>{{ content.cms_amount|default:'Amount' }}</th>
+                        <th>{{ content.cms_date|default:'Date' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -138,21 +138,21 @@
                 </tbody>
             </table>
             {% else %}
-            <p>No sales yet</p>
+            <p>{{ content.cms_no_sales_yet|default:'No sales yet' }}</p>
             {% endif %}
         </div>
     </div>
     <div class="col-lg-6">
         <div class="section">
-            <h6 class="section-title">Recent Orders</h6>
+            <h6 class="section-title">{{ content.cms_recent_orders|default:'Recent Orders' }}</h6>
             {% if recent_orders %}
             <table class="table table-sm">
                 <thead>
                     <tr>
-                        <th>Order #</th>
-                        <th>Branch</th>
-                        <th>Status</th>
-                        <th>Date</th>
+                        <th>{{ content.cms_order|default:'Order #' }}</th>
+                        <th>{{ content.cms_branch|default:'Branch' }}</th>
+                        <th>{{ content.cms_status|default:'Status' }}</th>
+                        <th>{{ content.cms_date|default:'Date' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -171,7 +171,7 @@
                 </tbody>
             </table>
             {% else %}
-            <p>No orders yet</p>
+            <p>{{ content.cms_no_orders_yet|default:'No orders yet' }}</p>
             {% endif %}
         </div>
     </div>
@@ -181,14 +181,14 @@
 <div class="row g-2 mt-2">
     <div class="col-12">
         <div class="section">
-            <h6 class="section-title">Low Stock Alerts</h6>
+            <h6 class="section-title">{{ content.cms_low_stock_alerts|default:'Low Stock Alerts' }}</h6>
             <table class="table table-sm">
                 <thead>
                     <tr>
-                        <th>Product</th>
-                        <th>Branch</th>
-                        <th>Current Qty</th>
-                        <th>Min Qty</th>
+                        <th>{{ content.cms_product|default:'Product' }}</th>
+                        <th>{{ content.cms_branch|default:'Branch' }}</th>
+                        <th>{{ content.cms_current_qty|default:'Current Qty' }}</th>
+                        <th>{{ content.cms_min_qty|default:'Min Qty' }}</th>
                     </tr>
                 </thead>
                 <tbody>

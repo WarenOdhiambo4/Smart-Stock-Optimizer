@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}General Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ content.cms_general_ledger|default:'General Ledger' }}</h1>
+</div>
+
+{% include 'core/finance_nav.html' %}
+
+{# Finance note removed to save space #}
+
+<div class="finance-actions">
+    <form method="get" class="ledger-filters">
+        <div class="filter-item">
+            <label>{{ content.cms_date_from|default:'Date From' }}</label>
+            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}">
+        </div>
+        <div class="filter-item">
+            <label>{{ content.cms_date_to|default:'Date To' }}</label>
+            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}">
+        </div>
+        <div class="filter-item filter-wide">
+            <label>{{ content.cms_account|default:'Account' }}</label>
+            <select name="account" class="form-select form-select-sm">
+                <option value="">{{ content.cms_all_accounts|default:'All Accounts' }}</option>
+                {% for account in accounts %}
+                <option value="{{ account.id }}" {% if filters.account_id == account.id %}selected{% endif %}>{{ account.account_code }} - {{ account.account_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-item filter-wide">
+            <label>{{ content.cms_branch|default:'Branch' }}</label>
+            <select name="branch" class="form-select form-select-sm">
+                <option value="">{{ content.cms_all_branches|default:'All Branches' }}</option>
+                {% for branch in branches %}
+                <option value="{{ branch.id }}" {% if filters.branch_id == branch.id %}selected{% endif %}>{{ branch.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>{{ content.cms_entry_type|default:'Entry Type' }}</label>
+            <select name="entry_type" class="form-select form-select-sm">
+                <option value="">{{ content.cms_all|default:'All' }}</option>
+                <option value="debit" {% if filters.entry_type == 'debit' %}selected{% endif %}>{{ content.cms_debit|default:'Debit' }}</option>
+                <option value="credit" {% if filters.entry_type == 'credit' %}selected{% endif %}>{{ content.cms_credit|default:'Credit' }}</option>
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">{{ content.cms_apply|default:'Apply' }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="spreadsheet-wrap">
+    <table class="spreadsheet-table">
+        <thead>
+            <tr>
+                <th class="freeze-col">{{ content.cms_date|default:'Date' }}</th>
+                <th>{{ content.cms_transaction_id|default:'Transaction ID' }}</th>
+                <th>{{ content.cms_month|default:'Month' }}</th>
+                <th>{{ content.cms_product|default:'Product' }}</th>
+                <th class="num">{{ content.cms_units_sold|default:'Units Sold' }}</th>
+                <th class="num">{{ content.cms_avg_price|default:'Avg Price' }}</th>
+                <th class="num">{{ content.cms_unit_cost|default:'Unit Cost' }}</th>
+                <th class="num">{{ content.cms_restocked|default:'Restocked' }}</th>
+                <th class="num">{{ content.cms_broken_units|default:'Broken Units' }}</th>
+                <th class="num">{{ content.cms_utilization|default:'Utilization %' }}</th>
+                <th>{{ content.cms_branch|default:'Branch' }}</th>
+                <th>{{ content.cms_account_name|default:'Account Name' }}</th>
+                <th class="num">{{ content.cms_debit|default:'Debit' }}</th>
+                <th class="num">{{ content.cms_credit|default:'Credit' }}</th>
+                <th class="num">{{ content.cms_running_balance|default:'Running Balance' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in page_obj %}
+            <tr>
+                <td class="freeze-col">{{ entry.transaction.transaction_date }}</td>
+                <td>{{ entry.transaction.transaction_id }}</td>
+                <td>{% if entry.metric_month %}{{ entry.metric_month }}{% else %}—{% endif %}</td>
+                <td>{% if entry.product_name %}{{ entry.product_name }}{% else %}—{% endif %}</td>
+                <td class="num">{% if entry.units_sold is not None %}{{ entry.units_sold }}{% else %}—{% endif %}</td>
+                <td class="num">{% if entry.avg_price is not None %}{{ entry.avg_price|floatformat:2 }}{% else %}—{% endif %}</td>
+                <td class="num">{% if entry.unit_cost is not None %}{{ entry.unit_cost|floatformat:2 }}{% else %}—{% endif %}</td>
+                <td class="num">{% if entry.restocked_units is not None %}{{ entry.restocked_units }}{% else %}—{% endif %}</td>
+                <td class="num">{% if entry.broken_units is not None %}{{ entry.broken_units }}{% else %}—{% endif %}</td>
+                <td class="num">{% if entry.utilization_rate %}{{ entry.utilization_rate }}{% else %}—{% endif %}</td>
+                <td>{% if entry.transaction.branch %}{{ entry.transaction.branch.name }}{% else %}—{% endif %}</td>
+                <td>{{ entry.account.account_name }}</td>
+                <td class="num debit-cell">{% if entry.debit_amount > 0 %}{{ entry.debit_amount|floatformat:2 }}{% endif %}</td>
+                <td class="num credit-cell">{% if entry.credit_amount > 0 %}{{ entry.credit_amount|floatformat:2 }}{% endif %}</td>
+                <td class="num balance-cell">{% if entry.running_balance is not None %}{{ entry.running_balance|floatformat:2 }}{% else %}—{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="15" class="text-center text-muted">{{ content.cms_no_ledger_entries_found|default:"No ledger entries found" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav aria-label="Ledger pagination" class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&account={{ filters.account_id }}&branch={{ filters.branch_id }}&entry_type={{ filters.entry_type }}">{{ content.cms_previous|default:'Previous' }}</a>
+        </li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&account={{ filters.account_id }}&branch={{ filters.branch_id }}&entry_type={{ filters.entry_type }}">{{ content.cms_next|default:'Next' }}</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/finance_tables.js' %}"></script>
+{% endblock %}

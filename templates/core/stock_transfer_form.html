@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Stock Transfer</h1>
+    <h1 class="page-title">{{ content.cms_stock_transfer|default:'Stock Transfer' }}</h1>
 </div>
 
 <div class="card">
@@ -13,44 +13,44 @@
             {% csrf_token %}
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">From Branch *</label>
+                    <label class="form-label">{{ content.cms_from_branch|default:'From Branch *' }}</label>
                     <select name="from_branch" class="form-select" required>
-                        <option value="">Select Source Branch</option>
+                        <option value="">{{ content.cms_select_source_branch|default:'Select Source Branch' }}</option>
                         {% for branch in branches %}
                         <option value="{{ branch.pk }}">{{ branch.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">To Branch *</label>
+                    <label class="form-label">{{ content.cms_to_branch|default:'To Branch *' }}</label>
                     <select name="to_branch" class="form-select" required>
-                        <option value="">Select Destination Branch</option>
+                        <option value="">{{ content.cms_select_destination_branch|default:'Select Destination Branch' }}</option>
                         {% for branch in branches %}
                         <option value="{{ branch.pk }}">{{ branch.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Product *</label>
+                    <label class="form-label">{{ content.cms_product|default:'Product *' }}</label>
                     <select name="product" class="form-select" required>
-                        <option value="">Select Product</option>
+                        <option value="">{{ content.cms_select_product|default:'Select Product' }}</option>
                         {% for product in products %}
                         <option value="{{ product.pk }}">{{ product.name }} ({{ product.sku }})</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Quantity *</label>
-                    <input type="number" name="quantity" class="form-control" min="1" required>
+                    <label class="form-label">{{ content.cms_quantity|default:'Quantity *' }}</label>
+                    <input type="number" name="quantity" class="form-control" min="0.01" step="0.01" required>
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Notes</label>
+                    <label class="form-label">{{ content.cms_notes|default:'Notes' }}</label>
                     <textarea name="notes" class="form-control" rows="2"></textarea>
                 </div>
             </div>
             <div class="mt-4">
-                <button type="submit" class="btn btn-primary">Request Transfer</button>
-                <a href="{% url 'stock_movement_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">{{ content.cms_request_transfer|default:'Request Transfer' }}</button>
+                <a href="{% url 'stock_movement_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
             </div>
         </form>
     </div>

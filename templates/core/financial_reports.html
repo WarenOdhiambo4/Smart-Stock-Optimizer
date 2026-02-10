@@ -7,18 +7,15 @@
     <h1 class="page-title">Financial Reports - {{ date_from }} to {{ date_to }}</h1>
     <div class="d-flex gap-2">
         <a href="{% url 'financial_report_print' %}?date_from={{ date_from }}&date_to={{ date_to }}" class="btn btn-primary btn-sm" target="_blank">
-            <i class="bi bi-printer me-1"></i>Print PDF
-        </a>
+            <i class="bi bi-printer me-1"></i>{{ content.cms_print_pdf|default:'Print PDF' }}</a>
         <a href="{% url 'financial_report_print' %}?date_from={{ date_from }}&date_to={{ date_to }}&format=html" class="btn btn-outline-primary btn-sm" target="_blank">
-            <i class="bi bi-eye me-1"></i>Preview
-        </a>
+            <i class="bi bi-eye me-1"></i>{{ content.cms_preview|default:'Preview' }}</a>
         <a href="{% url 'business_master_report' %}?date_from={{ date_from }}&date_to={{ date_to }}" class="btn btn-success btn-sm" target="_blank">
-            <i class="bi bi-file-earmark-text me-1"></i>Master Report
-        </a>
+            <i class="bi bi-file-earmark-text me-1"></i>{{ content.cms_master_report|default:'Master Report' }}</a>
         <form method="get" class="d-flex gap-2">
             <input type="date" name="date_from" class="form-control form-control-sm" placeholder="From Date" value="{{ date_from }}">
             <input type="date" name="date_to" class="form-control form-control-sm" placeholder="To Date" value="{{ date_to }}">
-            <button type="submit" class="btn btn-primary btn-sm">View</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{ content.cms_view|default:'View' }}</button>
         </form>
     </div>
 </div>
@@ -27,37 +24,37 @@
     <div class="col-md-4">
         <div class="card stat-card" style="border-left: 4px solid var(--success);">
             <div class="stat-value" style="color: var(--success);">KES {{ total_sales|floatformat:2 }}</div>
-            <div class="stat-label"><i class="bi bi-graph-up me-1"></i>Total Sales</div>
+            <div class="stat-label"><i class="bi bi-graph-up me-1"></i>{{ content.cms_total_sales|default:"Total Sales" }}</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card stat-card" style="border-left: 4px solid var(--danger);">
             <div class="stat-value" style="color: var(--danger);">KES {{ total_expenses|floatformat:2 }}</div>
-            <div class="stat-label"><i class="bi bi-cash-stack me-1"></i>Total Expenses</div>
+            <div class="stat-label"><i class="bi bi-cash-stack me-1"></i>{{ content.cms_total_expenses|default:"Total Expenses" }}</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card stat-card" style="border-left: 4px solid var(--primary);">
             <div class="stat-value" style="color: var(--primary);">KES {{ business_net_profit|floatformat:2 }}</div>
-            <div class="stat-label"><i class="bi bi-wallet2 me-1"></i>Net Profit</div>
+            <div class="stat-label"><i class="bi bi-wallet2 me-1"></i>{{ content.cms_net_profit|default:"Net Profit" }}</div>
         </div>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-header">Branch Financial Summary</div>
+    <div class="card-header">{{ content.cms_branch_financial_summary|default:"Branch Financial Summary" }}</div>
     <div class="card-body p-0">
         <table class="table">
             <thead>
                 <tr>
-                    <th>Branch</th>
-                    <th>Sales</th>
-                    <th>Logistics</th>
-                    <th>Total Revenue</th>
-                    <th>Expenses</th>
-                    <th>Profit</th>
-                    <th>Margin %</th>
-                    <th>Actions</th>
+                    <th>{{ content.cms_branch|default:'Branch' }}</th>
+                    <th>{{ content.cms_sales|default:'Sales' }}</th>
+                    <th>{{ content.cms_logistics|default:'Logistics' }}</th>
+                    <th>{{ content.cms_total_revenue|default:'Total Revenue' }}</th>
+                    <th>{{ content.cms_expenses|default:'Expenses' }}</th>
+                    <th>{{ content.cms_profit|default:'Profit' }}</th>
+                    <th>{{ content.cms_margin|default:'Margin %' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -78,8 +75,7 @@
                     </td>
                     <td>
                         <a href="{% url 'branch_monthly_report' report.branch.pk %}?date_from={{ date_from }}&date_to={{ date_to }}" class="btn btn-outline-primary btn-sm" target="_blank">
-                            <i class="bi bi-printer"></i> Print
-                        </a>
+                            <i class="bi bi-printer"></i> {{ content.cms_print|default:'Print' }}</a>
                     </td>
                 </tr>
                 {% endfor %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payroll Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ content.cms_payroll_ledger|default:'Payroll Ledger' }}</h1>
+</div>
+
+{% include 'core/finance_nav.html' %}
+
+{% if not manual_allowed %}
+<div class="finance-note">{{ content.cms_payroll_ledger_is_auto_synced_from_the_payroll_module_manual|default:"Payroll Ledger is auto-synced from the Payroll module. Manual entry is disabled." }}</div>
+{% endif %}
+
+<div class="spreadsheet-wrap">
+    <table class="spreadsheet-table">
+        <thead>
+            <tr>
+                <th class="freeze-col">{{ content.cms_pay_period|default:'Pay Period' }}</th>
+                <th>{{ content.cms_employee_name|default:'Employee Name' }}</th>
+                <th class="num">{{ content.cms_basic_salary|default:'Basic Salary' }}</th>
+                <th class="num">{{ content.cms_allowances|default:'Allowances' }}</th>
+                <th class="num">{{ content.cms_deductions|default:'Deductions' }}</th>
+                <th class="num">{{ content.cms_gross_pay|default:'Gross Pay' }}</th>
+                <th class="num">{{ content.cms_net_pay|default:'Net Pay' }}</th>
+                <th>{{ content.cms_payment_date|default:'Payment Date' }}</th>
+                <th>{{ content.cms_reference|default:'Reference' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td class="freeze-col">{{ entry.pay_period }}</td>
+                <td>{{ entry.employee_name }}</td>
+                <td class="num">{{ entry.basic_salary|floatformat:2 }}</td>
+                <td class="num">{{ entry.allowances|floatformat:2 }}</td>
+                <td class="num">{{ entry.deductions|floatformat:2 }}</td>
+                <td class="num">{{ entry.gross_pay|floatformat:2 }}</td>
+                <td class="num">{{ entry.net_pay|floatformat:2 }}</td>
+                <td>{{ entry.payment_date }}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <span>{{ entry.reference }}</span>
+                        {% if entry.posted %}
+                            <span class="row-status posted">{{ content.cms_posted|default:'Posted' }}</span>
+                        {% else %}
+                            <span class="row-status pending">{{ content.cms_unposted|default:'Unposted' }}</span>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="10" class="text-center text-muted">{{ content.cms_no_payroll_entries_found|default:"No payroll entries found" }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/finance_tables.js' %}"></script>
+{% endblock %}

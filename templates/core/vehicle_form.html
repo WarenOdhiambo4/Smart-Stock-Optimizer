@@ -13,98 +13,98 @@
             {% csrf_token %}
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Registration Number *</label>
+                    <label class="form-label">{{ content.cms_registration_number|default:'Registration Number *' }}</label>
                     <input type="text" name="registration_number" class="form-control" value="{{ vehicle.registration_number|default:'' }}" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Vehicle Type *</label>
+                    <label class="form-label">{{ content.cms_vehicle_type|default:'Vehicle Type *' }}</label>
                     <select name="vehicle_type" class="form-select" required>
-                        <option value="">Select Type</option>
-                        <option value="TRUCK" {% if vehicle.vehicle_type == 'TRUCK' %}selected{% endif %}>Truck</option>
-                        <option value="VAN" {% if vehicle.vehicle_type == 'VAN' %}selected{% endif %}>Van</option>
-                        <option value="PICKUP" {% if vehicle.vehicle_type == 'PICKUP' %}selected{% endif %}>Pickup</option>
-                        <option value="CAR" {% if vehicle.vehicle_type == 'CAR' %}selected{% endif %}>Car</option>
-                        <option value="MOTORCYCLE" {% if vehicle.vehicle_type == 'MOTORCYCLE' %}selected{% endif %}>Motorcycle</option>
-                        <option value="OTHER" {% if vehicle.vehicle_type == 'OTHER' %}selected{% endif %}>Other</option>
+                        <option value="">{{ content.cms_select_type|default:'Select Type' }}</option>
+                        <option value="TRUCK" {% if vehicle.vehicle_type == 'TRUCK' %}selected{% endif %}>{{ content.cms_truck|default:'Truck' }}</option>
+                        <option value="VAN" {% if vehicle.vehicle_type == 'VAN' %}selected{% endif %}>{{ content.cms_van|default:'Van' }}</option>
+                        <option value="PICKUP" {% if vehicle.vehicle_type == 'PICKUP' %}selected{% endif %}>{{ content.cms_pickup|default:'Pickup' }}</option>
+                        <option value="CAR" {% if vehicle.vehicle_type == 'CAR' %}selected{% endif %}>{{ content.cms_car|default:'Car' }}</option>
+                        <option value="MOTORCYCLE" {% if vehicle.vehicle_type == 'MOTORCYCLE' %}selected{% endif %}>{{ content.cms_motorcycle|default:'Motorcycle' }}</option>
+                        <option value="OTHER" {% if vehicle.vehicle_type == 'OTHER' %}selected{% endif %}>{{ content.cms_other|default:'Other' }}</option>
                     </select>
                 </div>
                 {% if vehicle %}
                 <div class="col-md-4">
-                    <label class="form-label">Status</label>
+                    <label class="form-label">{{ content.cms_status|default:'Status' }}</label>
                     <select name="status" class="form-select">
-                        <option value="ACTIVE" {% if vehicle.status == 'ACTIVE' %}selected{% endif %}>Active</option>
-                        <option value="MAINTENANCE" {% if vehicle.status == 'MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
-                        <option value="INACTIVE" {% if vehicle.status == 'INACTIVE' %}selected{% endif %}>Inactive</option>
-                        <option value="RETIRED" {% if vehicle.status == 'RETIRED' %}selected{% endif %}>Retired</option>
+                        <option value="ACTIVE" {% if vehicle.status == 'ACTIVE' %}selected{% endif %}>{{ content.cms_active|default:'Active' }}</option>
+                        <option value="MAINTENANCE" {% if vehicle.status == 'MAINTENANCE' %}selected{% endif %}>{{ content.cms_under_maintenance|default:'Under Maintenance' }}</option>
+                        <option value="INACTIVE" {% if vehicle.status == 'INACTIVE' %}selected{% endif %}>{{ content.cms_inactive|default:'Inactive' }}</option>
+                        <option value="RETIRED" {% if vehicle.status == 'RETIRED' %}selected{% endif %}>{{ content.cms_retired|default:'Retired' }}</option>
                     </select>
                 </div>
                 {% endif %}
                 <div class="col-md-4">
-                    <label class="form-label">Make *</label>
+                    <label class="form-label">{{ content.cms_make|default:'Make *' }}</label>
                     <input type="text" name="make" class="form-control" value="{{ vehicle.make|default:'' }}" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Model *</label>
+                    <label class="form-label">{{ content.cms_model|default:'Model *' }}</label>
                     <input type="text" name="model" class="form-control" value="{{ vehicle.model|default:'' }}" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Year *</label>
+                    <label class="form-label">{{ content.cms_year|default:'Year *' }}</label>
                     <input type="number" name="year" class="form-control" min="1990" max="2030" value="{{ vehicle.year|default:'' }}" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Branch *</label>
+                    <label class="form-label">{{ content.cms_branch|default:'Branch *' }}</label>
                     <select name="branch" class="form-select" required>
-                        <option value="">Select Branch</option>
+                        <option value="">{{ content.cms_select_branch|default:'Select Branch' }}</option>
                         {% for branch in branches %}
                         <option value="{{ branch.pk }}" {% if vehicle.branch_id == branch.pk %}selected{% endif %}>{{ branch.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Assigned Driver</label>
+                    <label class="form-label">{{ content.cms_assigned_driver|default:'Assigned Driver' }}</label>
                     <select name="assigned_driver" class="form-select">
-                        <option value="">No Driver Assigned</option>
+                        <option value="">{{ content.cms_no_driver_assigned|default:'No Driver Assigned' }}</option>
                         {% for driver in drivers %}
                         <option value="{{ driver.pk }}" {% if vehicle.assigned_driver_id == driver.pk %}selected{% endif %}>{{ driver.full_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Current Mileage (KM)</label>
+                    <label class="form-label">{{ content.cms_current_mileage_km|default:'Current Mileage (KM)' }}</label>
                     <input type="number" name="current_mileage" class="form-control" min="0" value="{{ vehicle.current_mileage|default:'0' }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Fuel Capacity (L)</label>
+                    <label class="form-label">{{ content.cms_fuel_capacity_l|default:'Fuel Capacity (L)' }}</label>
                     <input type="number" name="fuel_capacity" class="form-control" step="0.01" min="0" value="{{ vehicle.fuel_capacity|default:'0' }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Color</label>
+                    <label class="form-label">{{ content.cms_color|default:'Color' }}</label>
                     <input type="text" name="color" class="form-control" value="{{ vehicle.color|default:'' }}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Purchase Price</label>
+                    <label class="form-label">{{ content.cms_purchase_price|default:'Purchase Price' }}</label>
                     <input type="number" name="purchase_price" class="form-control" step="0.01" min="0" value="{{ vehicle.purchase_price|default:'0' }}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Purchase Date</label>
+                    <label class="form-label">{{ content.cms_purchase_date|default:'Purchase Date' }}</label>
                     <input type="date" name="purchase_date" class="form-control" value="{{ vehicle.purchase_date|date:'Y-m-d'|default:'' }}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Insurance Expiry</label>
+                    <label class="form-label">{{ content.cms_insurance_expiry|default:'Insurance Expiry' }}</label>
                     <input type="date" name="insurance_expiry" class="form-control" value="{{ vehicle.insurance_expiry|date:'Y-m-d'|default:'' }}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Registration Expiry</label>
+                    <label class="form-label">{{ content.cms_registration_expiry|default:'Registration Expiry' }}</label>
                     <input type="date" name="registration_expiry" class="form-control" value="{{ vehicle.registration_expiry|date:'Y-m-d'|default:'' }}">
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Notes</label>
+                    <label class="form-label">{{ content.cms_notes|default:'Notes' }}</label>
                     <textarea name="notes" class="form-control" rows="3">{{ vehicle.notes|default:'' }}</textarea>
                 </div>
             </div>
             <div class="mt-4">
                 <button type="submit" class="btn btn-primary">{{ action }} Vehicle</button>
-                <a href="{% url 'vehicle_list' %}" class="btn btn-secondary">Cancel</a>
+                <a href="{% url 'vehicle_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
             </div>
         </form>
     </div>

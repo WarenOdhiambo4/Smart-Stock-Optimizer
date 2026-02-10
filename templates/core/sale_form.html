@@ -13,68 +13,110 @@
             {% csrf_token %}
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
-                    <label class="form-label">Branch *</label>
+                    <label class="form-label">{{ content.cms_branch|default:'Branch *' }}</label>
                     <select name="branch" id="branchSelect" class="form-select" required>
-                        <option value="">Select Branch</option>
+                        <option value="">{{ content.cms_select_branch|default:'Select Branch' }}</option>
                         {% for branch in branches %}
-                        <option value="{{ branch.pk }}">{{ branch.name }}</option>
+                        <option value="{{ branch.pk }}" {% if sale and sale.branch_id == branch.pk %}selected{% endif %}>{{ branch.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Sale Date *</label>
-                    <input type="date" name="sale_date" class="form-control" required>
+                    <label class="form-label">{{ content.cms_sale_date|default:'Sale Date *' }}</label>
+                    <input type="date" name="sale_date" class="form-control" value="{% if sale %}{{ sale.created_at|date:'Y-m-d' }}{% endif %}" required>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Customer Name</label>
-                    <input type="text" name="customer_name" class="form-control">
+                    <label class="form-label">{{ content.cms_customer_name|default:'Customer Name' }}</label>
+                    <input type="text" name="customer_name" class="form-control" value="{% if sale %}{{ sale.customer_name }}{% endif %}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Customer Phone</label>
-                    <input type="text" name="customer_phone" class="form-control">
+                    <label class="form-label">{{ content.cms_customer_phone|default:'Customer Phone' }}</label>
+                    <input type="text" name="customer_phone" class="form-control" value="{% if sale %}{{ sale.customer_phone }}{% endif %}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Payment Method</label>
+                    <label class="form-label">{{ content.cms_payment_method|default:'Payment Method' }}</label>
                     <select name="payment_method" class="form-select">
-                        <option value="Cash">Cash</option>
-                        <option value="Card">Card</option>
-                        <option value="Mobile">Mobile Payment</option>
-                        <option value="Bank">Bank Transfer</option>
+                        <option value="Cash" {% if sale and sale.payment_method == 'Cash' %}selected{% endif %}>{{ content.cms_cash|default:'Cash' }}</option>
+                        <option value="Card" {% if sale and sale.payment_method == 'Card' %}selected{% endif %}>{{ content.cms_card|default:'Card' }}</option>
+                        <option value="Mobile" {% if sale and sale.payment_method == 'Mobile' %}selected{% endif %}>{{ content.cms_mobile_payment|default:'Mobile Payment' }}</option>
+                        <option value="Bank" {% if sale and sale.payment_method == 'Bank' %}selected{% endif %}>{{ content.cms_bank_transfer|default:'Bank Transfer' }}</option>
                     </select>
                 </div>
             </div>
 
-            <h6 class="mb-3">Sale Items</h6>
+            <h6 class="mb-3">{{ content.cms_sale_items|default:'Sale Items' }}</h6>
+            <div class="row g-2 mb-1 sale-item-labels text-muted small">
+                <div class="col-md-4">{{ content.cms_product|default:'Product' }}</div>
+                <div class="col-md-2">{{ content.cms_quantity|default:'Qty' }}</div>
+                <div class="col-md-2">{{ content.cms_unit_price|default:'Unit Price' }}</div>
+                <div class="col-md-2">{{ content.cms_total|default:'Item Total' }}</div>
+                <div class="col-md-1">Broken</div>
+                <div class="col-md-1"></div>
+            </div>
             <div id="saleItems">
+                {% if sale and sale.items.all %}
+                    {% for item in sale.items.all %}
+                    <div class="row g-2 mb-2 sale-item">
+                        <div class="col-md-4">
+                            <select name="stock_id" class="form-select form-select-sm stock-select" required>
+                                <option value="{{ item.stock.id }}">{{ item.stock.product.name }} ({{ item.stock.product.sku }})</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="quantity" step="0.01" class="form-control form-control-sm" placeholder="Qty" value="{{ item.quantity }}" min="0.01" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="unit_price" step="0.01" class="form-control form-control-sm" placeholder="Price" value="{{ item.unit_price }}" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm item-total" placeholder="Total" readonly>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-center">
+                            <input type="hidden" name="is_broken_sale" value="{% if item.is_broken_sale %}1{% else %}0{% endif %}" class="broken-hidden">
+                            <input type="checkbox" class="form-check-input broken-flag" title="Broken Sale" {% if item.is_broken_sale %}checked{% endif %}>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-item"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
                 <div class="row g-2 mb-2 sale-item">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <select name="stock_id" class="form-select form-select-sm stock-select" required>
-                            <option value="">Select Product (Select branch first)</option>
+                            <option value="">{{ content.cms_select_product_select_branch_first|default:'Select Product (Select branch first)' }}</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <input type="number" name="quantity" class="form-control form-control-sm" placeholder="Qty" value="1" min="1" required>
+                        <input type="number" name="quantity" step="0.01" class="form-control form-control-sm" placeholder="Qty" value="1" min="0.01" required>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <input type="number" name="unit_price" step="0.01" class="form-control form-control-sm" placeholder="Price" required>
                     </div>
                     <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm item-total" placeholder="Total" readonly>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-center">
+                        <input type="hidden" name="is_broken_sale" value="0" class="broken-hidden">
+                        <input type="checkbox" class="form-check-input broken-flag" title="Broken Sale">
+                    </div>
+                    <div class="col-md-1">
                         <button type="button" class="btn btn-outline-danger btn-sm remove-item"><i class="bi bi-trash"></i></button>
                     </div>
                 </div>
+                {% endif %}
             </div>
             <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">
-                <i class="bi bi-plus me-1"></i>Add Item
-            </button>
+                <i class="bi bi-plus me-1"></i>{{ content.cms_add_item|default:'Add Item' }}</button>
 
             <div class="col-12 mt-3">
-                <label class="form-label">Notes</label>
-                <textarea name="notes" class="form-control" rows="2"></textarea>
+                <label class="form-label">{{ content.cms_notes|default:'Notes' }}</label>
+                <textarea name="notes" class="form-control" rows="2">{% if sale %}{{ sale.notes }}{% endif %}</textarea>
             </div>
 
             <hr class="my-4">
             
-            <h6 class="mb-3">Sale Related Expenses (Optional)</h6>
+            <h6 class="mb-3">{{ content.cms_sale_related_expenses_optional|default:'Sale Related Expenses (Optional)' }}</h6>
             <div id="expenseItems">
                 <div class="row g-2 mb-2 expense-item">
                     <div class="col-md-4">
@@ -87,43 +129,39 @@
                         <input type="text" name="expense_receipt" class="form-control form-control-sm" placeholder="Receipt #">
                     </div>
                     <div class="col-md-2">
-                        <button type="button" class="btn btn-outline-danger btn-sm remove-expense">Remove</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-expense">{{ content.cms_remove|default:'Remove' }}</button>
                     </div>
                 </div>
             </div>
             <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="addExpense">
-                <i class="bi bi-plus me-1"></i>Add Expense
-            </button>
+                <i class="bi bi-plus me-1"></i>{{ content.cms_add_expense|default:'Add Expense' }}</button>
 
             <div class="mt-4">
                 <button type="button" class="btn btn-primary" onclick="showConfirmation()">
-                    <i class="bi bi-check-lg me-1"></i>Create Sale
-                </button>
-                <a href="{% url 'sale_list' %}" class="btn btn-secondary">Cancel</a>
+                    <i class="bi bi-check-lg me-1"></i>{{ content.cms_create_sale|default:'Create Sale' }}</button>
+                <a href="{% url 'sale_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Confirmation Modal -->
-<div class="modal fade" id="confirmModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade sale-confirm-modal" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Sale Details</h5>
+                <h5 class="modal-title">{{ content.cms_confirm_sale_details|default:'Confirm Sale Details' }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="confirmContent">
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    Please review all details carefully before submitting.
-                </div>
+                    {{ content.cms_please_review_all_details_carefully_before_submitting|default:"Please review all details carefully before submitting." }}</div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Go Back & Edit</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ content.cms_go_back_edit|default:'Go Back & Edit' }}</button>
                 <button type="button" class="btn btn-primary" onclick="submitForm()">
-                    <i class="bi bi-check-lg me-1"></i>Confirm & Submit
-                </button>
+                    <i class="bi bi-check-lg me-1"></i>{{ content.cms_confirm_submit|default:'Confirm & Submit' }}</button>
             </div>
         </div>
     </div>
@@ -153,11 +191,16 @@ function updateStockSelects() {
         stockData.forEach(stock => {
             const option = document.createElement('option');
             option.value = stock.id;
-            option.textContent = `${stock.product_name} (${stock.product_sku}) - Qty: ${stock.quantity}`;
+            const brokenQty = parseFloat(stock.broken_qty || 0);
+            const brokenLabel = brokenQty > 0 ? ` | Broken: ${brokenQty}` : '';
+            option.textContent = `${stock.product_name} (${stock.product_sku}) - Qty: ${stock.quantity}${brokenLabel}`;
             option.dataset.price = stock.unit_price;
+            option.dataset.brokenQty = brokenQty;
+            option.dataset.brokenOnly = stock.quantity <= 0 && brokenQty > 0 ? '1' : '0';
             select.appendChild(option);
         });
         if (currentValue) select.value = currentValue;
+        filterBrokenOptions(select.closest('.sale-item'));
     });
 }
 
@@ -168,15 +211,72 @@ document.getElementById('saleItems').addEventListener('change', function(e) {
         if (option.dataset.price) {
             priceInput.value = option.dataset.price;
         }
+        updateItemTotal(e.target.closest('.sale-item'));
     }
 });
+
+document.getElementById('saleItems').addEventListener('input', function(e) {
+    if (e.target.name === 'quantity' || e.target.name === 'unit_price') {
+        updateItemTotal(e.target.closest('.sale-item'));
+    }
+});
+
+document.getElementById('saleItems').addEventListener('change', function(e) {
+    if (e.target.classList.contains('broken-flag')) {
+        const row = e.target.closest('.sale-item');
+        const hidden = row.querySelector('.broken-hidden');
+        const qtyInput = row.querySelector('[name="quantity"]');
+        hidden.value = e.target.checked ? '1' : '0';
+        if (qtyInput) {
+            if (e.target.checked) {
+                qtyInput.value = '1.00';
+                qtyInput.setAttribute('readonly', 'readonly');
+            } else {
+                qtyInput.removeAttribute('readonly');
+            }
+        }
+        filterBrokenOptions(row);
+        updateItemTotal(row);
+    }
+});
+
+function filterBrokenOptions(row) {
+    if (!row) return;
+    const isBroken = row.querySelector('.broken-hidden')?.value === '1';
+    const select = row.querySelector('.stock-select');
+    if (!select) return;
+    Array.from(select.options).forEach(option => {
+        if (!option.value) return;
+        const brokenOnly = option.dataset.brokenOnly === '1';
+        if (isBroken) {
+            option.disabled = parseFloat(option.dataset.brokenQty || 0) <= 0;
+        } else {
+            option.disabled = brokenOnly;
+        }
+    });
+    if (select.selectedOptions.length && select.selectedOptions[0].disabled) {
+        select.value = '';
+    }
+}
+
+function updateItemTotal(itemRow) {
+    if (!itemRow) return;
+    const qty = parseFloat(itemRow.querySelector('[name="quantity"]').value || 0);
+    const price = parseFloat(itemRow.querySelector('[name="unit_price"]').value || 0);
+    const totalField = itemRow.querySelector('.item-total');
+    totalField.value = qty && price ? (qty * price).toFixed(2) : '';
+}
 
 document.getElementById('addItem').addEventListener('click', function() {
     const template = document.querySelector('.sale-item').cloneNode(true);
     template.querySelectorAll('input').forEach(input => input.value = input.name === 'quantity' ? '1' : '');
+    template.querySelector('.broken-hidden').value = '0';
+    const brokenFlag = template.querySelector('.broken-flag');
+    if (brokenFlag) brokenFlag.checked = false;
     template.querySelector('select').value = '';
     document.getElementById('saleItems').appendChild(template);
     updateStockSelects();
+    updateItemTotal(template);
 });
 
 document.getElementById('saleItems').addEventListener('click', function(e) {
@@ -210,22 +310,32 @@ function showConfirmation() {
     const customerName = form.querySelector('[name="customer_name"]').value || 'Walk-in customer';
     const paymentMethod = form.querySelector('[name="payment_method"]').value;
     
-    let itemsHtml = '<h6 class="mb-2">Sale Items:</h6><ul class="mb-3">';
+    let itemsHtml = '<div class="confirm-table-wrap"><table class="table confirm-table mb-3"><thead><tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Line Total</th><th class="text-end">Total Qty (Product)</th><th class="text-end">Broken</th></tr></thead><tbody>';
     let totalAmount = 0;
-    
+    const productTotals = {};
+    const rows = [];
+
     document.querySelectorAll('.sale-item').forEach(item => {
         const stockSelect = item.querySelector('.stock-select');
-        const qty = item.querySelector('[name="quantity"]').value;
-        const price = item.querySelector('[name="unit_price"]').value;
-        
+        const qty = parseFloat(item.querySelector('[name="quantity"]').value || 0);
+        const price = parseFloat(item.querySelector('[name="unit_price"]').value || 0);
+        const isBroken = item.querySelector('.broken-hidden')?.value === '1';
+
         if (stockSelect.value) {
-            const productName = stockSelect.options[stockSelect.selectedIndex].text;
-            const subtotal = (qty * price).toFixed(2);
-            totalAmount += parseFloat(subtotal);
-            itemsHtml += `<li>${productName} - Qty: ${qty} × KES ${price} = KES ${subtotal}</li>`;
+            const optionText = stockSelect.options[stockSelect.selectedIndex].text;
+            const productName = optionText.split(' - Qty:')[0];
+            const subtotal = qty * price;
+            totalAmount += subtotal;
+            productTotals[productName] = (productTotals[productName] || 0) + qty;
+            rows.push({ productName, qty, price, subtotal, isBroken });
         }
     });
-    itemsHtml += '</ul>';
+
+    rows.forEach(row => {
+        const totalQty = productTotals[row.productName] || 0;
+        itemsHtml += `<tr><td>${row.productName}</td><td class="text-end">${row.qty}</td><td class="text-end">KES ${row.price.toFixed(2)}</td><td class="text-end">KES ${row.subtotal.toFixed(2)}</td><td class="text-end">${totalQty}</td><td class="text-end">${row.isBroken ? 'Yes' : 'No'}</td></tr>`;
+    });
+    itemsHtml += '</tbody></table></div>';
     
     const expenseAmounts = form.querySelectorAll('[name="expense_amount"]');
     const expenseDescs = form.querySelectorAll('[name="expense_description"]');
@@ -246,13 +356,13 @@ function showConfirmation() {
     }
     
     const confirmHtml = `
-        <div class="mb-3">
-            <strong>Branch:</strong> ${branchText}<br>
-            <strong>Customer:</strong> ${customerName}<br>
-            <strong>Payment Method:</strong> ${paymentMethod}
+        <div class="mb-3 confirm-meta">
+            <div><strong>Branch:</strong> ${branchText}</div>
+            <div><strong>Customer:</strong> ${customerName}</div>
+            <div><strong>Payment Method:</strong> ${paymentMethod}</div>
         </div>
         ${itemsHtml}
-        <h5 class="text-primary">Total Sale Amount: KES ${totalAmount.toFixed(2)}</h5>
+        <div class="confirm-total">Total Sale Amount: KES ${totalAmount.toFixed(2)}</div>
         ${expenseHtml}
     `;
     
@@ -269,6 +379,25 @@ function submitForm() {
     confirmInput.value = 'true';
     form.appendChild(confirmInput);
     form.submit();
+}
+
+document.querySelectorAll('.sale-item').forEach(row => {
+    const brokenFlag = row.querySelector('.broken-flag');
+    const qtyInput = row.querySelector('[name="quantity"]');
+    if (brokenFlag && brokenFlag.checked && qtyInput) {
+        qtyInput.value = '1.00';
+        qtyInput.setAttribute('readonly', 'readonly');
+    }
+    updateItemTotal(row);
+});
+
+if (document.getElementById('branchSelect').value) {
+    fetch(`/api/branch/${document.getElementById('branchSelect').value}/stocks/`)
+        .then(response => response.json())
+        .then(data => {
+            stockData = data;
+            updateStockSelects();
+        });
 }
 </script>
 {% endblock %}

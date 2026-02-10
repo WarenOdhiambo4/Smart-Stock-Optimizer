@@ -3,7 +3,10 @@ from django.utils.html import format_html
 from .models import (
     Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory,
     Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance,
-    OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection, BusinessNote, InventoryLayer, PhysicalStockCount
+    OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection, BusinessNote, InventoryLayer, PhysicalStockCount,
+    AccountingPeriod, ChartOfAccount, LedgerTransaction, GeneralLedger,
+    IncomeRegister, ExpenseRegister, LoansRegister, PayrollLedger, AllowanceRegister,
+    PriceChangeLog, CostChangeLog, SystemContent
 )
 
 
@@ -38,9 +41,30 @@ class StockAdmin(admin.ModelAdmin):
 
 @admin.register(StockMovement)
 class StockMovementAdmin(admin.ModelAdmin):
-    list_display = ['stock', 'movement_type', 'quantity', 'status', 'created_at']
+    list_display = ['stock', 'movement_type', 'quantity', 'unit_cost', 'status', 'created_at']
     list_filter = ['movement_type', 'status']
     search_fields = ['stock__product__name']
+
+
+@admin.register(SystemContent)
+class SystemContentAdmin(admin.ModelAdmin):
+    list_display = ['key', 'module', 'is_active', 'updated_at']
+    list_filter = ['module', 'is_active']
+    search_fields = ['key', 'value', 'module']
+
+
+@admin.register(PriceChangeLog)
+class PriceChangeLogAdmin(admin.ModelAdmin):
+    list_display = ['product', 'old_price', 'new_price', 'changed_by', 'change_date']
+    list_filter = ['change_date']
+    search_fields = ['product__name', 'product__sku']
+
+
+@admin.register(CostChangeLog)
+class CostChangeLogAdmin(admin.ModelAdmin):
+    list_display = ['product', 'old_cost', 'new_cost', 'changed_by', 'change_date']
+    list_filter = ['change_date']
+    search_fields = ['product__name', 'product__sku']
 
 
 @admin.register(Order)
@@ -577,3 +601,74 @@ class PhysicalStockCountAdmin(admin.ModelAdmin):
         if obj:  # Editing existing object
             return self.readonly_fields + ('count_number', 'branch', 'product', 'system_quantity', 'physical_quantity', 'counted_by', 'notes')
         return self.readonly_fields
+
+
+@admin.register(ChartOfAccount)
+class ChartOfAccountAdmin(admin.ModelAdmin):
+    list_display = ['account_code', 'account_name', 'account_type', 'opening_balance', 'is_active']
+    list_filter = ['account_type', 'is_active']
+    search_fields = ['account_code', 'account_name']
+
+
+@admin.register(AccountingPeriod)
+class AccountingPeriodAdmin(admin.ModelAdmin):
+    list_display = ['start_date', 'end_date', 'is_closed', 'closed_at']
+    list_filter = ['is_closed']
+    date_hierarchy = 'start_date'
+
+
+@admin.register(LedgerTransaction)
+class LedgerTransactionAdmin(admin.ModelAdmin):
+    list_display = ['transaction_id', 'transaction_date', 'reference', 'source_type', 'source_id']
+    list_filter = ['transaction_date', 'source_type']
+    search_fields = ['transaction_id', 'reference', 'description']
+    date_hierarchy = 'transaction_date'
+    readonly_fields = ['created_at']
+
+
+@admin.register(GeneralLedger)
+class GeneralLedgerAdmin(admin.ModelAdmin):
+    list_display = ['transaction', 'account', 'debit_amount', 'credit_amount', 'created_at']
+    list_filter = ['account']
+    search_fields = ['transaction__transaction_id', 'account__account_code', 'account__account_name']
+    readonly_fields = ['created_at']
+
+
+@admin.register(IncomeRegister)
+class IncomeRegisterAdmin(admin.ModelAdmin):
+    list_display = ['date', 'receipt_no', 'source', 'account_credited', 'amount', 'payment_method', 'posted']
+    list_filter = ['posted', 'payment_method', 'date']
+    search_fields = ['receipt_no', 'source', 'reference']
+    date_hierarchy = 'date'
+
+
+@admin.register(ExpenseRegister)
+class ExpenseRegisterAdmin(admin.ModelAdmin):
+    list_display = ['date', 'voucher_no', 'category', 'account_debited', 'amount', 'payment_method', 'approved', 'posted']
+    list_filter = ['approved', 'posted', 'payment_method', 'date']
+    search_fields = ['voucher_no', 'category', 'reference']
+    date_hierarchy = 'date'
+
+
+@admin.register(LoansRegister)
+class LoansRegisterAdmin(admin.ModelAdmin):
+    list_display = ['loan_id', 'lender', 'account', 'principal', 'amount_paid', 'due_date', 'status', 'posted']
+    list_filter = ['status', 'posted']
+    search_fields = ['loan_id', 'lender']
+    date_hierarchy = 'due_date'
+
+
+@admin.register(PayrollLedger)
+class PayrollLedgerAdmin(admin.ModelAdmin):
+    list_display = ['pay_period', 'employee_name', 'basic_salary', 'allowances', 'deductions', 'payment_date', 'posted']
+    list_filter = ['posted', 'payment_date']
+    search_fields = ['employee_name', 'pay_period', 'reference']
+    date_hierarchy = 'payment_date'
+
+
+@admin.register(AllowanceRegister)
+class AllowanceRegisterAdmin(admin.ModelAdmin):
+    list_display = ['employee_name', 'allowance_type', 'fixed_or_variable', 'amount', 'effective_date', 'status']
+    list_filter = ['fixed_or_variable', 'status']
+    search_fields = ['employee_name', 'allowance_type']
+    date_hierarchy = 'effective_date'

@@ -13,75 +13,154 @@
             {% csrf_token %}
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Vehicle *</label>
+                    <label class="form-label">{{ content.cms_vehicle|default:'Vehicle *' }}</label>
                     <select name="vehicle" class="form-select" required>
-                        <option value="">Select Vehicle</option>
+                        <option value="">{{ content.cms_select_vehicle|default:'Select Vehicle' }}</option>
                         {% for vehicle in vehicles %}
-                        <option value="{{ vehicle.pk }}">{{ vehicle.registration_number }} - {{ vehicle.make }} {{ vehicle.model }}</option>
+                        <option value="{{ vehicle.pk }}" {% if maintenance and maintenance.vehicle_id == vehicle.pk %}selected{% endif %}>{{ vehicle.registration_number }} - {{ vehicle.make }} {{ vehicle.model }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Maintenance Type *</label>
+                    <label class="form-label">{{ content.cms_maintenance_type|default:'Maintenance Type *' }}</label>
                     <select name="maintenance_type" class="form-select" required>
-                        <option value="">Select Type</option>
-                        <option value="ROUTINE">Routine Service</option>
-                        <option value="REPAIR">Repair</option>
-                        <option value="INSPECTION">Inspection</option>
-                        <option value="TIRE">Tire Service</option>
-                        <option value="BRAKE">Brake Service</option>
-                        <option value="ENGINE">Engine Work</option>
-                        <option value="ELECTRICAL">Electrical</option>
-                        <option value="BODYWORK">Body Work</option>
-                        <option value="OTHER">Other</option>
+                        <option value="">{{ content.cms_select_type|default:'Select Type' }}</option>
+                        <option value="ROUTINE" {% if maintenance and maintenance.maintenance_type == 'ROUTINE' %}selected{% endif %}>{{ content.cms_routine_service|default:'Routine Service' }}</option>
+                        <option value="REPAIR" {% if maintenance and maintenance.maintenance_type == 'REPAIR' %}selected{% endif %}>{{ content.cms_repair|default:'Repair' }}</option>
+                        <option value="INSPECTION" {% if maintenance and maintenance.maintenance_type == 'INSPECTION' %}selected{% endif %}>{{ content.cms_inspection|default:'Inspection' }}</option>
+                        <option value="TIRE" {% if maintenance and maintenance.maintenance_type == 'TIRE' %}selected{% endif %}>{{ content.cms_tire_service|default:'Tire Service' }}</option>
+                        <option value="BRAKE" {% if maintenance and maintenance.maintenance_type == 'BRAKE' %}selected{% endif %}>{{ content.cms_brake_service|default:'Brake Service' }}</option>
+                        <option value="ENGINE" {% if maintenance and maintenance.maintenance_type == 'ENGINE' %}selected{% endif %}>{{ content.cms_engine_work|default:'Engine Work' }}</option>
+                        <option value="ELECTRICAL" {% if maintenance and maintenance.maintenance_type == 'ELECTRICAL' %}selected{% endif %}>{{ content.cms_electrical|default:'Electrical' }}</option>
+                        <option value="BODYWORK" {% if maintenance and maintenance.maintenance_type == 'BODYWORK' %}selected{% endif %}>{{ content.cms_body_work|default:'Body Work' }}</option>
+                        <option value="OTHER" {% if maintenance and maintenance.maintenance_type == 'OTHER' %}selected{% endif %}>{{ content.cms_other|default:'Other' }}</option>
                     </select>
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Description *</label>
-                    <textarea name="description" class="form-control" rows="3" required placeholder="Describe the work to be done..."></textarea>
+                    <label class="form-label">{{ content.cms_parts|default:'Parts & Costs' }}</label>
+                    <div id="partsList">
+                        {% if parts_data %}
+                            {% for part in parts_data %}
+                            <div class="row g-2 mb-2 part-item">
+                                <div class="col-md-6">
+                                    <input type="text" name="part_name" class="form-control form-control-sm" placeholder="Part name" value="{{ part.name }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="number" name="part_cost" class="form-control form-control-sm part-cost" step="0.01" min="0" placeholder="Cost" value="{{ part.cost }}">
+                                </div>
+                                <div class="col-md-2 d-grid">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-part">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="row g-2 mb-2 part-item">
+                            <div class="col-md-6">
+                                <input type="text" name="part_name" class="form-control form-control-sm" placeholder="Part name">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" name="part_cost" class="form-control form-control-sm part-cost" step="0.01" min="0" placeholder="Cost">
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-part">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-1" id="addPart">
+                        <i class="bi bi-plus me-1"></i>{{ content.cms_add_part|default:'Add Part' }}
+                    </button>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Service Provider *</label>
-                    <input type="text" name="service_provider" class="form-control" required placeholder="Garage/mechanic name">
+                    <label class="form-label">{{ content.cms_service_provider|default:'Service Provider *' }}</label>
+                    <input type="text" name="service_provider" class="form-control" required placeholder="Garage/mechanic name" value="{% if maintenance %}{{ maintenance.service_provider }}{% endif %}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Service Date *</label>
-                    <input type="date" name="service_date" class="form-control" required>
+                    <label class="form-label">{{ content.cms_service_date|default:'Service Date *' }}</label>
+                    <input type="date" name="service_date" class="form-control" required value="{% if maintenance %}{{ maintenance.service_date|date:'Y-m-d' }}{% endif %}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Parts Cost</label>
-                    <input type="number" name="parts_cost" class="form-control" step="0.01" min="0" value="0">
+                    <label class="form-label">{{ content.cms_parts_total|default:'Parts Total' }}</label>
+                    <input type="text" class="form-control" id="partsTotalDisplay" value="{% if maintenance %}{{ maintenance.parts_cost|floatformat:2 }}{% else %}0.00{% endif %}" readonly>
+                    <input type="hidden" name="parts_cost" id="partsTotal" value="{% if maintenance %}{{ maintenance.parts_cost|floatformat:2 }}{% else %}0.00{% endif %}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Labor Cost</label>
-                    <input type="number" name="labor_cost" class="form-control" step="0.01" min="0" value="0">
+                    <label class="form-label">{{ content.cms_labor_cost|default:'Labor Cost' }}</label>
+                    <input type="number" name="labor_cost" class="form-control" step="0.01" min="0" value="{% if maintenance %}{{ maintenance.labor_cost|floatformat:2 }}{% else %}0{% endif %}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Other Costs</label>
-                    <input type="number" name="other_costs" class="form-control" step="0.01" min="0" value="0">
+                    <label class="form-label">{{ content.cms_other_costs|default:'Other Costs' }}</label>
+                    <input type="number" name="other_costs" class="form-control" step="0.01" min="0" value="{% if maintenance %}{{ maintenance.other_costs|floatformat:2 }}{% else %}0{% endif %}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Mileage at Service *</label>
-                    <input type="number" name="mileage_at_service" class="form-control" min="0" required>
+                    <label class="form-label">{{ content.cms_mileage_at_service|default:'Mileage at Service *' }}</label>
+                    <input type="number" name="mileage_at_service" class="form-control" min="0" required value="{% if maintenance %}{{ maintenance.mileage_at_service }}{% endif %}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Next Service Mileage</label>
-                    <input type="number" name="next_service_mileage" class="form-control" min="0">
+                    <label class="form-label">{{ content.cms_next_service_mileage|default:'Next Service Mileage' }}</label>
+                    <input type="number" name="next_service_mileage" class="form-control" min="0" value="{% if maintenance and maintenance.next_service_mileage %}{{ maintenance.next_service_mileage }}{% endif %}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Receipt Number</label>
-                    <input type="text" name="receipt_number" class="form-control">
+                    <label class="form-label">{{ content.cms_receipt_number|default:'Receipt Number' }}</label>
+                    <input type="text" name="receipt_number" class="form-control" value="{% if maintenance %}{{ maintenance.receipt_number }}{% endif %}">
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Notes</label>
-                    <textarea name="notes" class="form-control" rows="2"></textarea>
+                    <label class="form-label">{{ content.cms_notes|default:'Notes' }}</label>
+                    <textarea name="notes" class="form-control" rows="2">{% if maintenance %}{{ maintenance.notes }}{% endif %}</textarea>
                 </div>
             </div>
             <div class="mt-4">
                 <button type="submit" class="btn btn-primary">{{ action }} Maintenance</button>
-                <a href="{% url 'maintenance_list' %}" class="btn btn-secondary">Cancel</a>
+                <a href="{% url 'maintenance_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
             </div>
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updatePartsTotal() {
+    let total = 0;
+    document.querySelectorAll('.part-cost').forEach(input => {
+        const value = parseFloat(input.value || 0);
+        if (!Number.isNaN(value)) {
+            total += value;
+        }
+    });
+    document.getElementById('partsTotalDisplay').value = total.toFixed(2);
+    document.getElementById('partsTotal').value = total.toFixed(2);
+}
+
+document.getElementById('addPart').addEventListener('click', function() {
+    const template = document.querySelector('.part-item').cloneNode(true);
+    template.querySelectorAll('input').forEach(input => input.value = '');
+    document.getElementById('partsList').appendChild(template);
+});
+
+document.getElementById('partsList').addEventListener('input', function(e) {
+    if (e.target.classList.contains('part-cost')) {
+        updatePartsTotal();
+    }
+});
+
+document.getElementById('partsList').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-part')) {
+        const items = document.querySelectorAll('.part-item');
+        if (items.length > 1) {
+            e.target.closest('.part-item').remove();
+            updatePartsTotal();
+        } else {
+            e.target.closest('.part-item').querySelectorAll('input').forEach(input => input.value = '');
+            updatePartsTotal();
+        }
+    }
+});
+
+updatePartsTotal();
+</script>
 {% endblock %}

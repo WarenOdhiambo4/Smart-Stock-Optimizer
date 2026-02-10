@@ -17,7 +17,7 @@ from .profit_engine import ProfitCalculationEngine
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
+@role_required('ADMIN', 'BOSS')
 def broken_products_list(request):
     """List all broken products"""
     search = request.GET.get('search', '')
@@ -41,14 +41,18 @@ def broken_products_list(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'LOGISTICS')
-def report_broken_product(request):
+@role_required('ADMIN', 'BOSS')
+def report_broken_product(request, stock_id=None):
     """Report a broken/damaged product"""
     stocks = Stock.objects.select_related('product', 'branch').filter(quantity__gt=0)
+    preselected_stock = None
+    if stock_id:
+        preselected_stock = get_object_or_404(Stock, pk=stock_id)
+        stocks = stocks.filter(pk=stock_id)
     
     if request.method == 'POST':
-        stock_id = request.POST.get('stock')
-        quantity = int(request.POST.get('quantity', 0))
+        stock_id = request.POST.get('stock') or stock_id
+        quantity = Decimal(str(request.POST.get('quantity', 0) or 0))
         damage_type = request.POST.get('damage_type')
         description = request.POST.get('description', '')
         
@@ -61,13 +65,14 @@ def report_broken_product(request):
         # Use weighted average purchase price for cost calculation
         unit_cost = stock.weighted_avg_purchase_price
         
+        reporter = Employee.objects.filter(user=request.user).first()
         BrokenProduct.objects.create(
             stock=stock,
             quantity=quantity,
             damage_type=damage_type,
             unit_cost=unit_cost,
             description=description,
-            reported_by=request.user.profile.employee if hasattr(request.user, 'profile') else None
+            reported_by=reporter
         )
         
         messages.success(request, f'Reported {quantity} broken {stock.product.name} items')
@@ -75,6 +80,8 @@ def report_broken_product(request):
     
     return render(request, 'core/report_broken_product.html', {
         'stocks': stocks,
+        'selected_stock_id': preselected_stock.id if preselected_stock else None,
+        'damage_types': BrokenProduct.DAMAGE_TYPES,
         'action': 'Report'
     })
 
@@ -202,7 +209,7 @@ def update_stock_purchase_price(request, stock_id):
     stock = get_object_or_404(Stock, pk=stock_id)
     
     if request.method == 'POST':
-        quantity = int(request.POST.get('quantity', 0))
+        quantity = Decimal(str(request.POST.get('quantity', 0) or 0))
         unit_price = Decimal(request.POST.get('unit_price', '0.00'))
         
         if quantity > 0 and unit_price > 0:

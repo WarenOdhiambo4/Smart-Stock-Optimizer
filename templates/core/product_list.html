@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Products</h1>
+    <h1 class="page-title">{{ content.cms_products|default:'Products' }}</h1>
     <div class="d-flex gap-2">
         <div class="search-box">
             <i class="bi bi-search search-icon"></i>
@@ -12,7 +12,7 @@
                 <input type="text" name="search" class="form-control form-control-sm" placeholder="Search products..." value="{{ search }}">
             </form>
         </div>
-        <a href="{% url 'product_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Product</a>
+        <a href="{% url 'product_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>{{ content.cms_add_product|default:'Add Product' }}</a>
     </div>
 </div>
 
@@ -22,13 +22,13 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>SKU</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Unit Price</th>
-                    <th>Cost Price</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{{ content.cms_sku|default:'SKU' }}</th>
+                    <th>{{ content.cms_name|default:'Name' }}</th>
+                    <th>{{ content.cms_category|default:'Category' }}</th>
+                    <th>{{ content.cms_unit_price|default:'Unit Price' }}</th>
+                    <th>{{ content.cms_cost_price|default:'Cost Price' }}</th>
+                    <th>{{ content.cms_status|default:'Status' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,9 +41,9 @@
                     <td>${{ product.cost_price }}</td>
                     <td>
                         {% if product.is_active %}
-                            <span class="badge badge-success">Active</span>
+                            <span class="badge badge-success">{{ content.cms_active|default:'Active' }}</span>
                         {% else %}
-                            <span class="badge badge-secondary">Inactive</span>
+                            <span class="badge badge-secondary">{{ content.cms_inactive|default:'Inactive' }}</span>
                         {% endif %}
                     </td>
                     <td>
@@ -64,9 +64,9 @@
         {% else %}
         <div class="empty-state">
             <i class="bi bi-tags" style="font-size: 3rem;"></i>
-            <h5>No products found</h5>
-            <p>Add products to your catalog</p>
-            <a href="{% url 'product_create' %}" class="btn btn-primary btn-sm">Add Product</a>
+            <h5>{{ content.cms_no_products_found|default:'No products found' }}</h5>
+            <p>{{ content.cms_add_products_to_your_catalog|default:'Add products to your catalog' }}</p>
+            <a href="{% url 'product_create' %}" class="btn btn-primary btn-sm">{{ content.cms_add_product|default:'Add Product' }}</a>
         </div>
         {% endif %}
     </div>

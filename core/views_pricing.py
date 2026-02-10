@@ -15,7 +15,7 @@ from .views import role_required
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER')
+@role_required('ADMIN', 'BOSS')
 def price_management_dashboard(request):
     """Price management dashboard with analytics"""
     from django.core.paginator import Paginator
@@ -43,7 +43,7 @@ def price_management_dashboard(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER')
+@role_required('ADMIN', 'BOSS')
 @require_POST
 def change_product_price(request):
     """Handle single product price change"""
@@ -113,7 +113,7 @@ def bulk_price_update(request):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER')
+@role_required('ADMIN', 'BOSS')
 def price_elasticity_analysis(request, product_id):
     """Get price elasticity analysis for a product"""
     try:
@@ -131,7 +131,7 @@ def price_elasticity_analysis(request, product_id):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER')
+@role_required('ADMIN', 'BOSS')
 def product_price_history(request, product_id):
     """Get price change history for a product"""
     try:

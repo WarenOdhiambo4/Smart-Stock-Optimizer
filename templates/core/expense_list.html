@@ -4,15 +4,15 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Expenses</h1>
+    <h1 class="page-title">{{ content.cms_expenses|default:'Expenses' }}</h1>
     <div class="quick-actions">
         <form method="get" class="search-box me-2">
             <i class="bi bi-search search-icon"></i>
             <input type="text" name="search" class="form-control form-control-sm" placeholder="Search expenses..." value="{{ search }}">
             {% csrf_token %}
         </form>
-        <a href="{% url 'expense_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Expense</a>
-        <button onclick="printExpenses()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
+        <a href="{% url 'expense_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>{{ content.cms_add_expense|default:'Add Expense' }}</a>
+        <button onclick="printExpenses()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>{{ content.cms_print|default:'Print' }}</button>
     </div>
 </div>
 
@@ -22,14 +22,14 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Expense #</th>
-                    <th>Branch</th>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Date</th>
-                    <th>Related Sale</th>
-                    <th>Actions</th>
+                    <th>{{ content.cms_expense|default:'Expense #' }}</th>
+                    <th>{{ content.cms_branch|default:'Branch' }}</th>
+                    <th>{{ content.cms_type|default:'Type' }}</th>
+                    <th>{{ content.cms_description|default:'Description' }}</th>
+                    <th>{{ content.cms_amount|default:'Amount' }}</th>
+                    <th>{{ content.cms_date|default:'Date' }}</th>
+                    <th>{{ content.cms_related_sale|default:'Related Sale' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -63,7 +63,7 @@
                             </button>
                         </form>
                         {% else %}
-                        <span class="text-muted small">Auto-generated</span>
+                        <span class="text-muted small">{{ content.cms_auto_generated|default:'Auto-generated' }}</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -74,9 +74,9 @@
         {% include 'core/pagination.html' %}
         {% else %}
         <div class="empty-state">
-            <h5>No Expenses Found</h5>
-            <p>Start tracking expenses by adding a new one.</p>
-            <a href="{% url 'expense_create' %}" class="btn btn-primary btn-sm">Add Expense</a>
+            <h5>{{ content.cms_no_expenses_found|default:'No Expenses Found' }}</h5>
+            <p>{{ content.cms_start_tracking_expenses_by_adding_a_new_one|default:'Start tracking expenses by adding a new one.' }}</p>
+            <a href="{% url 'expense_create' %}" class="btn btn-primary btn-sm">{{ content.cms_add_expense|default:'Add Expense' }}</a>
         </div>
         {% endif %}
     </div>

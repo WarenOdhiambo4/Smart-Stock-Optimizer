@@ -7,11 +7,11 @@
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-12">
-            <h4>Logistics Analytics Dashboard <span class="badge badge-success" id="liveIndicator">LIVE</span></h4>
+            <h4>Logistics Analytics Dashboard <span class="badge badge-success" id="liveIndicator">{{ content.cms_live|default:'LIVE' }}</span></h4>
             <div class="row">
                 <div class="col-md-3">
                     <select id="vehicleFilter" class="form-control">
-                        <option value="">All Vehicles</option>
+                        <option value="">{{ content.cms_all_vehicles|default:'All Vehicles' }}</option>
                         {% for vehicle in vehicles %}
                         <option value="{{ vehicle.id }}">{{ vehicle.registration_number }}</option>
                         {% endfor %}
@@ -24,7 +24,7 @@
                     <input type="date" id="dateToFilter" class="form-control" placeholder="To">
                 </div>
                 <div class="col-md-3">
-                    <button id="analyzeBtn" class="btn btn-primary">Analyze Performance</button>
+                    <button id="analyzeBtn" class="btn btn-primary">{{ content.cms_analyze_performance|default:'Analyze Performance' }}</button>
                 </div>
             </div>
         </div>
@@ -35,7 +35,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-info" style="height: 60px;">
                 <div class="card-body p-2">
-                    <small style="font-size: 10px;">Total Trips</small>
+                    <small style="font-size: 10px;">{{ content.cms_total_trips|default:'Total Trips' }}</small>
                     <h6 class="mb-0" id="totalTrips">-</h6>
                 </div>
             </div>
@@ -43,7 +43,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-warning" style="height: 60px;">
                 <div class="card-body p-2">
-                    <small style="font-size: 10px;">Distance (km)</small>
+                    <small style="font-size: 10px;">{{ content.cms_distance_km|default:'Distance (km)' }}</small>
                     <h6 class="mb-0" id="totalDistance">-</h6>
                 </div>
             </div>
@@ -51,7 +51,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-danger" style="height: 60px;">
                 <div class="card-body p-2">
-                    <small style="font-size: 10px;">Fuel Cost</small>
+                    <small style="font-size: 10px;">{{ content.cms_fuel_cost|default:'Fuel Cost' }}</small>
                     <h6 class="mb-0" id="totalFuelCost">-</h6>
                 </div>
             </div>
@@ -59,7 +59,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-success" style="height: 60px;">
                 <div class="card-body p-2">
-                    <small style="font-size: 10px;">Efficiency</small>
+                    <small style="font-size: 10px;">{{ content.cms_efficiency|default:'Efficiency' }}</small>
                     <h6 class="mb-0" id="avgEfficiency">-</h6>
                 </div>
             </div>
@@ -71,34 +71,34 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h6>Live Trip Mileage Analysis</h6>
+                    <h6>{{ content.cms_live_trip_mileage_analysis|default:'Live Trip Mileage Analysis' }}</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
-                        <div>Showing <span id="tripStart">0</span>-<span id="tripEnd">0</span> of <span id="tripTotal">0</span> trips</div>
+                        <div>Showing <span id="tripStart">{{ content.cms_0|default:'0' }}</span>-<span id="tripEnd">{{ content.cms_0|default:'0' }}</span> of <span id="tripTotal">{{ content.cms_0|default:'0' }}</span> trips</div>
                         <div>
-                            <button id="tripPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
-                            <button id="tripNextBtn" class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                            <button id="tripPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>{{ content.cms_previous|default:'Previous' }}</button>
+                            <button id="tripNextBtn" class="btn btn-sm btn-outline-secondary" disabled>{{ content.cms_next|default:'Next' }}</button>
                         </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-striped" id="tripAnalysisTable">
                             <thead>
                                 <tr>
-                                    <th>Trip #</th>
-                                    <th>Vehicle</th>
-                                    <th>Route</th>
-                                    <th>Distance (km)</th>
-                                    <th>Fuel Cost</th>
-                                    <th>Actual Fuel (L)</th>
-                                    <th>Mileage (km/L)</th>
-                                    <th>Revenue</th>
-                                    <th>Profit</th>
-                                    <th>Efficiency</th>
+                                    <th>{{ content.cms_trip|default:'Trip #' }}</th>
+                                    <th>{{ content.cms_vehicle|default:'Vehicle' }}</th>
+                                    <th>{{ content.cms_route|default:'Route' }}</th>
+                                    <th>{{ content.cms_distance_km|default:'Distance (km)' }}</th>
+                                    <th>{{ content.cms_fuel_cost|default:'Fuel Cost' }}</th>
+                                    <th>{{ content.cms_actual_fuel_l|default:'Actual Fuel (L)' }}</th>
+                                    <th>{{ content.cms_mileage_km_l|default:'Mileage (km/L)' }}</th>
+                                    <th>{{ content.cms_revenue|default:'Revenue' }}</th>
+                                    <th>{{ content.cms_profit|default:'Profit' }}</th>
+                                    <th>{{ content.cms_efficiency|default:'Efficiency' }}</th>
                                 </tr>
                             </thead>
                             <tbody id="tripAnalysisBody">
-                                <tr><td colspan="10" class="text-center">Click "Analyze Performance" to load data</td></tr>
+                                <tr><td colspan="10" class="text-center">{{ content.cms_click_analyze_performance_to_load_data|default:"Click &quot;Analyze Performance&quot; to load data" }}</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -112,35 +112,35 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-success text-white">
-                    <h6>Driver KPI Analysis (Maintenance - Transfers - Fuel - Profit)</h6>
+                    <h6>{{ content.cms_driver_kpi_analysis_maintenance_transfers_fuel_profit|default:'Driver KPI Analysis (Maintenance - Transfers - Fuel - Profit)' }}</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
-                        <div>Showing <span id="driverStart">0</span>-<span id="driverEnd">0</span> of <span id="driverTotal">0</span> drivers</div>
+                        <div>Showing <span id="driverStart">{{ content.cms_0|default:'0' }}</span>-<span id="driverEnd">{{ content.cms_0|default:'0' }}</span> of <span id="driverTotal">{{ content.cms_0|default:'0' }}</span> drivers</div>
                         <div>
-                            <button id="driverPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
-                            <button id="driverNextBtn" class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                            <button id="driverPrevBtn" class="btn btn-sm btn-outline-secondary" disabled>{{ content.cms_previous|default:'Previous' }}</button>
+                            <button id="driverNextBtn" class="btn btn-sm btn-outline-secondary" disabled>{{ content.cms_next|default:'Next' }}</button>
                         </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover" id="driverKpiTable">
                             <thead>
                                 <tr>
-                                    <th>Driver</th>
-                                    <th>Trips</th>
-                                    <th>Fuel Efficiency</th>
-                                    <th>Fuel Score</th>
-                                    <th>Maintenance Events</th>
-                                    <th>Maint. Score</th>
-                                    <th>Transfers</th>
-                                    <th>Transfer Score</th>
-                                    <th>Net Profit</th>
-                                    <th>Profit Score</th>
-                                    <th>Overall KPI</th>
+                                    <th>{{ content.cms_driver|default:'Driver' }}</th>
+                                    <th>{{ content.cms_trips|default:'Trips' }}</th>
+                                    <th>{{ content.cms_fuel_efficiency|default:'Fuel Efficiency' }}</th>
+                                    <th>{{ content.cms_fuel_score|default:'Fuel Score' }}</th>
+                                    <th>{{ content.cms_maintenance_events|default:'Maintenance Events' }}</th>
+                                    <th>{{ content.cms_maint_score|default:'Maint. Score' }}</th>
+                                    <th>{{ content.cms_transfers|default:'Transfers' }}</th>
+                                    <th>{{ content.cms_transfer_score|default:'Transfer Score' }}</th>
+                                    <th>{{ content.cms_net_profit|default:'Net Profit' }}</th>
+                                    <th>{{ content.cms_profit_score|default:'Profit Score' }}</th>
+                                    <th>{{ content.cms_overall_kpi|default:'Overall KPI' }}</th>
                                 </tr>
                             </thead>
                             <tbody id="driverKpiBody">
-                                <tr><td colspan="11" class="text-center">Loading driver KPI analysis...</td></tr>
+                                <tr><td colspan="11" class="text-center">{{ content.cms_loading_driver_kpi_analysis|default:"Loading driver KPI analysis..." }}</td></tr>
                             </tbody>
                         </table>
                     </div>

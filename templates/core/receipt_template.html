@@ -298,28 +298,28 @@
                     <span class="metadata-value">{{ document_number }}</span>
                 </div>
                 <div class="metadata-item">
-                    <span class="metadata-label">Date:</span>
+                    <span class="metadata-label">{{ content.cms_date|default:'Date:' }}</span>
                     <span class="metadata-value">{{ document_date }}</span>
                 </div>
                 {% if due_date %}
                 <div class="metadata-item">
-                    <span class="metadata-label">Due Date:</span>
+                    <span class="metadata-label">{{ content.cms_due_date|default:'Due Date:' }}</span>
                     <span class="metadata-value">{{ due_date }}</span>
                 </div>
                 {% endif %}
             </div>
             <div class="metadata-right">
                 <div class="metadata-item">
-                    <span class="metadata-label">Prepared By:</span>
+                    <span class="metadata-label">{{ content.cms_prepared_by|default:'Prepared By:' }}</span>
                     <span class="metadata-value">{{ prepared_by }}</span>
                 </div>
                 <div class="metadata-item">
-                    <span class="metadata-label">Payment Terms:</span>
+                    <span class="metadata-label">{{ content.cms_payment_terms|default:'Payment Terms:' }}</span>
                     <span class="metadata-value">{{ payment_terms }}</span>
                 </div>
                 {% if branch %}
                 <div class="metadata-item">
-                    <span class="metadata-label">Branch:</span>
+                    <span class="metadata-label">{{ content.cms_branch|default:'Branch:' }}</span>
                     <span class="metadata-value">{{ branch }}</span>
                 </div>
                 {% endif %}
@@ -343,11 +343,11 @@
                 <thead>
                     <tr>
                         <th style="width: 5%;">#</th>
-                        <th style="width: 45%;">Description</th>
-                        <th style="width: 10%;" class="text-center">Qty</th>
-                        <th style="width: 10%;" class="text-center">Unit</th>
-                        <th style="width: 15%;" class="text-right">Rate</th>
-                        <th style="width: 15%;" class="text-right">Total</th>
+                        <th style="width: 45%;">{{ content.cms_description|default:'Description' }}</th>
+                        <th style="width: 10%;" class="text-center">{{ content.cms_qty|default:'Qty' }}</th>
+                        <th style="width: 10%;" class="text-center">{{ content.cms_unit|default:'Unit' }}</th>
+                        <th style="width: 15%;" class="text-right">{{ content.cms_rate|default:'Rate' }}</th>
+                        <th style="width: 15%;" class="text-right">{{ content.cms_total|default:'Total' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -372,12 +372,12 @@
         <div class="totals-section">
             <table class="totals-table">
                 <tr>
-                    <td class="totals-label">Subtotal:</td>
+                    <td class="totals-label">{{ content.cms_subtotal|default:"Subtotal:" }}</td>
                     <td class="totals-value">{{ currency }}{{ subtotal|floatformat:2 }}</td>
                 </tr>
                 {% if discount > 0 %}
                 <tr>
-                    <td class="totals-label">Discount:</td>
+                    <td class="totals-label">{{ content.cms_discount|default:"Discount:" }}</td>
                     <td class="totals-value">-{{ currency }}{{ discount|floatformat:2 }}</td>
                 </tr>
                 {% endif %}
@@ -388,7 +388,7 @@
                 </tr>
                 {% endif %}
                 <tr class="grand-total">
-                    <td class="totals-label">GRAND TOTAL:</td>
+                    <td class="totals-label">{{ content.cms_grand_total|default:"GRAND TOTAL:" }}</td>
                     <td class="totals-value">{{ currency }}{{ grand_total|floatformat:2 }}</td>
                 </tr>
             </table>
@@ -397,7 +397,7 @@
         <!-- Terms & Conditions -->
         {% if terms_conditions %}
         <div class="terms-section">
-            <div class="terms-title">Terms & Conditions</div>
+            <div class="terms-title">{{ content.cms_terms_conditions|default:"Terms & Conditions" }}</div>
             <div class="terms-content">{{ terms_conditions|linebreaks }}</div>
         </div>
         {% endif %}
@@ -406,7 +406,7 @@
         <div class="footer">
             <div class="signature-section">
                 <div class="signature-line"></div>
-                <div class="signature-label">Authorized Signature</div>
+                <div class="signature-label">{{ content.cms_authorized_signature|default:"Authorized Signature" }}</div>
             </div>
             <div class="footer-info">
                 Generated on {{ generated_date }}<br>

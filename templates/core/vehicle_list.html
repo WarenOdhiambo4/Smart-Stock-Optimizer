@@ -4,9 +4,9 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Vehicles</h1>
+    <h1 class="page-title">{{ content.cms_vehicles|default:'Vehicles' }}</h1>
     <div class="page-actions">
-        <a href="{% url 'vehicle_create' %}" class="btn btn-primary">Add Vehicle</a>
+        <a href="{% url 'vehicle_create' %}" class="btn btn-primary">{{ content.cms_add_vehicle|default:'Add Vehicle' }}</a>
     </div>
 </div>
 
@@ -15,7 +15,7 @@
         <form method="get" class="mb-3">
             <div class="input-group">
                 <input type="text" name="search" class="form-control" placeholder="Search vehicles..." value="{{ search }}">
-                <button type="submit" class="btn btn-outline-secondary">Search</button>
+                <button type="submit" class="btn btn-outline-secondary">{{ content.cms_search|default:'Search' }}</button>
             </div>
         </form>
 
@@ -23,15 +23,15 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>Registration</th>
-                        <th>Type</th>
-                        <th>Make/Model</th>
-                        <th>Branch</th>
-                        <th>Driver</th>
-                        <th>Status</th>
-                        <th>Mileage</th>
-                        <th>Revenue</th>
-                        <th>Actions</th>
+                        <th>{{ content.cms_registration|default:'Registration' }}</th>
+                        <th>{{ content.cms_type|default:'Type' }}</th>
+                        <th>{{ content.cms_make_model|default:'Make/Model' }}</th>
+                        <th>{{ content.cms_branch|default:'Branch' }}</th>
+                        <th>{{ content.cms_driver|default:'Driver' }}</th>
+                        <th>{{ content.cms_status|default:'Status' }}</th>
+                        <th>{{ content.cms_mileage|default:'Mileage' }}</th>
+                        <th>{{ content.cms_revenue|default:'Revenue' }}</th>
+                        <th>{{ content.cms_actions|default:'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,12 +50,12 @@
                         <td>{{ vehicle.current_mileage|floatformat:0 }} KM</td>
                         <td>${{ vehicle.total_revenue|floatformat:2 }}</td>
                         <td>
-                            <a href="{% url 'vehicle_edit' vehicle.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <a href="{% url 'vehicle_edit' vehicle.pk %}" class="btn btn-sm btn-outline-primary">{{ content.cms_edit|default:'Edit' }}</a>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center text-muted">No vehicles found</td>
+                        <td colspan="9" class="text-center text-muted">{{ content.cms_no_vehicles_found|default:"No vehicles found" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

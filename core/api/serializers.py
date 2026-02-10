@@ -3,7 +3,9 @@ from core.models import (
     Branch, Employee, Product, Stock, StockMovement, Order, OrderItem,
     Sale, SaleItem, Expense, Vehicle, Trip, VehicleMaintenance,
     OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection,
-    Logistics
+    Logistics,
+    ChartOfAccount, LedgerTransaction, GeneralLedger,
+    IncomeRegister, ExpenseRegister, LoansRegister, PayrollLedger, AllowanceRegister
 )
 
 
@@ -170,4 +172,62 @@ class LogisticsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Logistics
+        fields = '__all__'
+
+
+class ChartOfAccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChartOfAccount
+        fields = '__all__'
+
+
+class LedgerTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LedgerTransaction
+        fields = '__all__'
+
+
+class GeneralLedgerSerializer(serializers.ModelSerializer):
+    account_name = serializers.CharField(source='account.account_name', read_only=True)
+    account_code = serializers.CharField(source='account.account_code', read_only=True)
+    transaction_id = serializers.CharField(source='transaction.transaction_id', read_only=True)
+    transaction_date = serializers.DateField(source='transaction.transaction_date', read_only=True)
+
+    class Meta:
+        model = GeneralLedger
+        fields = '__all__'
+
+
+class IncomeRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IncomeRegister
+        fields = '__all__'
+
+
+class ExpenseRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpenseRegister
+        fields = '__all__'
+
+
+class LoansRegisterSerializer(serializers.ModelSerializer):
+    outstanding_balance = serializers.ReadOnlyField()
+
+    class Meta:
+        model = LoansRegister
+        fields = '__all__'
+
+
+class PayrollLedgerSerializer(serializers.ModelSerializer):
+    gross_pay = serializers.ReadOnlyField()
+    net_pay = serializers.ReadOnlyField()
+
+    class Meta:
+        model = PayrollLedger
+        fields = '__all__'
+
+
+class AllowanceRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AllowanceRegister
         fields = '__all__'

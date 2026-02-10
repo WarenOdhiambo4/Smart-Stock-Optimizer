@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Allowances Register{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ content.cms_allowances_register|default:'Allowances Register' }}</h1>
+</div>
+
+{% include 'core/finance_nav.html' %}
+
+<div class="finance-actions" data-add-row-wrapper>
+    <button type="button" class="btn btn-primary" data-add-row>{{ content.cms_add_row|default:'Add Row' }}</button>
+</div>
+
+<div class="spreadsheet-wrap" data-add-row-wrapper>
+    <table class="spreadsheet-table">
+        <thead>
+            <tr>
+                <th class="freeze-col">{{ content.cms_employee_name|default:'Employee Name' }}</th>
+                <th>{{ content.cms_allowance_type|default:'Allowance Type' }}</th>
+                <th>{{ content.cms_fixed_variable|default:'Fixed / Variable' }}</th>
+                <th class="num">{{ content.cms_amount|default:'Amount' }}</th>
+                <th>{{ content.cms_effective_date|default:'Effective Date' }}</th>
+                <th>{{ content.cms_status|default:'Status' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr data-update-url="{% url 'allowances_register_update' entry.id %}" data-locked="false">
+                <td class="freeze-col editable" contenteditable="true" data-editable="true" data-field="employee_name">{{ entry.employee_name }}</td>
+                <td class="editable" contenteditable="true" data-editable="true" data-field="allowance_type">{{ entry.allowance_type }}</td>
+                <td>
+                    <select class="cell-select" data-editable="true" data-field="fixed_or_variable">
+                        {% for code, label in fixed_types %}
+                        <option value="{{ code }}" {% if entry.fixed_or_variable == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="num editable" contenteditable="true" data-editable="true" data-field="amount">{{ entry.amount|floatformat:2 }}</td>
+                <td>
+                    <input type="date" class="cell-input" data-editable="true" data-field="effective_date" value="{{ entry.effective_date|date:'Y-m-d' }}">
+                </td>
+                <td>
+                    <select class="cell-select" data-editable="true" data-field="status">
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if entry.status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted">{{ content.cms_no_allowances_found|default:"No allowances found" }}</td></tr>
+            {% endfor %}
+            <tr class="add-row" data-new-row="true" data-create-url="{% url 'allowances_register_create' %}">
+                <td class="freeze-col"><input class="cell-input" data-field="employee_name" placeholder="Employee"></td>
+                <td><input class="cell-input" data-field="allowance_type" placeholder="Allowance"></td>
+                <td>
+                    <select class="cell-select" data-field="fixed_or_variable">
+                        {% for code, label in fixed_types %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="num"><input class="cell-input" data-field="amount" placeholder="0.00"></td>
+                <td><input type="date" class="cell-input" data-field="effective_date"></td>
+                <td>
+                    <select class="cell-select" data-field="status">
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/finance_tables.js' %}"></script>
+{% endblock %}

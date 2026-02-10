@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">{{ action }} Business Note</h1>
-    <a href="{% url 'note_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Notes</a>
+    <a href="{% url 'note_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>{{ content.cms_back_to_notes|default:'Back to Notes' }}</a>
 </div>
 
 <div class="row">
@@ -16,32 +16,31 @@
                     {% csrf_token %}
                     <div class="row g-3">
                         <div class="col-12">
-                            <label for="title" class="form-label">Title *</label>
+                            <label for="title" class="form-label">{{ content.cms_title|default:'Title *' }}</label>
                             <input type="text" name="title" id="title" class="form-control" value="{% if note %}{{ note.title }}{% endif %}" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="priority" class="form-label">Priority *</label>
+                            <label for="priority" class="form-label">{{ content.cms_priority|default:'Priority *' }}</label>
                             <select name="priority" id="priority" class="form-select" required>
-                                <option value="LOW" {% if note and note.priority == 'LOW' %}selected{% endif %}>Low</option>
-                                <option value="MEDIUM" {% if note and note.priority == 'MEDIUM' %}selected{% elif not note %}selected{% endif %}>Medium</option>
-                                <option value="HIGH" {% if note and note.priority == 'HIGH' %}selected{% endif %}>High</option>
-                                <option value="URGENT" {% if note and note.priority == 'URGENT' %}selected{% endif %}>Urgent</option>
+                                <option value="LOW" {% if note and note.priority == 'LOW' %}selected{% endif %}>{{ content.cms_low|default:'Low' }}</option>
+                                <option value="MEDIUM" {% if note and note.priority == 'MEDIUM' %}selected{% elif not note %}selected{% endif %}>{{ content.cms_medium|default:'Medium' }}</option>
+                                <option value="HIGH" {% if note and note.priority == 'HIGH' %}selected{% endif %}>{{ content.cms_high|default:'High' }}</option>
+                                <option value="URGENT" {% if note and note.priority == 'URGENT' %}selected{% endif %}>{{ content.cms_urgent|default:'Urgent' }}</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="tags" class="form-label">Tags</label>
+                            <label for="tags" class="form-label">{{ content.cms_tags|default:'Tags' }}</label>
                             <input type="text" name="tags" id="tags" class="form-control" value="{% if note %}{{ note.tags }}{% endif %}" placeholder="strategy, meeting, idea">
-                            <div class="form-text">Comma-separated tags</div>
+                            <div class="form-text">{{ content.cms_comma_separated_tags|default:"Comma-separated tags" }}</div>
                         </div>
                         <div class="col-12">
-                            <label for="content" class="form-label">Content *</label>
+                            <label for="content" class="form-label">{{ content.cms_content|default:'Content *' }}</label>
                             <textarea name="content" id="content" class="form-control" rows="8" required>{% if note %}{{ note.content }}{% endif %}</textarea>
                         </div>
                         <div class="col-12">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i>Save Note
-                            </button>
-                            <a href="{% url 'note_list' %}" class="btn btn-secondary">Cancel</a>
+                                <i class="bi bi-check-lg me-1"></i>{{ content.cms_save_note|default:'Save Note' }}</button>
+                            <a href="{% url 'note_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
                         </div>
                     </div>
                 </form>
@@ -51,7 +50,7 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Tips</h6>
+                <h6 class="mb-0">{{ content.cms_tips|default:'Tips' }}</h6>
             </div>
             <div class="card-body">
                 <ul class="list-unstyled small">

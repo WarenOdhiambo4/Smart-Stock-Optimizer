@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Income Register{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ content.cms_income_register|default:'Income Register' }}</h1>
+</div>
+
+{% include 'core/finance_nav.html' %}
+
+{% if not manual_allowed %}
+<div class="finance-note">{{ content.cms_income_register_is_auto_synced_from_sales_edit_in_sales_modu|default:"Income Register is auto-synced from Sales. Edit in Sales module." }}</div>
+{% endif %}
+
+<div class="spreadsheet-wrap">
+    <table class="spreadsheet-table">
+        <thead>
+            <tr>
+                <th class="freeze-col">{{ content.cms_date|default:'Date' }}</th>
+                <th>{{ content.cms_receipt_no|default:'Receipt No' }}</th>
+                <th>{{ content.cms_client_source|default:'Client / Source' }}</th>
+                <th>{{ content.cms_account_credited|default:'Account Credited' }}</th>
+                <th class="num">{{ content.cms_amount|default:'Amount' }}</th>
+                <th>{{ content.cms_payment_method|default:'Payment Method' }}</th>
+                <th>{{ content.cms_reference|default:'Reference' }}</th>
+                <th>{{ content.cms_posted|default:'Posted' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td class="freeze-col">{{ entry.date }}</td>
+                <td>{{ entry.receipt_no }}</td>
+                <td>{{ entry.source }}</td>
+                <td>{{ entry.account_credited.account_code }} - {{ entry.account_credited.account_name }}</td>
+                <td class="num">{{ entry.amount|floatformat:2 }}</td>
+                <td>{{ entry.get_payment_method_display }}</td>
+                <td>{{ entry.reference }}</td>
+                <td>
+                    {% if entry.posted %}
+                        <span class="row-status posted">{{ content.cms_yes|default:'Yes' }}</span>
+                    {% else %}
+                        <span class="row-status pending">{{ content.cms_no|default:'No' }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted">{{ content.cms_no_income_entries_found|default:"No income entries found" }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/finance_tables.js' %}"></script>
+{% endblock %}

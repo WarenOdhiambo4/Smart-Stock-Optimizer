@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0">Sales</h1>
+    <h1 class="h3 mb-0">{{ content.cms_sales|default:'Sales' }}</h1>
     <a href="{% url 'sale_create' %}" class="btn btn-primary">
         <i class="bi bi-plus-circle me-1"></i>
-        <span class="d-none d-sm-inline">New Sale</span>
-        <span class="d-sm-none">New</span>
+        <span class="d-none d-sm-inline">{{ content.cms_new_sale|default:'New Sale' }}</span>
+        <span class="d-sm-none">{{ content.cms_new|default:'New' }}</span>
     </a>
 </div>
 
@@ -22,7 +22,7 @@
                 </div>
                 <div class="col-6 col-md-3">
                     <select name="branch" class="form-select">
-                        <option value="">All Branches</option>
+                        <option value="">{{ content.cms_all_branches|default:'All Branches' }}</option>
                         {% for branch in branches %}
                         <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ branch.name }}</option>
                         {% endfor %}
@@ -36,8 +36,7 @@
                 </div>
                 <div class="col-6 col-md-2">
                     <button type="submit" class="btn btn-outline-secondary w-100">
-                        <i class="bi bi-funnel me-1"></i>Filter
-                    </button>
+                        <i class="bi bi-funnel me-1"></i>{{ content.cms_filter|default:'Filter' }}</button>
                 </div>
             </div>
         </form>
@@ -48,14 +47,14 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Sale #</th>
-                        <th class="d-none d-md-table-cell">Branch</th>
-                        <th class="d-none d-lg-table-cell">Customer</th>
-                        <th class="d-none d-sm-table-cell">Items</th>
-                        <th>Total</th>
-                        <th class="d-none d-md-table-cell">Payment</th>
-                        <th class="d-none d-lg-table-cell">Date</th>
-                        <th>Actions</th>
+                        <th>{{ content.cms_sale|default:'Sale #' }}</th>
+                        <th class="d-none d-md-table-cell">{{ content.cms_branch|default:'Branch' }}</th>
+                        <th class="d-none d-lg-table-cell">{{ content.cms_customer|default:'Customer' }}</th>
+                        <th class="d-none d-sm-table-cell">{{ content.cms_items|default:'Items' }}</th>
+                        <th>{{ content.cms_total|default:'Total' }}</th>
+                        <th class="d-none d-md-table-cell">{{ content.cms_payment|default:'Payment' }}</th>
+                        <th class="d-none d-lg-table-cell">{{ content.cms_date|default:'Date' }}</th>
+                        <th>{{ content.cms_actions|default:'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -90,11 +89,17 @@
                             <div class="btn-group" role="group">
                                 <a href="{% url 'sale_detail' sale.pk %}" class="btn btn-outline-primary btn-sm" title="View Details">
                                     <i class="bi bi-eye"></i>
-                                    <span class="d-none d-xl-inline ms-1">View</span>
+                                    <span class="d-none d-xl-inline ms-1">{{ content.cms_view|default:'View' }}</span>
                                 </a>
+                                {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' %}
+                                <a href="{% url 'sale_edit' sale.pk %}" class="btn btn-outline-warning btn-sm" title="Edit Sale">
+                                    <i class="bi bi-pencil"></i>
+                                    <span class="d-none d-xl-inline ms-1">{{ content.cms_edit|default:'Edit' }}</span>
+                                </a>
+                                {% endif %}
                                 <a href="{% url 'sale_print' sale.pk %}" class="btn btn-outline-success btn-sm" title="Print PDF" target="_blank">
                                     <i class="bi bi-printer"></i>
-                                    <span class="d-none d-xl-inline ms-1">Print</span>
+                                    <span class="d-none d-xl-inline ms-1">{{ content.cms_print|default:'Print' }}</span>
                                 </a>
                             </div>
                         </td>
@@ -149,11 +154,10 @@
         {% else %}
         <div class="text-center py-5">
             <i class="bi bi-cart text-muted" style="font-size: 3rem;"></i>
-            <h5 class="mt-3">No sales found</h5>
-            <p class="text-muted">Record your first sale to get started</p>
+            <h5 class="mt-3">{{ content.cms_no_sales_found|default:'No sales found' }}</h5>
+            <p class="text-muted">{{ content.cms_record_your_first_sale_to_get_started|default:'Record your first sale to get started' }}</p>
             <a href="{% url 'sale_create' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle me-1"></i>New Sale
-            </a>
+                <i class="bi bi-plus-circle me-1"></i>{{ content.cms_new_sale|default:'New Sale' }}</a>
         </div>
         {% endif %}
     </div>

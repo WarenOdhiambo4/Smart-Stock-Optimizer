@@ -4,9 +4,9 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Vehicle Maintenance</h1>
+    <h1 class="page-title">{{ content.cms_vehicle_maintenance|default:'Vehicle Maintenance' }}</h1>
     <div class="page-actions">
-        <a href="{% url 'maintenance_create' %}" class="btn btn-primary">Schedule Maintenance</a>
+        <a href="{% url 'maintenance_create' %}" class="btn btn-primary">{{ content.cms_schedule_maintenance|default:'Schedule Maintenance' }}</a>
     </div>
 </div>
 
@@ -15,7 +15,7 @@
         <form method="get" class="mb-3">
             <div class="input-group">
                 <input type="text" name="search" class="form-control" placeholder="Search maintenance..." value="{{ search }}">
-                <button type="submit" class="btn btn-outline-secondary">Search</button>
+                <button type="submit" class="btn btn-outline-secondary">{{ content.cms_search|default:'Search' }}</button>
             </div>
         </form>
 
@@ -23,14 +23,15 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>Maintenance #</th>
-                        <th>Vehicle</th>
-                        <th>Type</th>
-                        <th>Service Date</th>
-                        <th>Provider</th>
-                        <th>Status</th>
-                        <th>Total Cost</th>
-                        <th>Mileage</th>
+                        <th>{{ content.cms_maintenance|default:'Maintenance #' }}</th>
+                        <th>{{ content.cms_vehicle|default:'Vehicle' }}</th>
+                        <th>{{ content.cms_type|default:'Type' }}</th>
+                        <th>{{ content.cms_service_date|default:'Service Date' }}</th>
+                        <th>{{ content.cms_provider|default:'Provider' }}</th>
+                        <th>{{ content.cms_status|default:'Status' }}</th>
+                        <th>{{ content.cms_total_cost|default:'Total Cost' }}</th>
+                        <th>{{ content.cms_mileage|default:'Mileage' }}</th>
+                        <th>{{ content.cms_actions|default:'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,10 +49,15 @@
                         </td>
                         <td>${{ maint.total_cost|floatformat:2 }}</td>
                         <td>{{ maint.mileage_at_service|floatformat:0 }} KM</td>
+                        <td>
+                            {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
+                            <a href="{% url 'maintenance_edit' maint.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted">No maintenance records found</td>
+                        <td colspan="9" class="text-center text-muted">{{ content.cms_no_maintenance_records_found|default:"No maintenance records found" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -64,10 +70,10 @@
             <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}">&laquo; First</a>
+                        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}">{{ content.cms_laquo_first|default:'&laquo; First' }}</a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}">Previous</a>
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}">{{ content.cms_previous|default:'Previous' }}</a>
                     </li>
                 {% endif %}
                 
@@ -79,10 +85,10 @@
                 
                 {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}">Next</a>
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}">{{ content.cms_next|default:'Next' }}</a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}">Last &raquo;</a>
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}">{{ content.cms_last_raquo|default:'Last &raquo;' }}</a>
                     </li>
                 {% endif %}
             </ul>

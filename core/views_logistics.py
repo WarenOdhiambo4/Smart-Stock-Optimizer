@@ -5,10 +5,12 @@ from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from .logistics_analytics import LogisticsAnalytics, KPISecretDashboard
 from .models import Vehicle, Branch
+from .views import role_required
 from datetime import datetime
 import json
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def logistics_dashboard(request):
     """Main logistics dashboard view"""
     from .models import Vehicle
@@ -16,6 +18,7 @@ def logistics_dashboard(request):
     return render(request, 'core/logistics_dashboard.html', {'vehicles': vehicles})
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def logistics_analysis_api(request):
     """API endpoint for logistics analysis data"""
     try:
@@ -55,6 +58,7 @@ def logistics_analysis_api(request):
         }, status=500)
 
 @login_required
+@role_required('ADMIN')
 def kpi_secret_dashboard(request):
     """Secret KPI dashboard view"""
     # Skip admin check for now to debug the issue
@@ -64,6 +68,7 @@ def kpi_secret_dashboard(request):
     return render(request, 'core/kpi_secret_dashboard.html')
 
 @login_required
+@role_required('ADMIN')
 def kpi_dashboard_api(request):
     """API endpoint for KPI secret dashboard data"""
     from django.db import connection
@@ -162,6 +167,7 @@ def kpi_dashboard_api(request):
         }, status=500)
 
 @login_required
+@role_required('ADMIN')
 def kpi_secret_print(request):
     """Generate PDF for KPI Secret Dashboard"""
     from .receipt_generator import ReceiptGenerator
@@ -267,29 +273,9 @@ def kpi_secret_print(request):
     except Exception as e:
         from django.http import HttpResponse
 @login_required
+@role_required('ADMIN')
 def branch_performance_detail_api(request, branch_id):
     """API endpoint for detailed branch performance"""
-    if not hasattr(request.user, 'profile') or request.user.profile.role != 'ADMIN':
-        return JsonResponse({'error': 'Access denied'}, status=403)
-    
-    month = request.GET.get('month')
-    year = request.GET.get('year')
-    
-    kpi_dashboard = KPISecretDashboard()
-    performance_data = kpi_dashboard.analyze_branch_performance(
-        branch_id=branch_id,
-        month=int(month) if month else None,
-        year=int(year) if year else None
-    )
-    
-    return JsonResponse({
-        'status': 'success',
-        'data': performance_data
-    })
-    """API endpoint for detailed branch performance"""
-    if not hasattr(request.user, 'profile') or request.user.profile.role != 'ADMIN':
-        return JsonResponse({'error': 'Access denied'}, status=403)
-    
     month = request.GET.get('month')
     year = request.GET.get('year')
     
@@ -306,6 +292,7 @@ def branch_performance_detail_api(request, branch_id):
     })
 
 @login_required
+@role_required('ADMIN', 'LOGISTICS')
 def vehicle_trip_distance_api(request):
     """API endpoint to calculate trip distance"""
     origin = request.GET.get('origin')

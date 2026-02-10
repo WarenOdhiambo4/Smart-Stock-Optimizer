@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Branches</h1>
+    <h1 class="page-title">{{ content.cms_branches|default:'Branches' }}</h1>
     <div class="d-flex gap-2">
         <div class="search-box">
             <i class="bi bi-search search-icon"></i>
@@ -12,7 +12,7 @@
                 <input type="text" name="search" class="form-control form-control-sm" placeholder="Search branches..." value="{{ search }}">
             </form>
         </div>
-        <a href="{% url 'branch_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Branch</a>
+        <a href="{% url 'branch_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>{{ content.cms_add_branch|default:'Add Branch' }}</a>
     </div>
 </div>
 
@@ -22,12 +22,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Address</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{{ content.cms_name|default:'Name' }}</th>
+                    <th>{{ content.cms_address|default:'Address' }}</th>
+                    <th>{{ content.cms_phone|default:'Phone' }}</th>
+                    <th>{{ content.cms_email|default:'Email' }}</th>
+                    <th>{{ content.cms_status|default:'Status' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -39,9 +39,9 @@
                     <td>{{ branch.email }}</td>
                     <td>
                         {% if branch.is_active %}
-                            <span class="badge badge-success">Active</span>
+                            <span class="badge badge-success">{{ content.cms_active|default:'Active' }}</span>
                         {% else %}
-                            <span class="badge badge-secondary">Inactive</span>
+                            <span class="badge badge-secondary">{{ content.cms_inactive|default:'Inactive' }}</span>
                         {% endif %}
                     </td>
                     <td>
@@ -62,9 +62,9 @@
         {% else %}
         <div class="empty-state">
             <i class="bi bi-building" style="font-size: 3rem;"></i>
-            <h5>No branches found</h5>
-            <p>Create your first branch to get started</p>
-            <a href="{% url 'branch_create' %}" class="btn btn-primary btn-sm">Add Branch</a>
+            <h5>{{ content.cms_no_branches_found|default:'No branches found' }}</h5>
+            <p>{{ content.cms_create_your_first_branch_to_get_started|default:'Create your first branch to get started' }}</p>
+            <a href="{% url 'branch_create' %}" class="btn btn-primary btn-sm">{{ content.cms_add_branch|default:'Add Branch' }}</a>
         </div>
         {% endif %}
     </div>

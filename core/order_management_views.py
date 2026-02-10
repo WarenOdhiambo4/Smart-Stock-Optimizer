@@ -3,14 +3,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from .models import Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Branch, Product, Employee
 from .views import role_required
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'SALES')
+@role_required('ADMIN', 'MANAGER', 'BOSS', 'SALES')
 def order_edit(request, pk):
     """Edit order details including items, branch, and supplier"""
     from .delivery_manager import DeliveryChargesManager
@@ -25,24 +25,28 @@ def order_edit(request, pk):
                 old_branch = order.branch
                 new_branch_id = request.POST.get('branch')
                 new_branch = get_object_or_404(Branch, pk=new_branch_id)
-                
+
                 order.supplier = request.POST.get('supplier', '')
                 order.notes = request.POST.get('notes', '')
-                
+
                 # Handle delivery charges update
-                delivery_charges = Decimal(request.POST.get('delivery_charges', '0'))
+                delivery_charges_raw = request.POST.get('delivery_charges', '0') or '0'
+                try:
+                    delivery_charges = Decimal(delivery_charges_raw)
+                except InvalidOperation:
+                    delivery_charges = Decimal('0')
                 DeliveryChargesManager.set_delivery_charges(
-                    order, 
-                    delivery_charges, 
+                    order,
+                    delivery_charges,
                     created_by=getattr(request.user, 'employee', None)
                 )
-                
+
                 # Change branch if different
                 if old_branch and old_branch.id != int(new_branch_id):
                     if hasattr(order, 'change_branch'):
                         try:
                             order.change_branch(new_branch, changed_by=getattr(request.user, 'employee', None))
-                        except Exception as e:
+                        except Exception:
                             order.branch = new_branch
                             order.save()
                     else:
@@ -50,7 +54,81 @@ def order_edit(request, pk):
                         order.save()
                 else:
                     order.save()
-                
+
+                # Update order items
+                item_ids = request.POST.getlist('item_id')
+                product_names = request.POST.getlist('product_name')
+                product_skus = request.POST.getlist('product_sku')
+                quantities = request.POST.getlist('quantity')
+                unit_prices = request.POST.getlist('unit_price')
+
+                seen_ids = set()
+                for idx, name in enumerate(product_names):
+                    name = (name or '').strip()
+                    if not name:
+                        continue
+
+                    sku = product_skus[idx] if idx < len(product_skus) else ''
+                    qty_raw = quantities[idx] if idx < len(quantities) else '0'
+                    price_raw = unit_prices[idx] if idx < len(unit_prices) else '0'
+
+                    try:
+                        qty = Decimal(str(qty_raw))
+                    except InvalidOperation:
+                        qty = Decimal('0')
+
+                    try:
+                        price = Decimal(str(price_raw))
+                    except InvalidOperation:
+                        price = Decimal('0')
+
+                    item_id = item_ids[idx] if idx < len(item_ids) else ''
+                    if item_id:
+                        item = get_object_or_404(OrderItem, pk=item_id, order=order)
+                        if item.quantity_completed and qty < item.quantity_completed:
+                            messages.error(
+                                request,
+                                f'Quantity for "{item.product_name}" cannot be less than completed quantity.'
+                            )
+                            return redirect('order_edit', pk=order.pk)
+
+                        item.product_name = name
+                        item.product_sku = sku
+                        item.quantity = qty
+                        item.quantity_ordered = qty
+                        item.unit_price = price
+                        if hasattr(item, 'quantity_completed'):
+                            item.quantity_remaining = qty - item.quantity_completed
+                            if item.quantity_remaining < 0:
+                                item.quantity_remaining = Decimal('0')
+                            item.update_completion_status()
+                        else:
+                            item.save()
+                        seen_ids.add(item.id)
+                    else:
+                        new_item = OrderItem.objects.create(
+                            order=order,
+                            product_name=name,
+                            product_sku=sku,
+                            quantity=qty,
+                            quantity_ordered=qty,
+                            quantity_completed=Decimal('0.00'),
+                            quantity_remaining=qty,
+                            unit_price=price,
+                            status='PENDING',
+                        )
+                        seen_ids.add(new_item.id)
+
+                # Remove items deleted in the form
+                for item in order.items.exclude(id__in=seen_ids):
+                    if getattr(item, 'quantity_completed', Decimal('0')) > 0:
+                        continue
+                    item.delete()
+
+                order.calculate_total()
+                if hasattr(order, 'update_completion_status'):
+                    order.update_completion_status()
+
                 messages.success(request, f'Order {order.order_number} updated successfully!')
                 return redirect('order_detail', pk=order.pk)
         
@@ -58,7 +136,7 @@ def order_edit(request, pk):
             'order': order,
             'branches': branches,
             'action': 'Edit',
-            'delivery_charges': DeliveryChargesManager.get_delivery_charges(order)
+            'delivery_charges': DeliveryChargesManager.get_delivery_charges(order),
         })
     except Exception as e:
         messages.error(request, f'Error editing order: {str(e)}')
@@ -66,7 +144,7 @@ def order_edit(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'SALES')
+@role_required('ADMIN', 'MANAGER', 'BOSS', 'SALES')
 def order_partial_complete(request, pk):
     """Complete selected items or partial quantities from an order"""
     order = get_object_or_404(Order, pk=pk)
@@ -86,7 +164,7 @@ def order_partial_complete(request, pk):
             
             for i, item_id in enumerate(item_ids):
                 if item_id and i < len(quantities_to_complete):
-                    quantity = int(quantities_to_complete[i]) if quantities_to_complete[i] else 0
+                    quantity = Decimal(str(quantities_to_complete[i])) if quantities_to_complete[i] else Decimal('0.00')
                     
                     if quantity > 0:
                         item = get_object_or_404(OrderItem, pk=item_id, order=order)
@@ -135,7 +213,7 @@ def order_partial_complete(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'SALES')
+@role_required('ADMIN', 'BOSS', 'SALES')
 def order_change_branch(request, pk):
     """Change order branch"""
     order = get_object_or_404(Order, pk=pk)
@@ -173,7 +251,7 @@ def order_change_branch(request, pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'SALES')
+@role_required('ADMIN', 'BOSS', 'SALES')
 def order_item_complete(request, order_pk, item_pk):
     """Complete a specific order item entirely"""
     order = get_object_or_404(Order, pk=order_pk)
@@ -218,6 +296,7 @@ def order_item_complete(request, order_pk, item_pk):
 
 
 @login_required
+@role_required('ADMIN', 'BOSS', 'SALES')
 def order_completion_history(request, pk):
     """View order completion history"""
     order = get_object_or_404(Order, pk=pk)
@@ -265,7 +344,7 @@ def get_order_item_details(request, item_pk):
 
 
 @login_required
-@role_required('ADMIN', 'BOSS', 'MANAGER', 'SALES')
+@role_required('ADMIN', 'BOSS', 'SALES')
 def bulk_order_operations(request):
     """Bulk operations on multiple orders"""
     try:

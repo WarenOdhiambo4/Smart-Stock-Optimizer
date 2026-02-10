@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">{{ action }} Expense</h1>
-    <a href="{% url 'expense_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to List</a>
+    <a href="{% url 'expense_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>{{ content.cms_back_to_list|default:'Back to List' }}</a>
 </div>
 
 <div class="row">
@@ -16,60 +16,60 @@
                     {% csrf_token %}
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="branch" class="form-label">Branch *</label>
+                            <label for="branch" class="form-label">{{ content.cms_branch|default:'Branch *' }}</label>
                             <select name="branch" id="branch" class="form-select" required>
-                                <option value="">Select Branch</option>
+                                <option value="">{{ content.cms_select_branch|default:'Select Branch' }}</option>
                                 {% for branch in branches %}
                                 <option value="{{ branch.id }}" {% if expense and expense.branch.id == branch.id %}selected{% endif %}>{{ branch.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="expense_type" class="form-label">Expense Type *</label>
+                            <label for="expense_type" class="form-label">{{ content.cms_expense_type|default:'Expense Type *' }}</label>
                             <select name="expense_type" id="expense_type" class="form-select" required>
-                                <option value="">Select Type</option>
-                                <option value="OPERATIONAL" {% if expense and expense.expense_type == 'OPERATIONAL' %}selected{% endif %}>Operational Expense</option>
-                                <option value="SALE_RELATED" {% if expense and expense.expense_type == 'SALE_RELATED' %}selected{% endif %}>Sale Related Expense</option>
-                                <option value="TRANSPORT" {% if expense and expense.expense_type == 'TRANSPORT' %}selected{% endif %}>Transport/Delivery</option>
-                                <option value="UTILITIES" {% if expense and expense.expense_type == 'UTILITIES' %}selected{% endif %}>Utilities</option>
-                                <option value="SALARY" {% if expense and expense.expense_type == 'SALARY' %}selected{% endif %}>Salary</option>
-                                <option value="RENT" {% if expense and expense.expense_type == 'RENT' %}selected{% endif %}>Rent</option>
-                                <option value="MAINTENANCE" {% if expense and expense.expense_type == 'MAINTENANCE' %}selected{% endif %}>Maintenance</option>
-                                <option value="OTHER" {% if expense and expense.expense_type == 'OTHER' %}selected{% endif %}>Other</option>
+                                <option value="">{{ content.cms_select_type|default:'Select Type' }}</option>
+                                <option value="OPERATIONAL" {% if expense and expense.expense_type == 'OPERATIONAL' %}selected{% endif %}>{{ content.cms_operational_expense|default:'Operational Expense' }}</option>
+                                <option value="SALE_RELATED" {% if expense and expense.expense_type == 'SALE_RELATED' %}selected{% endif %}>{{ content.cms_sale_related_expense|default:'Sale Related Expense' }}</option>
+                                <option value="TRANSPORT" {% if expense and expense.expense_type == 'TRANSPORT' %}selected{% endif %}>{{ content.cms_transport_delivery|default:'Transport/Delivery' }}</option>
+                                <option value="UTILITIES" {% if expense and expense.expense_type == 'UTILITIES' %}selected{% endif %}>{{ content.cms_utilities|default:'Utilities' }}</option>
+                                <option value="SALARY" {% if expense and expense.expense_type == 'SALARY' %}selected{% endif %}>{{ content.cms_salary|default:'Salary' }}</option>
+                                <option value="RENT" {% if expense and expense.expense_type == 'RENT' %}selected{% endif %}>{{ content.cms_rent|default:'Rent' }}</option>
+                                <option value="MAINTENANCE" {% if expense and expense.expense_type == 'MAINTENANCE' %}selected{% endif %}>{{ content.cms_maintenance|default:'Maintenance' }}</option>
+                                <option value="OTHER" {% if expense and expense.expense_type == 'OTHER' %}selected{% endif %}>{{ content.cms_other|default:'Other' }}</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="amount" class="form-label">Amount *</label>
+                            <label for="amount" class="form-label">{{ content.cms_amount|default:'Amount *' }}</label>
                             <input type="number" name="amount" id="amount" class="form-control" step="0.01" value="{% if expense %}{{ expense.amount }}{% endif %}" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="expense_date" class="form-label">Expense Date *</label>
+                            <label for="expense_date" class="form-label">{{ content.cms_expense_date|default:'Expense Date *' }}</label>
                             <input type="date" name="expense_date" id="expense_date" class="form-control" value="{% if expense %}{{ expense.expense_date|date:'Y-m-d' }}{% endif %}" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="sale" class="form-label">Related Sale (Optional)</label>
+                            <label for="sale" class="form-label">{{ content.cms_related_sale_optional|default:'Related Sale (Optional)' }}</label>
                             <select name="sale" id="sale" class="form-select">
-                                <option value="">None</option>
+                                <option value="">{{ content.cms_none|default:'None' }}</option>
                                 {% for sale in sales %}
                                 <option value="{{ sale.id }}" {% if expense and expense.sale and expense.sale.id == sale.id %}selected{% endif %}>{{ sale.sale_number }} - {{ sale.branch.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="receipt_number" class="form-label">Receipt Number</label>
+                            <label for="receipt_number" class="form-label">{{ content.cms_receipt_number|default:'Receipt Number' }}</label>
                             <input type="text" name="receipt_number" id="receipt_number" class="form-control" value="{% if expense %}{{ expense.receipt_number }}{% endif %}">
                         </div>
                         <div class="col-12">
-                            <label for="description" class="form-label">Description *</label>
+                            <label for="description" class="form-label">{{ content.cms_description|default:'Description *' }}</label>
                             <textarea name="description" id="description" class="form-control" rows="3" required>{% if expense %}{{ expense.description }}{% endif %}</textarea>
                         </div>
                         <div class="col-12">
-                            <label for="notes" class="form-label">Notes</label>
+                            <label for="notes" class="form-label">{{ content.cms_notes|default:'Notes' }}</label>
                             <textarea name="notes" id="notes" class="form-control" rows="2">{% if expense %}{{ expense.notes }}{% endif %}</textarea>
                         </div>
                     </div>
                     
-                    <h6 class="mt-4 mb-3">Expense Items</h6>
+                    <h6 class="mt-4 mb-3">{{ content.cms_expense_items|default:'Expense Items' }}</h6>
                     <div id="expenseItems">
                         <div class="row g-2 mb-2 expense-item">
                             <div class="col-md-4">
@@ -82,20 +82,17 @@
                                 <input type="text" name="item_receipt" class="form-control form-control-sm" placeholder="Receipt #">
                             </div>
                             <div class="col-md-2">
-                                <button type="button" class="btn btn-outline-danger btn-sm remove-item">Remove</button>
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-item">{{ content.cms_remove|default:'Remove' }}</button>
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">
-                        Add Item
-                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">{{ content.cms_add_item|default:'Add Item' }}</button>
                     
                     <div class="row g-3 mt-3">
                         <div class="col-12">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i>Save Expense
-                            </button>
-                            <a href="{% url 'expense_list' %}" class="btn btn-secondary">Cancel</a>
+                                <i class="bi bi-check-lg me-1"></i>{{ content.cms_save_expense|default:'Save Expense' }}</button>
+                            <a href="{% url 'expense_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
                         </div>
                     </div>
                 </form>

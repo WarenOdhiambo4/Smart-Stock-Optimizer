@@ -4,21 +4,21 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Business Notes</h1>
+    <h1 class="page-title">{{ content.cms_business_notes|default:'Business Notes' }}</h1>
     <div class="quick-actions">
         <form method="get" class="search-box me-2">
             <input type="text" name="search" class="form-control form-control-sm" placeholder="Search notes..." value="{{ search }}">
             <select name="priority" class="form-select form-select-sm ms-2">
-                <option value="">All Priorities</option>
-                <option value="LOW" {% if selected_priority == 'LOW' %}selected{% endif %}>Low</option>
-                <option value="MEDIUM" {% if selected_priority == 'MEDIUM' %}selected{% endif %}>Medium</option>
-                <option value="HIGH" {% if selected_priority == 'HIGH' %}selected{% endif %}>High</option>
-                <option value="URGENT" {% if selected_priority == 'URGENT' %}selected{% endif %}>Urgent</option>
+                <option value="">{{ content.cms_all_priorities|default:'All Priorities' }}</option>
+                <option value="LOW" {% if selected_priority == 'LOW' %}selected{% endif %}>{{ content.cms_low|default:'Low' }}</option>
+                <option value="MEDIUM" {% if selected_priority == 'MEDIUM' %}selected{% endif %}>{{ content.cms_medium|default:'Medium' }}</option>
+                <option value="HIGH" {% if selected_priority == 'HIGH' %}selected{% endif %}>{{ content.cms_high|default:'High' }}</option>
+                <option value="URGENT" {% if selected_priority == 'URGENT' %}selected{% endif %}>{{ content.cms_urgent|default:'Urgent' }}</option>
             </select>
-            <button type="submit" class="btn btn-outline-secondary btn-sm ms-2">Filter</button>
+            <button type="submit" class="btn btn-outline-secondary btn-sm ms-2">{{ content.cms_filter|default:'Filter' }}</button>
         </form>
-        <a href="{% url 'note_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Add Note</a>
-        <button onclick="printNotes()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
+        <a href="{% url 'note_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>{{ content.cms_add_note|default:'Add Note' }}</a>
+        <button onclick="printNotes()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>{{ content.cms_print|default:'Print' }}</button>
     </div>
 </div>
 
@@ -28,12 +28,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Title</th>
-                    <th>Priority</th>
-                    <th>Tags</th>
-                    <th>Created By</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+                    <th>{{ content.cms_title|default:'Title' }}</th>
+                    <th>{{ content.cms_priority|default:'Priority' }}</th>
+                    <th>{{ content.cms_tags|default:'Tags' }}</th>
+                    <th>{{ content.cms_created_by|default:'Created By' }}</th>
+                    <th>{{ content.cms_date|default:'Date' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -74,9 +74,9 @@
         {% include 'core/pagination.html' %}
         {% else %}
         <div class="empty-state">
-            <h5>No Notes Found</h5>
-            <p>Start documenting key business insights.</p>
-            <a href="{% url 'note_create' %}" class="btn btn-primary btn-sm">Add Note</a>
+            <h5>{{ content.cms_no_notes_found|default:'No Notes Found' }}</h5>
+            <p>{{ content.cms_start_documenting_key_business_insights|default:'Start documenting key business insights.' }}</p>
+            <a href="{% url 'note_create' %}" class="btn btn-primary btn-sm">{{ content.cms_add_note|default:'Add Note' }}</a>
         </div>
         {% endif %}
     </div>

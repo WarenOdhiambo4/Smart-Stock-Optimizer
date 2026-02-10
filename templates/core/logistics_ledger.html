@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Logistics Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ content.cms_logistics_ledger|default:'Logistics Ledger' }}</h1>
+</div>
+
+{% include 'core/finance_nav.html' %}
+
+<div class="finance-note">{{ content.cms_logistics_ledger_auto_populates_from_logistics_records_and_i|default:"Logistics ledger auto-populates from Logistics records and is grouped by vehicle." }}</div>
+
+<div class="finance-actions">
+    <form method="get" class="ledger-filters">
+        <div class="filter-item filter-wide">
+            <label>{{ content.cms_vehicle|default:'Vehicle' }}</label>
+            <select name="vehicle" class="form-select form-select-sm">
+                <option value="">{{ content.cms_all_vehicles|default:'All Vehicles' }}</option>
+                {% for vehicle in vehicles %}
+                <option value="{{ vehicle.id }}" {% if filters.vehicle_id == vehicle.id %}selected{% endif %}>
+                    {{ vehicle.registration_number }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">{{ content.cms_apply|default:'Apply' }}</button>
+        </div>
+    </form>
+</div>
+
+<div class="spreadsheet-wrap">
+    <table class="spreadsheet-table">
+        <thead>
+            <tr>
+                <th class="freeze-col">{{ content.cms_date|default:'Date' }}</th>
+                <th>{{ content.cms_transaction_id|default:'Transaction ID' }}</th>
+                <th>{{ content.cms_description|default:'Description' }}</th>
+                <th>{{ content.cms_branch|default:'Branch' }}</th>
+                <th>{{ content.cms_vehicle|default:'Vehicle' }}</th>
+                <th>{{ content.cms_account|default:'Account' }}</th>
+                <th class="num">{{ content.cms_debit|default:'Debit' }}</th>
+                <th class="num">{{ content.cms_credit|default:'Credit' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in page_obj %}
+            <tr>
+                <td class="freeze-col">{{ entry.transaction.transaction_date }}</td>
+                <td>{{ entry.transaction.transaction_id }}</td>
+                <td>{{ entry.transaction.description }}</td>
+                <td>{% if entry.transaction.branch %}{{ entry.transaction.branch.name }}{% else %}—{% endif %}</td>
+                <td>{% if entry.transaction.vehicle %}{{ entry.transaction.vehicle.registration_number }}{% else %}—{% endif %}</td>
+                <td>{{ entry.account.account_name }}</td>
+                <td class="num">{% if entry.debit_amount > 0 %}{{ entry.debit_amount|floatformat:2 }}{% endif %}</td>
+                <td class="num">{% if entry.credit_amount > 0 %}{{ entry.credit_amount|floatformat:2 }}{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center text-muted">{{ content.cms_no_logistics_ledger_entries_found|default:"No logistics ledger entries found" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav aria-label="Logistics ledger pagination" class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&vehicle={{ filters.vehicle_id }}">{{ content.cms_previous|default:'Previous' }}</a>
+        </li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&vehicle={{ filters.vehicle_id }}">{{ content.cms_next|default:'Next' }}</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/finance_tables.js' %}"></script>
+{% endblock %}

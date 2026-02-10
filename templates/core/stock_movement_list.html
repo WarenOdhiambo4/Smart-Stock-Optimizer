@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">Stock Movements</h1>
+    <h1 class="page-title">{{ content.cms_stock_movements|default:'Stock Movements' }}</h1>
     <div class="d-flex gap-2">
         <form method="get" class="d-flex gap-2">
             <div class="search-box">
@@ -12,14 +12,14 @@
                 <input type="text" name="search" class="form-control form-control-sm" placeholder="Search movements..." value="{{ search }}">
             </div>
             <select name="branch" class="form-select form-select-sm" onchange="this.form.submit()">
-                <option value="">All Branches</option>
+                <option value="">{{ content.cms_all_branches|default:'All Branches' }}</option>
                 {% for branch in branches %}
                 <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ branch.name }}</option>
                 {% endfor %}
             </select>
         </form>
-        <a href="{% url 'stock_transfer' %}" class="btn btn-primary btn-sm"><i class="bi bi-truck me-1"></i>New Transfer</a>
-        <button onclick="printMovements()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
+        <a href="{% url 'stock_transfer' %}" class="btn btn-primary btn-sm"><i class="bi bi-truck me-1"></i>{{ content.cms_new_transfer|default:'New Transfer' }}</a>
+        <button onclick="printMovements()" class="btn btn-secondary btn-sm"><i class="bi bi-printer me-1"></i>{{ content.cms_print|default:'Print' }}</button>
     </div>
 </div>
 
@@ -29,14 +29,15 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Product</th>
-                    <th>Type</th>
-                    <th>Quantity</th>
-                    <th>From</th>
-                    <th>To</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{{ content.cms_date|default:'Date' }}</th>
+                    <th>{{ content.cms_product|default:'Product' }}</th>
+                    <th>{{ content.cms_type|default:'Type' }}</th>
+                    <th>{{ content.cms_quantity|default:'Quantity' }}</th>
+                    <th>{{ content.cms_from|default:'From' }}</th>
+                    <th>{{ content.cms_to|default:'To' }}</th>
+                    <th>{{ content.cms_status|default:'Status' }}</th>
+                    <th>{{ content.cms_notes|default:'Notes' }}</th>
+                    <th>{{ content.cms_actions|default:'Actions' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -57,6 +58,7 @@
                             {{ movement.status }}
                         </span>
                     </td>
+                    <td class="text-muted">{{ movement.notes|default:"-" }}</td>
                     <td>
                         {% if movement.status == 'PENDING' and movement.movement_type == 'TRANSFER' %}
                         <form method="post" action="{% url 'approve_transfer' movement.pk %}" style="display:inline;">
@@ -77,8 +79,8 @@
         {% else %}
         <div class="empty-state">
             <i class="bi bi-arrow-left-right" style="font-size: 3rem;"></i>
-            <h5>No movements recorded</h5>
-            <p>Stock movements will appear here</p>
+            <h5>{{ content.cms_no_movements_recorded|default:'No movements recorded' }}</h5>
+            <p>{{ content.cms_stock_movements_will_appear_here|default:'Stock movements will appear here' }}</p>
         </div>
         {% endif %}
     </div>

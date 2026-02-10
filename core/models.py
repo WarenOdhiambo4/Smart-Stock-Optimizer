@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from decimal import Decimal
 from simple_history.models import HistoricalRecords
+from django.utils import timezone
 
 
 class Branch(models.Model):
@@ -19,6 +20,23 @@ class Branch(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SystemContent(models.Model):
+    """Centralized content management for UI text."""
+    key = models.CharField(max_length=200, unique=True)
+    value = models.TextField()
+    module = models.CharField(max_length=100, blank=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['key']
+
+    def __str__(self):
+        return self.key
 
 
 class Employee(models.Model):
@@ -75,8 +93,8 @@ class Product(models.Model):
 class Stock(models.Model):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='stocks')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stocks')
-    quantity = models.IntegerField(default=0)
-    min_quantity = models.IntegerField(default=10)
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    min_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('10.00'))
     # Track weighted average purchase price for profit calculation
     weighted_avg_purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     created_at = models.DateTimeField(auto_now_add=True)
@@ -121,11 +139,14 @@ class StockMovement(models.Model):
 
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='movements')
     movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)
-    quantity = models.IntegerField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
     from_branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name='outgoing_movements')
     to_branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name='incoming_movements')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='APPROVED')
     notes = models.TextField(blank=True)
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    source_type = models.CharField(max_length=20, blank=True)
+    source_id = models.PositiveIntegerField(null=True, blank=True)
     created_by = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     _processed = models.BooleanField(default=False)
@@ -143,9 +164,28 @@ class StockMovement(models.Model):
         if self.movement_type in ['OUT', 'SALE']:
             self.stock.quantity -= abs(self.quantity)
             self.stock.save()
-        elif self.movement_type == 'IN':
-            self.stock.quantity += abs(self.quantity)
+        elif self.movement_type == 'ADJUSTMENT':
+            self.stock.quantity += self.quantity
             self.stock.save()
+        elif self.movement_type == 'IN':
+            qty = abs(self.quantity)
+            if self.unit_cost is not None:
+                # Update weighted average purchase price and stock quantity
+                self.stock.update_purchase_price(qty, self.unit_cost)
+                try:
+                    InventoryLayer.objects.create(
+                        stock=self.stock,
+                        quantity=qty,
+                        remaining_quantity=qty,
+                        unit_cost=self.unit_cost,
+                        source_type=self.source_type or 'MANUAL',
+                        source_id=self.source_id,
+                    )
+                except Exception:
+                    pass
+            else:
+                self.stock.quantity += qty
+                self.stock.save()
         elif self.movement_type == 'TRANSFER':
             self.stock.quantity -= abs(self.quantity)
             self.stock.save()
@@ -321,12 +361,12 @@ class OrderItem(models.Model):
     product_sku = models.CharField(max_length=50, blank=True)
     
     # EXISTING FIELD - KEEP FOR BACKWARD COMPATIBILITY
-    quantity = models.IntegerField(default=1)
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('1.00'))
     
     # NEW FIELDS - ALL SAFE WITH DEFAULTS
-    quantity_ordered = models.IntegerField(default=1, help_text="Original quantity ordered")
-    quantity_completed = models.IntegerField(default=0, help_text="Quantity completed so far")
-    quantity_remaining = models.IntegerField(default=0, help_text="Quantity still pending")
+    quantity_ordered = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('1.00'), help_text="Original quantity ordered")
+    quantity_completed = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Quantity completed so far")
+    quantity_remaining = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Quantity still pending")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     completion_branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, help_text="Branch where item was completed")
     
@@ -397,7 +437,10 @@ class OrderItem(models.Model):
                 movement_type='IN',
                 quantity=quantity_to_complete,
                 status='APPROVED',
-                notes=f"Partial completion of Order #{self.order.order_number} - Item: {self.product_name}"
+                notes=f"Partial completion of Order #{self.order.order_number} - Item: {self.product_name}",
+                unit_cost=self.unit_price,
+                source_type='ORDER',
+                source_id=self.order_id
             )
         
         return True
@@ -427,7 +470,7 @@ class OrderItem(models.Model):
 class OrderItemCompletion(models.Model):
     """Track individual completions of order items for audit trail"""
     order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='completions')
-    quantity_completed = models.IntegerField(help_text="Quantity completed in this action")
+    quantity_completed = models.DecimalField(max_digits=12, decimal_places=2, help_text="Quantity completed in this action")
     completion_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, help_text="Branch where completion happened")
     completed_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
     completion_date = models.DateTimeField(auto_now_add=True)
@@ -486,8 +529,10 @@ class Sale(models.Model):
 class SaleItem(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='items')
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
-    quantity = models.IntegerField(default=1)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1.00'))
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_cost_at_sale = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    is_broken_sale = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -504,14 +549,16 @@ class SaleItem(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
         
-        if is_new:
-            StockMovement.objects.create(
-                stock=self.stock,
-                movement_type='SALE',
-                quantity=self.quantity,
-                status='APPROVED',
-                notes=f"Sale #{self.sale.sale_number}"
-            )
+        if is_new and not self.is_broken_sale:
+            note = f"Sale #{self.sale.sale_number} | Item {self.id}"
+            if not StockMovement.objects.filter(movement_type='SALE', stock=self.stock, notes=note).exists():
+                StockMovement.objects.create(
+                    stock=self.stock,
+                    movement_type='SALE',
+                    quantity=self.quantity,
+                    status='APPROVED',
+                    notes=note
+                )
 
 
 class UserProfile(models.Model):
@@ -860,7 +907,7 @@ class StockBatch(models.Model):
     """Track individual batches of stock with their purchase prices"""
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='batches')
     batch_number = models.CharField(max_length=50)
-    quantity = models.IntegerField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
     unit_purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
     order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
     received_date = models.DateTimeField(auto_now_add=True)
@@ -885,7 +932,7 @@ class BrokenProduct(models.Model):
     ]
     
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='broken_items')
-    quantity = models.IntegerField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
     damage_type = models.CharField(max_length=20, choices=DAMAGE_TYPES)
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2, help_text="Cost per unit when purchased")
     description = models.TextField(blank=True)
@@ -903,22 +950,52 @@ class BrokenProduct(models.Model):
         return self.quantity * self.unit_cost
     
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new and self.quantity > self.stock.quantity:
+            raise ValueError("Broken quantity exceeds available stock.")
+
         super().save(*args, **kwargs)
-        # Reduce stock quantity
-        self.stock.quantity -= self.quantity
-        self.stock.save()
-        
-        # Create expense record for the loss
-        Expense.objects.create(
-            expense_number=f"LOSS-{self.id}",
-            branch=self.stock.branch,
-            expense_type='OTHER',
-            description=f"Product loss: {self.damage_type} - {self.stock.product.name}",
-            amount=self.total_loss,
-            expense_date=self.reported_date.date(),
-            notes=self.description,
-            created_by=self.reported_by
-        )
+
+        if not is_new:
+            return
+
+        # Record stock movement for broken items (reduces stock)
+        try:
+            note_text = f'Broken product: {self.damage_type}'
+            if self.description:
+                note_text = f'{note_text} - {self.description}'
+            StockMovement.objects.create(
+                stock=self.stock,
+                movement_type='OUT',
+                quantity=self.quantity,
+                status='APPROVED',
+                notes=note_text,
+                created_by=self.reported_by
+            )
+        except Exception:
+            pass
+
+        # Create expense record for the loss (idempotent)
+        expense_number = f"LOSS-{self.id}"
+        if not Expense.objects.filter(expense_number=expense_number).exists():
+            Expense.objects.create(
+                expense_number=expense_number,
+                branch=self.stock.branch,
+                expense_type='OTHER',
+                description=f"Product loss: {self.damage_type} - {self.stock.product.name}",
+                amount=self.total_loss,
+                expense_date=self.reported_date.date(),
+                notes=self.description,
+                created_by=self.reported_by
+            )
+
+        # Record loss in the ledger
+        try:
+            from .finance_services import post_inventory_loss
+            if not LedgerTransaction.objects.filter(source_type='BROKEN_PRODUCT', source_id=self.id).exists():
+                post_inventory_loss(self, user=self.reported_by)
+        except Exception:
+            pass
 
 
 class MonthlyProfitAnalysis(models.Model):
@@ -928,7 +1005,7 @@ class MonthlyProfitAnalysis(models.Model):
     month = models.DateField(help_text="First day of the month")
     
     # Sales data
-    total_quantity_sold = models.IntegerField(default=0)
+    total_quantity_sold = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     total_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     average_selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     
@@ -937,7 +1014,7 @@ class MonthlyProfitAnalysis(models.Model):
     total_purchase_cost = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     
     # Losses
-    broken_quantity = models.IntegerField(default=0)
+    broken_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     broken_cost = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     
     # Expenses allocated to this product
@@ -949,8 +1026,8 @@ class MonthlyProfitAnalysis(models.Model):
     profit_margin = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
     
     # Stock turnover
-    opening_stock = models.IntegerField(default=0)
-    closing_stock = models.IntegerField(default=0)
+    opening_stock = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    closing_stock = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     stock_turnover_ratio = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal('0.00'))
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1009,9 +1086,9 @@ class OrderFulfillment(models.Model):
     status = models.CharField(max_length=30, choices=FULFILLMENT_STATUS, default='PENDING')
     
     # Capacity and tracking
-    total_items_ordered = models.IntegerField(default=0, help_text="Total items in the order")
-    total_items_fulfilled = models.IntegerField(default=0, help_text="Total items delivered so far")
-    total_items_remaining = models.IntegerField(default=0, help_text="Items still to be delivered")
+    total_items_ordered = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Total items in the order")
+    total_items_fulfilled = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Total items delivered so far")
+    total_items_remaining = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Items still to be delivered")
     
     # Financial tracking
     total_order_value = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
@@ -1092,8 +1169,8 @@ class OrderShipment(models.Model):
     # Vehicle and capacity tracking
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, related_name='order_shipments')
     driver = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='order_shipments_driven')
-    vehicle_capacity = models.IntegerField(default=0, help_text="Maximum items this vehicle can carry")
-    items_loaded = models.IntegerField(default=0, help_text="Actual items loaded in this shipment")
+    vehicle_capacity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Maximum items this vehicle can carry")
+    items_loaded = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), help_text="Actual items loaded in this shipment")
     
     # Trip integration
     trip = models.ForeignKey(Trip, on_delete=models.SET_NULL, null=True, blank=True, related_name='order_shipments')
@@ -1166,9 +1243,9 @@ class ShipmentItem(models.Model):
     shipment = models.ForeignKey(OrderShipment, on_delete=models.CASCADE, related_name='items')
     order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='shipment_deliveries')
     
-    quantity_ordered = models.IntegerField(help_text="Original quantity ordered")
-    quantity_delivered = models.IntegerField(help_text="Quantity delivered in this shipment")
-    quantity_remaining = models.IntegerField(help_text="Quantity still to be delivered")
+    quantity_ordered = models.DecimalField(max_digits=12, decimal_places=2, help_text="Original quantity ordered")
+    quantity_delivered = models.DecimalField(max_digits=12, decimal_places=2, help_text="Quantity delivered in this shipment")
+    quantity_remaining = models.DecimalField(max_digits=12, decimal_places=2, help_text="Quantity still to be delivered")
     
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     
@@ -1265,6 +1342,28 @@ class PriceChangeLog(models.Model):
         return 0
 
 
+class CostChangeLog(models.Model):
+    """Enterprise cost change audit log"""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='cost_changes')
+    old_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    new_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    reason = models.TextField(blank=True)
+    change_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-change_date']
+
+    def __str__(self):
+        return f"{self.product.name}: {self.old_cost} → {self.new_cost}"
+
+    @property
+    def cost_change_percent(self):
+        if self.old_cost > 0:
+            return ((self.new_cost - self.old_cost) / self.old_cost) * 100
+        return 0
+
+
 class FuelConsumption(models.Model):
     """Track fuel consumption for vehicles"""
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='fuel_records')
@@ -1303,11 +1402,279 @@ class Maintenance(models.Model):
         return f"{self.vehicle.registration_number} - {self.description}"
 
 
+class AccountingPeriod(models.Model):
+    """Defines open/closed accounting periods to lock edits."""
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_closed = models.BooleanField(default=False)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-start_date']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(end_date__gte=models.F('start_date')),
+                name='accounting_period_valid_range'
+            )
+        ]
+
+    def __str__(self):
+        status = "Closed" if self.is_closed else "Open"
+        return f"{self.start_date} to {self.end_date} ({status})"
+
+    def contains(self, date_value):
+        return self.start_date <= date_value <= self.end_date
+
+
+class ChartOfAccount(models.Model):
+    """Chart of Accounts master table."""
+    ACCOUNT_TYPES = [
+        ('ASSET', 'Asset'),
+        ('LIABILITY', 'Liability'),
+        ('EQUITY', 'Equity'),
+        ('INCOME', 'Income'),
+        ('EXPENSE', 'Expense'),
+    ]
+
+    account_code = models.CharField(max_length=30, unique=True)
+    account_name = models.CharField(max_length=200)
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPES)
+    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['account_code']
+
+    def __str__(self):
+        return f"{self.account_code} - {self.account_name}"
+
+    @property
+    def normal_balance(self):
+        """Returns 'DEBIT' or 'CREDIT' based on account type."""
+        if self.account_type in ['ASSET', 'EXPENSE']:
+            return 'DEBIT'
+        return 'CREDIT'
+
+
+class LedgerTransaction(models.Model):
+    """Header for a group of ledger entries (double-entry)."""
+    transaction_id = models.CharField(max_length=50, unique=True)
+    transaction_date = models.DateField()
+    description = models.TextField()
+    reference = models.CharField(max_length=100, blank=True)
+    source_type = models.CharField(max_length=30, blank=True)
+    source_id = models.PositiveIntegerField(null=True, blank=True)
+    branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name='ledger_transactions')
+    vehicle = models.ForeignKey('Vehicle', on_delete=models.SET_NULL, null=True, blank=True, related_name='ledger_transactions')
+    reversal_of = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='reversals')
+    created_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-transaction_date', '-id']
+
+    def __str__(self):
+        return self.transaction_id
+
+
+class GeneralLedger(models.Model):
+    """Line-level ledger entries (debit/credit)."""
+    transaction = models.ForeignKey(LedgerTransaction, on_delete=models.CASCADE, related_name='entries')
+    account = models.ForeignKey(ChartOfAccount, on_delete=models.PROTECT, related_name='ledger_entries')
+    debit_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    credit_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['transaction__transaction_date', 'id']
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (models.Q(debit_amount__gt=0) & models.Q(credit_amount=0)) |
+                    (models.Q(credit_amount__gt=0) & models.Q(debit_amount=0))
+                ),
+                name='ledger_entry_debit_credit_xor'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.transaction.transaction_id} - {self.account.account_code}"
+
+
+class IncomeRegister(models.Model):
+    PAYMENT_METHODS = [
+        ('CASH', 'Cash'),
+        ('BANK', 'Bank'),
+        ('MOBILE', 'Mobile Money'),
+        ('CARD', 'Card'),
+        ('OTHER', 'Other'),
+    ]
+
+    date = models.DateField()
+    receipt_no = models.CharField(max_length=50, unique=True)
+    source = models.CharField(max_length=200)
+    account_credited = models.ForeignKey(ChartOfAccount, on_delete=models.PROTECT, related_name='income_credits')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='CASH')
+    reference = models.CharField(max_length=100, blank=True)
+    posted = models.BooleanField(default=False)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    posted_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='income_posted')
+    ledger_transaction = models.OneToOneField(LedgerTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='income_register')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-date', '-id']
+
+    def __str__(self):
+        return self.receipt_no
+
+
+class ExpenseRegister(models.Model):
+    PAYMENT_METHODS = IncomeRegister.PAYMENT_METHODS
+
+    date = models.DateField()
+    voucher_no = models.CharField(max_length=50, unique=True)
+    category = models.CharField(max_length=200)
+    account_debited = models.ForeignKey(ChartOfAccount, on_delete=models.PROTECT, related_name='expense_debits')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='CASH')
+    reference = models.CharField(max_length=100, blank=True)
+    approved = models.BooleanField(default=False)
+    posted = models.BooleanField(default=False)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    posted_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='expense_posted')
+    ledger_transaction = models.OneToOneField(LedgerTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='expense_register')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-date', '-id']
+
+    def __str__(self):
+        return self.voucher_no
+
+
+class LoansRegister(models.Model):
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('PAID', 'Paid'),
+        ('OVERDUE', 'Overdue'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+
+    loan_id = models.CharField(max_length=50, unique=True)
+    lender = models.CharField(max_length=200)
+    account = models.ForeignKey(ChartOfAccount, on_delete=models.PROTECT, related_name='loan_accounts')
+    principal = models.DecimalField(max_digits=12, decimal_places=2)
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    due_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    posted = models.BooleanField(default=False)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    posted_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='loan_posted')
+    ledger_transaction = models.OneToOneField(LedgerTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='loan_register')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-due_date', '-id']
+
+    def __str__(self):
+        return self.loan_id
+
+    @property
+    def outstanding_balance(self):
+        return max(self.principal - self.amount_paid, Decimal('0.00'))
+
+
+class PayrollLedger(models.Model):
+    pay_period = models.CharField(max_length=50)
+    employee_name = models.CharField(max_length=200)
+    basic_salary = models.DecimalField(max_digits=12, decimal_places=2)
+    allowances = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    deductions = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    payment_date = models.DateField()
+    reference = models.CharField(max_length=100, blank=True)
+    posted = models.BooleanField(default=False)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    posted_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_posted')
+    ledger_transaction = models.OneToOneField(LedgerTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_register')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-payment_date', '-id']
+
+    def __str__(self):
+        return f"{self.employee_name} - {self.pay_period}"
+
+    @property
+    def gross_pay(self):
+        return self.basic_salary + self.allowances
+
+    @property
+    def net_pay(self):
+        return self.gross_pay - self.deductions
+
+
+class AllowanceRegister(models.Model):
+    FIXED_TYPES = [
+        ('FIXED', 'Fixed'),
+        ('VARIABLE', 'Variable'),
+    ]
+
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('INACTIVE', 'Inactive'),
+    ]
+
+    employee_name = models.CharField(max_length=200)
+    allowance_type = models.CharField(max_length=100)
+    fixed_or_variable = models.CharField(max_length=20, choices=FIXED_TYPES, default='FIXED')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    effective_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-effective_date', '-id']
+
+    def __str__(self):
+        return f"{self.employee_name} - {self.allowance_type}"
+
+
 class InventoryLayer(models.Model):
     """Track inventory layers for FIFO costing"""
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='layers')
-    quantity = models.PositiveIntegerField()
-    remaining_quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    remaining_quantity = models.DecimalField(max_digits=12, decimal_places=2)
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
     source_type = models.CharField(max_length=20, choices=[
         ('ORDER', 'From Order'),
@@ -1329,9 +1696,9 @@ class PhysicalStockCount(models.Model):
     count_number = models.CharField(max_length=50, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='stock_counts')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    system_quantity = models.IntegerField(help_text="Quantity according to system")
-    physical_quantity = models.IntegerField(help_text="Actual physical count")
-    discrepancy = models.IntegerField(help_text="Difference (physical - system)")
+    system_quantity = models.DecimalField(max_digits=12, decimal_places=2, help_text="Quantity according to system")
+    physical_quantity = models.DecimalField(max_digits=12, decimal_places=2, help_text="Actual physical count")
+    discrepancy = models.DecimalField(max_digits=12, decimal_places=2, help_text="Difference (physical - system)")
     discrepancy_value = models.DecimalField(max_digits=10, decimal_places=2, help_text="Value of discrepancy")
     count_date = models.DateTimeField(auto_now_add=True)
     counted_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)

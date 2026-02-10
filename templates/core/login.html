@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - SaasApp</title>
+    <title>{{ content.login.page_title|default:'Login' }} - {{ content.site_name|default:'Paroha SCM' }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     {% load static %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <style>
         .login-container {
@@ -14,44 +17,51 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: url("{% static 'img/paroha_reference.jpeg' %}") center / cover no-repeat;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            z-index: 1;
         }
         .login-card {
-            background: white;
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 15px;
-            padding: 2.5rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            max-width: 420px;
+            padding: 2rem;
+            box-shadow: 0 10px 35px rgba(15, 23, 42, 0.2);
+            max-width: 400px;
             width: 100%;
+            border: 1px solid rgba(31, 42, 68, 0.15);
+            position: relative;
+            z-index: 2;
         }
         .login-header {
             text-align: center;
             margin-bottom: 2rem;
         }
         .login-header i {
-            font-size: 3rem;
+            font-size: 2.5rem;
             color: var(--primary);
             margin-bottom: 1rem;
         }
         .login-header h2 {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--dark);
             margin-bottom: 0.5rem;
         }
         .login-header p {
-            font-size: 13px;
+            font-size: 11px;
             color: var(--secondary);
         }
     </style>
 </head>
-<body>
+<body class="antialiased">
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
                 <i class="bi bi-box-seam"></i>
-                <h2>Welcome to SaasApp</h2>
-                <p>Inventory & Sales Management System</p>
+                <h2>{{ content.site_name|default:'Paroha Supply Chain System' }}</h2>
+                <p>{{ content.login.subtitle|default:'Paroha Hardware • Twyford • Micasso' }}</p>
             </div>
 
             {% if messages %}
@@ -67,47 +77,65 @@
                 {% csrf_token %}
                 {% if not show_verification %}
                     <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
+                        <label for="username" class="form-label">{{ content.login.username_label|default:'Username' }}</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-person"></i></span>
-                            <input type="text" class="form-control" id="username" name="username" value="{{ username|default:'' }}" required autofocus>
+                            <input type="text" class="form-control" id="username" name="username" value="{{ username|default:'' }}" placeholder="{{ content.login.username_placeholder|default:'Enter username' }}" required autofocus>
                         </div>
                     </div>
                     <div class="mb-4">
-                        <label for="password" class="form-label">Password</label>
+                        <label for="password" class="form-label">{{ content.login.password_label|default:'Password' }}</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                            <input type="password" class="form-control" id="password" name="password" required>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="{{ content.login.password_placeholder|default:'Enter password' }}" required>
+                            <button type="button" class="btn btn-outline-secondary" id="togglePassword" aria-label="Show password">
+                                <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                            </button>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary w-100 mb-3">
-                        <i class="bi bi-box-arrow-in-right me-2"></i>Send Verification Code
+                        <i class="bi bi-box-arrow-in-right me-2"></i>{{ content.login.button|default:'Send Verification Code' }}
                     </button>
                 {% else %}
                     <input type="hidden" name="username" value="{{ username }}">
                     <div class="mb-3">
-                        <label for="verification_code" class="form-label">Verification Code</label>
+                        <label for="verification_code" class="form-label">{{ content.login.verification_label|default:'Verification Code' }}</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-shield-check"></i></span>
-                            <input type="text" class="form-control" id="verification_code" name="verification_code" placeholder="Enter 6-digit code" maxlength="6" required autofocus>
+                            <input type="text" class="form-control" id="verification_code" name="verification_code" placeholder="{{ content.login.verification_placeholder|default:'Enter 6-digit code' }}" maxlength="6" required autofocus>
                         </div>
-                        <div class="form-text">Check your email for the verification code. Code expires in 5 minutes.</div>
+                        <div class="form-text">{{ content.login.verification_help|default:'Check your email for the verification code. Code expires in 5 minutes.' }}</div>
                     </div>
                     <button type="submit" class="btn btn-success w-100 mb-3">
-                        <i class="bi bi-check-circle me-2"></i>Verify & Login
+                        <i class="bi bi-check-circle me-2"></i>{{ content.login.verify_button|default:'Verify & Login' }}
                     </button>
                     <a href="{% url 'login' %}" class="btn btn-outline-secondary w-100">
-                        <i class="bi bi-arrow-left me-2"></i>Back to Login
+                        <i class="bi bi-arrow-left me-2"></i>{{ content.login.back_button|default:'Back to Login' }}
                     </a>
                 {% endif %}
             </form>
 
-            <div class="text-center text-muted" style="font-size: 11px;">
-                <p class="mb-0">&copy; 2025 SaasApp. All rights reserved.</p>
+            <div class="text-center text-muted" style="font-size: 10px;">
+                <p class="mb-0">{{ content.login.footer|default:'© 2026 Paroha Hardware. All rights reserved.' }}</p>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('togglePasswordIcon');
+
+        if (togglePassword && passwordInput && toggleIcon) {
+            togglePassword.addEventListener('click', () => {
+                const isHidden = passwordInput.getAttribute('type') === 'password';
+                passwordInput.setAttribute('type', isHidden ? 'text' : 'password');
+                toggleIcon.classList.toggle('bi-eye');
+                toggleIcon.classList.toggle('bi-eye-slash');
+                togglePassword.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            });
+        }
+    </script>
 </body>
 </html>

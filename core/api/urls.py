@@ -5,7 +5,10 @@ from .views import (
     StockMovementViewSet, OrderViewSet, OrderItemViewSet, SaleViewSet,
     SaleItemViewSet, ExpenseViewSet, VehicleViewSet, TripViewSet,
     VehicleMaintenanceViewSet, OrderFulfillmentViewSet, OrderShipmentViewSet,
-    ShipmentItemViewSet, PaymentCollectionViewSet, LogisticsViewSet
+    ShipmentItemViewSet, PaymentCollectionViewSet, LogisticsViewSet,
+    ChartOfAccountViewSet, LedgerTransactionViewSet, GeneralLedgerViewSet,
+    IncomeRegisterViewSet, ExpenseRegisterViewSet, LoansRegisterViewSet,
+    PayrollLedgerViewSet, AllowanceRegisterViewSet
 )
 
 # Create enterprise-grade API router
@@ -30,6 +33,14 @@ router.register(r'order-shipments', OrderShipmentViewSet, basename='ordershipmen
 router.register(r'shipment-items', ShipmentItemViewSet, basename='shipmentitem')
 router.register(r'payment-collections', PaymentCollectionViewSet, basename='paymentcollection')
 router.register(r'logistics', LogisticsViewSet, basename='logistics')
+router.register(r'chart-of-accounts', ChartOfAccountViewSet, basename='chartofaccounts')
+router.register(r'ledger-transactions', LedgerTransactionViewSet, basename='ledgertransactions')
+router.register(r'general-ledger', GeneralLedgerViewSet, basename='generalledger')
+router.register(r'income-register', IncomeRegisterViewSet, basename='incomeregister')
+router.register(r'expense-register', ExpenseRegisterViewSet, basename='expenseregister')
+router.register(r'loans-register', LoansRegisterViewSet, basename='loansregister')
+router.register(r'payroll-ledger', PayrollLedgerViewSet, basename='payrollledger')
+router.register(r'allowances-register', AllowanceRegisterViewSet, basename='allowancesregister')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -13,87 +13,87 @@
             {% csrf_token %}
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Vehicle *</label>
+                    <label class="form-label">{{ content.cms_vehicle|default:'Vehicle *' }}</label>
                     <select name="vehicle" class="form-select" required>
-                        <option value="">Select Vehicle</option>
+                        <option value="">{{ content.cms_select_vehicle|default:'Select Vehicle' }}</option>
                         {% for vehicle in vehicles %}
                         <option value="{{ vehicle.pk }}" {% if trip and trip.vehicle.pk == vehicle.pk %}selected{% endif %}>{{ vehicle.registration_number }} - {{ vehicle.make }} {{ vehicle.model }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Driver *</label>
+                    <label class="form-label">{{ content.cms_driver|default:'Driver *' }}</label>
                     <select name="driver" class="form-select" required>
-                        <option value="">Select Driver</option>
+                        <option value="">{{ content.cms_select_driver|default:'Select Driver' }}</option>
                         {% for driver in drivers %}
                         <option value="{{ driver.pk }}" {% if trip and trip.driver and trip.driver.pk == driver.pk %}selected{% endif %}>{{ driver.full_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Trip Type *</label>
+                    <label class="form-label">{{ content.cms_trip_type|default:'Trip Type *' }}</label>
                     <select name="trip_type" class="form-select" required>
-                        <option value="">Select Type</option>
-                        <option value="DELIVERY" {% if trip and trip.trip_type == 'DELIVERY' %}selected{% endif %}>Delivery</option>
-                        <option value="PICKUP" {% if trip and trip.trip_type == 'PICKUP' %}selected{% endif %}>Pickup</option>
-                        <option value="TRANSPORT" {% if trip and trip.trip_type == 'TRANSPORT' %}selected{% endif %}>Transport</option>
-                        <option value="RENTAL" {% if trip and trip.trip_type == 'RENTAL' %}selected{% endif %}>Rental</option>
-                        <option value="OTHER" {% if trip and trip.trip_type == 'OTHER' %}selected{% endif %}>Other</option>
+                        <option value="">{{ content.cms_select_type|default:'Select Type' }}</option>
+                        <option value="DELIVERY" {% if trip and trip.trip_type == 'DELIVERY' %}selected{% endif %}>{{ content.cms_delivery|default:'Delivery' }}</option>
+                        <option value="PICKUP" {% if trip and trip.trip_type == 'PICKUP' %}selected{% endif %}>{{ content.cms_pickup|default:'Pickup' }}</option>
+                        <option value="TRANSPORT" {% if trip and trip.trip_type == 'TRANSPORT' %}selected{% endif %}>{{ content.cms_transport|default:'Transport' }}</option>
+                        <option value="RENTAL" {% if trip and trip.trip_type == 'RENTAL' %}selected{% endif %}>{{ content.cms_rental|default:'Rental' }}</option>
+                        <option value="OTHER" {% if trip and trip.trip_type == 'OTHER' %}selected{% endif %}>{{ content.cms_other|default:'Other' }}</option>
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Related Sale (Optional)</label>
+                    <label class="form-label">{{ content.cms_related_sale_optional|default:'Related Sale (Optional)' }}</label>
                     <select name="sale" class="form-select">
-                        <option value="">No Related Sale</option>
+                        <option value="">{{ content.cms_no_related_sale|default:'No Related Sale' }}</option>
                         {% for sale in sales %}
                         <option value="{{ sale.pk }}" {% if trip and trip.sale and trip.sale.pk == sale.pk %}selected{% endif %}>{{ sale.sale_number }} - {{ sale.customer_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Origin *</label>
+                    <label class="form-label">{{ content.cms_origin|default:'Origin *' }}</label>
                     <input type="text" name="origin" class="form-control" value="{% if trip %}{{ trip.origin }}{% endif %}" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Destination *</label>
+                    <label class="form-label">{{ content.cms_destination|default:'Destination *' }}</label>
                     <input type="text" name="destination" class="form-control" value="{% if trip %}{{ trip.destination }}{% endif %}" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Distance (KM)</label>
+                    <label class="form-label">{{ content.cms_distance_km|default:'Distance (KM)' }}</label>
                     <input type="number" name="distance" class="form-control" step="0.1" min="0" value="{% if trip %}{{ trip.distance }}{% else %}0{% endif %}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Scheduled Date *</label>
+                    <label class="form-label">{{ content.cms_scheduled_date|default:'Scheduled Date *' }}</label>
                     <input type="datetime-local" name="scheduled_date" class="form-control" value="{% if trip %}{{ trip.scheduled_date|date:'Y-m-d\TH:i' }}{% endif %}" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Revenue</label>
+                    <label class="form-label">{{ content.cms_revenue|default:'Revenue' }}</label>
                     <input type="number" name="revenue" class="form-control" step="0.01" min="0" value="{% if trip %}{{ trip.revenue }}{% else %}0{% endif %}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Fuel Cost</label>
+                    <label class="form-label">{{ content.cms_fuel_cost|default:'Fuel Cost' }}</label>
                     <input type="number" name="fuel_cost" class="form-control" step="0.01" min="0" value="{% if trip %}{{ trip.fuel_cost }}{% else %}0{% endif %}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Other Expenses</label>
+                    <label class="form-label">{{ content.cms_other_expenses|default:'Other Expenses' }}</label>
                     <input type="number" name="other_expenses" class="form-control" step="0.01" min="0" value="{% if trip %}{{ trip.other_expenses }}{% else %}0{% endif %}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Customer Name</label>
+                    <label class="form-label">{{ content.cms_customer_name|default:'Customer Name' }}</label>
                     <input type="text" name="customer_name" class="form-control" value="{% if trip %}{{ trip.customer_name }}{% endif %}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Customer Phone</label>
+                    <label class="form-label">{{ content.cms_customer_phone|default:'Customer Phone' }}</label>
                     <input type="text" name="customer_phone" class="form-control" value="{% if trip %}{{ trip.customer_phone }}{% endif %}">
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Notes</label>
+                    <label class="form-label">{{ content.cms_notes|default:'Notes' }}</label>
                     <textarea name="notes" class="form-control" rows="3">{% if trip %}{{ trip.notes }}{% endif %}</textarea>
                 </div>
             </div>
             <div class="mt-4">
                 <button type="submit" class="btn btn-primary">{{ action }} Trip</button>
-                <a href="{% url 'trip_list' %}" class="btn btn-secondary">Cancel</a>
+                <a href="{% url 'trip_list' %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
             </div>
         </form>
     </div>

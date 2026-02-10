@@ -5,7 +5,6 @@
 {% block content %}
 <style>
     body { font-family: 'Nunito', sans-serif; font-size: 14px; }
-    .page-header { background: #10b981; color: white; padding: 1rem; margin-bottom: 1rem; }
     .page-title { font-size: 14px; font-weight: 600; margin: 0; }
     .quick-actions .btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 14px; }
     .form-label { color: #059669; font-weight: 600; font-size: 14px; }
@@ -27,21 +26,21 @@
 <div class="page-header">
     <h1 class="page-title">Edit Order - {{ order.order_number }}</h1>
     <div class="quick-actions mt-2">
-        <a href="{% url 'order_list' %}" class="btn btn-sm me-2">Back to Orders</a>
-        <a href="{% url 'order_detail' order.pk %}" class="btn btn-sm">View Details</a>
+        <a href="{% url 'order_list' %}" class="btn btn-sm me-2">{{ content.cms_back_to_orders|default:'Back to Orders' }}</a>
+        <a href="{% url 'order_detail' order.pk %}" class="btn btn-sm">{{ content.cms_view_details|default:'View Details' }}</a>
     </div>
 </div>
 
 <div class="row">
     <div class="col-md-8">
         <div class="section">
-            <h5 class="section-title">Order Information</h5>
-            <form method="post">
+            <h5 class="section-title">{{ content.cms_order_information|default:'Order Information' }}</h5>
+            <form method="post" id="orderEditForm">
                 {% csrf_token %}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Branch</label>
+                            <label class="form-label">{{ content.cms_branch|default:'Branch' }}</label>
                             <select name="branch" class="form-select" required>
                                 {% for branch in branches %}
                                 <option value="{{ branch.id }}" {% if branch.id == order.branch.id %}selected{% endif %}>{{ branch.name }}</option>
@@ -51,7 +50,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Supplier</label>
+                            <label class="form-label">{{ content.cms_supplier|default:'Supplier' }}</label>
                             <input type="text" name="supplier" class="form-control" value="{{ order.supplier }}">
                         </div>
                     </div>
@@ -59,20 +58,67 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Delivery Charges (KES)</label>
+                            <label class="form-label">{{ content.cms_delivery_charges_kes|default:'Delivery Charges (KES)' }}</label>
                             <input type="number" name="delivery_charges" step="0.01" class="form-control" value="{{ delivery_charges }}" min="0">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Notes</label>
+                            <label class="form-label">{{ content.cms_notes|default:'Notes' }}</label>
                             <textarea name="notes" class="form-control" rows="2">{{ order.notes }}</textarea>
                         </div>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between">
-                    <button type="submit" class="btn btn-primary">Update Order</button>
-                    <a href="{% url 'order_detail' order.pk %}" class="btn btn-secondary">Cancel</a>
+
+                <h6 class="section-title mt-3">{{ content.cms_order_items|default:'Order Items' }}</h6>
+                <div id="orderItems">
+                    {% for item in order.items.all %}
+                    <div class="row g-2 mb-2 order-item">
+                        <input type="hidden" name="item_id" value="{{ item.id }}">
+                        <div class="col-md-4">
+                            <input type="text" name="product_name" class="form-control form-control-sm" value="{{ item.product_name }}" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" name="product_sku" class="form-control form-control-sm" value="{{ item.product_sku }}">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="quantity" class="form-control form-control-sm" value="{{ item.quantity_ordered|default:item.quantity }}" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="unit_price" step="0.01" class="form-control form-control-sm" value="{{ item.unit_price }}" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-item">Remove</button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="row g-2 mb-2 order-item">
+                        <input type="hidden" name="item_id" value="">
+                        <div class="col-md-4">
+                            <input type="text" name="product_name" class="form-control form-control-sm" placeholder="Product Name" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" name="product_sku" class="form-control form-control-sm" placeholder="SKU">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="quantity" class="form-control form-control-sm" placeholder="Qty" value="1" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="unit_price" step="0.01" class="form-control form-control-sm" placeholder="Price" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-item">Remove</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">
+                    {{ content.cms_add_item|default:'Add Item' }}
+                </button>
+
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="submit" class="btn btn-primary">{{ content.cms_update_order|default:'Update Order' }}</button>
+                    <a href="{% url 'order_detail' order.pk %}" class="btn btn-secondary">{{ content.cms_cancel|default:'Cancel' }}</a>
                 </div>
             </form>
         </div>
@@ -80,20 +126,47 @@
     
     <div class="col-md-4">
         <div class="section">
-            <h6 class="section-title">Order Status</h6>
+            <h6 class="section-title">{{ content.cms_order_status|default:'Order Status' }}</h6>
             <div class="mb-2"><strong>Status:</strong> <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% else %}badge-secondary{% endif %}">{{ order.status }}</span></div>
             <div class="mb-2"><strong>Total:</strong> {{ order.total_amount|floatformat:2 }}</div>
             <div class="mb-2"><strong>Items:</strong> {{ order.items.count }}</div>
             <div class="mb-2"><strong>Created:</strong> {{ order.created_at|date:"M d, Y" }}</div>
         </div>
         <div class="section">
-            <h6 class="section-title">Quick Actions</h6>
+            <h6 class="section-title">{{ content.cms_quick_actions|default:'Quick Actions' }}</h6>
             <div class="d-grid gap-2">
-                <a href="{% url 'order_partial_complete' order.pk %}" class="btn btn-success btn-sm">Complete Items</a>
-                <a href="{% url 'order_change_branch' order.pk %}" class="btn btn-info btn-sm">Change Branch</a>
-                <a href="{% url 'order_completion_history' order.pk %}" class="btn btn-outline-secondary btn-sm">View History</a>
+                <a href="{% url 'order_partial_complete' order.pk %}" class="btn btn-success btn-sm">{{ content.cms_complete_items|default:'Complete Items' }}</a>
+                <a href="{% url 'order_change_branch' order.pk %}" class="btn btn-info btn-sm">{{ content.cms_change_branch|default:'Change Branch' }}</a>
+                <a href="{% url 'order_completion_history' order.pk %}" class="btn btn-outline-secondary btn-sm">{{ content.cms_view_history|default:'View History' }}</a>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addItem').addEventListener('click', function() {
+    const template = document.querySelector('.order-item').cloneNode(true);
+    template.querySelectorAll('input').forEach(input => {
+        if (input.name === 'item_id') {
+            input.value = '';
+        } else if (input.name === 'quantity') {
+            input.value = '1';
+        } else {
+            input.value = '';
+        }
+    });
+    document.getElementById('orderItems').appendChild(template);
+});
+
+document.getElementById('orderItems').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-item')) {
+        const items = document.querySelectorAll('.order-item');
+        if (items.length > 1) {
+            e.target.closest('.order-item').remove();
+        }
+    }
+});
+</script>
 {% endblock %}

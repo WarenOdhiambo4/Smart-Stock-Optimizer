@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 from decouple import config
+import dj_database_url
 
 # Load environment variables from .env file
 try:
@@ -38,7 +39,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'simple_history',
     # Local apps
-    'core',
+    'core.apps.CoreConfig',
 ]
 
 MIDDLEWARE = [
@@ -51,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 ROOT_URLCONF = 'saas_project.urls'
@@ -65,6 +67,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.system_content',
             ],
         },
     },
@@ -72,18 +75,37 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'saas_project.wsgi.application'
 
-# Database Configuration for Supabase
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DATABASE_NAME", "postgres"),
-        "USER": os.environ.get("DATABASE_USER", "postgres.bmbvkdzvdlgnncshpchw"),
-        "PASSWORD": os.environ.get("DATABASE_PASSWORD", "xxyyz418712"),
-        "HOST": os.environ.get("DATABASE_HOST", "aws-1-eu-west-2.pooler.supabase.com"),
-        "PORT": os.environ.get("DATABASE_PORT", "5432"),
-        "OPTIONS": {"sslmode": "require"},
+# Database Configuration
+DATABASE_URL = config('DATABASE_URL', default='')
+DATABASE_HOST = config('DATABASE_HOST', default='')
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
-}
+elif DATABASE_HOST:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("DATABASE_NAME", default="postgres"),
+            "USER": config("DATABASE_USER", default=""),
+            "PASSWORD": config("DATABASE_PASSWORD", default=""),
+            "HOST": DATABASE_HOST,
+            "PORT": config("DATABASE_PORT", default="5432"),
+            "OPTIONS": {"sslmode": "require"},
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -127,6 +149,32 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='kabisaerp@gmail.com')
 # Supabase Configuration (using environment variables)
 SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default='')
+
+# Accounting system defaults (used for ledger postings)
+ACCOUNTING_DEFAULT_CASH_ACCOUNT_CODE = config('ACCOUNTING_DEFAULT_CASH_ACCOUNT_CODE', default='1000')
+ACCOUNTING_DEFAULT_CASH_ACCOUNT_NAME = config('ACCOUNTING_DEFAULT_CASH_ACCOUNT_NAME', default='Cash on Hand')
+ACCOUNTING_DEFAULT_BANK_ACCOUNT_CODE = config('ACCOUNTING_DEFAULT_BANK_ACCOUNT_CODE', default='1010')
+ACCOUNTING_DEFAULT_BANK_ACCOUNT_NAME = config('ACCOUNTING_DEFAULT_BANK_ACCOUNT_NAME', default='Bank Account')
+ACCOUNTING_DEFAULT_MOBILE_ACCOUNT_CODE = config('ACCOUNTING_DEFAULT_MOBILE_ACCOUNT_CODE', default='1020')
+ACCOUNTING_DEFAULT_MOBILE_ACCOUNT_NAME = config('ACCOUNTING_DEFAULT_MOBILE_ACCOUNT_NAME', default='Mobile Money')
+ACCOUNTING_DEFAULT_CARD_ACCOUNT_CODE = config('ACCOUNTING_DEFAULT_CARD_ACCOUNT_CODE', default='1030')
+ACCOUNTING_DEFAULT_CARD_ACCOUNT_NAME = config('ACCOUNTING_DEFAULT_CARD_ACCOUNT_NAME', default='Card Receipts')
+ACCOUNTING_DEFAULT_OTHER_ACCOUNT_CODE = config('ACCOUNTING_DEFAULT_OTHER_ACCOUNT_CODE', default='1099')
+ACCOUNTING_DEFAULT_OTHER_ACCOUNT_NAME = config('ACCOUNTING_DEFAULT_OTHER_ACCOUNT_NAME', default='Undeposited Funds')
+ACCOUNTING_DEFAULT_PAYROLL_EXPENSE_CODE = config('ACCOUNTING_DEFAULT_PAYROLL_EXPENSE_CODE', default='5000')
+ACCOUNTING_DEFAULT_PAYROLL_EXPENSE_NAME = config('ACCOUNTING_DEFAULT_PAYROLL_EXPENSE_NAME', default='Payroll Expense')
+ACCOUNTING_DEFAULT_LOAN_FUNDING_CODE = config('ACCOUNTING_DEFAULT_LOAN_FUNDING_CODE', default='1010')
+ACCOUNTING_DEFAULT_LOAN_FUNDING_NAME = config('ACCOUNTING_DEFAULT_LOAN_FUNDING_NAME', default='Bank Account')
+ACCOUNTING_DEFAULT_REVENUE_ACCOUNT_CODE = config('ACCOUNTING_DEFAULT_REVENUE_ACCOUNT_CODE', default='4000')
+ACCOUNTING_DEFAULT_REVENUE_ACCOUNT_NAME = config('ACCOUNTING_DEFAULT_REVENUE_ACCOUNT_NAME', default='Sales Revenue')
+ACCOUNTING_DEFAULT_EXPENSE_ACCOUNT_CODE = config('ACCOUNTING_DEFAULT_EXPENSE_ACCOUNT_CODE', default='6000')
+ACCOUNTING_DEFAULT_EXPENSE_ACCOUNT_NAME = config('ACCOUNTING_DEFAULT_EXPENSE_ACCOUNT_NAME', default='Operating Expense')
+
+# Finance module controls
+ACCOUNTING_AUTO_POST_FROM_CORE = config('ACCOUNTING_AUTO_POST_FROM_CORE', default=True, cast=bool)
+ACCOUNTING_MANUAL_INCOME_REGISTER = config('ACCOUNTING_MANUAL_INCOME_REGISTER', default=False, cast=bool)
+ACCOUNTING_MANUAL_EXPENSE_REGISTER = config('ACCOUNTING_MANUAL_EXPENSE_REGISTER', default=False, cast=bool)
+ACCOUNTING_MANUAL_PAYROLL_LEDGER = config('ACCOUNTING_MANUAL_PAYROLL_LEDGER', default=False, cast=bool)
 
 # REST Framework Configuration - Enterprise Grade
 REST_FRAMEWORK = {

@@ -9,7 +9,9 @@ from core.models import (
     Branch, Employee, Product, Stock, StockMovement, Order, OrderItem,
     Sale, SaleItem, Expense, Vehicle, Trip, VehicleMaintenance,
     OrderFulfillment, OrderShipment, ShipmentItem, PaymentCollection,
-    Logistics
+    Logistics,
+    ChartOfAccount, LedgerTransaction, GeneralLedger,
+    IncomeRegister, ExpenseRegister, LoansRegister, PayrollLedger, AllowanceRegister
 )
 from .serializers import (
     BranchSerializer, EmployeeSerializer, ProductSerializer, StockSerializer,
@@ -17,8 +19,24 @@ from .serializers import (
     SaleSerializer, SaleItemSerializer, ExpenseSerializer, VehicleSerializer,
     TripSerializer, VehicleMaintenanceSerializer, OrderFulfillmentSerializer,
     OrderShipmentSerializer, ShipmentItemSerializer, PaymentCollectionSerializer,
-    LogisticsSerializer
+    LogisticsSerializer,
+    ChartOfAccountSerializer, LedgerTransactionSerializer, GeneralLedgerSerializer,
+    IncomeRegisterSerializer, ExpenseRegisterSerializer, LoansRegisterSerializer,
+    PayrollLedgerSerializer, AllowanceRegisterSerializer
 )
+
+from core.finance_services import (
+    AccountingError,
+    ensure_open_period,
+    post_income_register,
+    post_expense_register,
+    post_loan_register,
+    post_payroll_entry,
+    reverse_transaction,
+)
+
+from django.utils import timezone
+from django.conf import settings
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -367,3 +385,241 @@ class LogisticsViewSet(viewsets.ModelViewSet):
     search_fields = ['tracking_number', 'customer_name']
     ordering_fields = ['created_at', 'delivery_date']
     ordering = ['-created_at']
+
+
+class NoDeleteMixin:
+    def destroy(self, request, *args, **kwargs):
+        return Response({'detail': 'Delete is not allowed. Use reversal entries.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class ChartOfAccountViewSet(NoDeleteMixin, viewsets.ModelViewSet):
+    queryset = ChartOfAccount.objects.all()
+    serializer_class = ChartOfAccountSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['account_type', 'is_active']
+    search_fields = ['account_code', 'account_name']
+    ordering_fields = ['account_code', 'account_name']
+    ordering = ['account_code']
+
+
+class LedgerTransactionViewSet(NoDeleteMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = LedgerTransaction.objects.all()
+    serializer_class = LedgerTransactionSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['transaction_date', 'source_type']
+    search_fields = ['transaction_id', 'reference', 'description']
+    ordering_fields = ['transaction_date']
+    ordering = ['-transaction_date']
+
+    @action(detail=True, methods=['post'])
+    def reverse(self, request, pk=None):
+        transaction_obj = self.get_object()
+        try:
+            reversal = reverse_transaction(transaction_obj, getattr(request.user, 'employee', None))
+            serializer = self.get_serializer(reversal)
+            return Response(serializer.data)
+        except AccountingError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GeneralLedgerViewSet(NoDeleteMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = GeneralLedger.objects.select_related('transaction', 'account')
+    serializer_class = GeneralLedgerSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['account', 'transaction__branch', 'transaction__vehicle', 'transaction__source_type']
+    search_fields = ['transaction__transaction_id', 'account__account_name']
+    ordering_fields = ['transaction__transaction_date', 'id']
+    ordering = ['transaction__transaction_date', 'id']
+
+    @action(detail=False, methods=['get'])
+    def with_running_balance(self, request):
+        account_id = request.query_params.get('account')
+        if not account_id:
+            return Response({'detail': 'account query parameter is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        account = ChartOfAccount.objects.filter(id=account_id).first()
+        if not account:
+            return Response({'detail': 'Account not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        entries = list(self.queryset.filter(account_id=account_id).order_by('transaction__transaction_date', 'id'))
+        balance = account.opening_balance
+        data = []
+        for entry in entries:
+            if account.normal_balance == 'DEBIT':
+                balance += entry.debit_amount - entry.credit_amount
+            else:
+                balance += entry.credit_amount - entry.debit_amount
+            serialized = GeneralLedgerSerializer(entry).data
+            serialized['running_balance'] = balance
+            data.append(serialized)
+        return Response(data)
+
+class IncomeRegisterViewSet(NoDeleteMixin, viewsets.ModelViewSet):
+    queryset = IncomeRegister.objects.select_related('account_credited')
+    serializer_class = IncomeRegisterSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['posted', 'payment_method', 'date']
+    search_fields = ['receipt_no', 'source', 'reference']
+    ordering_fields = ['date']
+    ordering = ['-date']
+
+    def create(self, request, *args, **kwargs):
+        if not getattr(settings, 'ACCOUNTING_MANUAL_INCOME_REGISTER', True):
+            return Response({'detail': 'Income register is auto-generated from Sales.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        entry = self.get_object()
+        if not getattr(settings, 'ACCOUNTING_MANUAL_INCOME_REGISTER', True):
+            return Response({'detail': 'Income register is auto-generated from Sales.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if entry.posted:
+            return Response({'detail': 'Posted entries cannot be edited.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        ensure_open_period(serializer.validated_data['date'])
+        serializer.save()
+
+    def perform_update(self, serializer):
+        date_value = serializer.validated_data.get('date', serializer.instance.date)
+        ensure_open_period(date_value)
+        serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def post_to_ledger(self, request, pk=None):
+        entry = self.get_object()
+        try:
+            txn = post_income_register(entry, getattr(request.user, 'employee', None))
+            return Response({'transaction_id': txn.transaction_id})
+        except AccountingError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+class ExpenseRegisterViewSet(NoDeleteMixin, viewsets.ModelViewSet):
+    queryset = ExpenseRegister.objects.select_related('account_debited')
+    serializer_class = ExpenseRegisterSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['approved', 'posted', 'payment_method', 'date']
+    search_fields = ['voucher_no', 'category', 'reference']
+    ordering_fields = ['date']
+    ordering = ['-date']
+
+    def create(self, request, *args, **kwargs):
+        if not getattr(settings, 'ACCOUNTING_MANUAL_EXPENSE_REGISTER', True):
+            return Response({'detail': 'Expense register is auto-generated from Expenses.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        entry = self.get_object()
+        if not getattr(settings, 'ACCOUNTING_MANUAL_EXPENSE_REGISTER', True):
+            return Response({'detail': 'Expense register is auto-generated from Expenses.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if entry.posted:
+            return Response({'detail': 'Posted entries cannot be edited.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        ensure_open_period(serializer.validated_data['date'])
+        serializer.save()
+
+    def perform_update(self, serializer):
+        date_value = serializer.validated_data.get('date', serializer.instance.date)
+        ensure_open_period(date_value)
+        serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def post_to_ledger(self, request, pk=None):
+        entry = self.get_object()
+        try:
+            txn = post_expense_register(entry, getattr(request.user, 'employee', None))
+            return Response({'transaction_id': txn.transaction_id})
+        except AccountingError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+class LoansRegisterViewSet(NoDeleteMixin, viewsets.ModelViewSet):
+    queryset = LoansRegister.objects.select_related('account')
+    serializer_class = LoansRegisterSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'posted']
+    search_fields = ['loan_id', 'lender']
+    ordering_fields = ['due_date']
+    ordering = ['-due_date']
+
+    def update(self, request, *args, **kwargs):
+        entry = self.get_object()
+        if entry.posted:
+            return Response({'detail': 'Posted entries cannot be edited.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        ensure_open_period(serializer.validated_data['due_date'])
+        serializer.save()
+
+    def perform_update(self, serializer):
+        date_value = serializer.validated_data.get('due_date', serializer.instance.due_date)
+        ensure_open_period(date_value)
+        serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def post_to_ledger(self, request, pk=None):
+        entry = self.get_object()
+        try:
+            txn = post_loan_register(entry, getattr(request.user, 'employee', None))
+            return Response({'transaction_id': txn.transaction_id})
+        except AccountingError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+class PayrollLedgerViewSet(NoDeleteMixin, viewsets.ModelViewSet):
+    queryset = PayrollLedger.objects.all()
+    serializer_class = PayrollLedgerSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['posted', 'payment_date']
+    search_fields = ['employee_name', 'pay_period', 'reference']
+    ordering_fields = ['payment_date']
+    ordering = ['-payment_date']
+
+    def create(self, request, *args, **kwargs):
+        if not getattr(settings, 'ACCOUNTING_MANUAL_PAYROLL_LEDGER', True):
+            return Response({'detail': 'Payroll ledger is auto-generated.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        entry = self.get_object()
+        if not getattr(settings, 'ACCOUNTING_MANUAL_PAYROLL_LEDGER', True):
+            return Response({'detail': 'Payroll ledger is auto-generated.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if entry.posted:
+            return Response({'detail': 'Posted entries cannot be edited.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        ensure_open_period(serializer.validated_data['payment_date'])
+        serializer.save()
+
+    def perform_update(self, serializer):
+        date_value = serializer.validated_data.get('payment_date', serializer.instance.payment_date)
+        ensure_open_period(date_value)
+        serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def post_to_ledger(self, request, pk=None):
+        entry = self.get_object()
+        try:
+            txn = post_payroll_entry(entry, getattr(request.user, 'employee', None))
+            return Response({'transaction_id': txn.transaction_id})
+        except AccountingError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+class AllowanceRegisterViewSet(NoDeleteMixin, viewsets.ModelViewSet):
+    queryset = AllowanceRegister.objects.all()
+    serializer_class = AllowanceRegisterSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['fixed_or_variable', 'status']
+    search_fields = ['employee_name', 'allowance_type']
+    ordering_fields = ['effective_date']
+    ordering = ['-effective_date']
