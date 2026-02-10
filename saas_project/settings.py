@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'saas_project.wsgi.application'
 
 # Database Configuration
 DATABASE_URL = config('DATABASE_URL', default='')
-DATABASE_HOST = config('DATABASE_HOST', default='')
+DATABASE_HOST = config('DATABASE_HOST', default=config('DB_HOST', default=''))
 
 if DATABASE_URL:
     DATABASES = {
@@ -88,14 +88,17 @@ if DATABASE_URL:
         )
     }
 elif DATABASE_HOST:
+    db_password = config("DATABASE_PASSWORD", default=config("DB_PASSWORD", default=""))
+    if isinstance(db_password, str):
+        db_password = db_password.strip()
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": config("DATABASE_NAME", default="postgres"),
-            "USER": config("DATABASE_USER", default=""),
-            "PASSWORD": config("DATABASE_PASSWORD", default=""),
+            "NAME": config("DATABASE_NAME", default=config("DB_NAME", default="postgres")),
+            "USER": config("DATABASE_USER", default=config("DB_USER", default="")),
+            "PASSWORD": db_password,
             "HOST": DATABASE_HOST,
-            "PORT": config("DATABASE_PORT", default="5432"),
+            "PORT": config("DATABASE_PORT", default=config("DB_PORT", default="5432")),
             "OPTIONS": {"sslmode": "require"},
         }
     }
