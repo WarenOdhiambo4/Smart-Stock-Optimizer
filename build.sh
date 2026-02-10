@@ -7,7 +7,7 @@ pip install -r requirements.txt
 
 python manage.py collectstatic --noinput
 
-# Mark all migrations as applied since tables already exist
-python manage.py migrate --fake
+# Apply migrations normally; fall back to --fake-initial if tables already exist
+python manage.py migrate --noinput || python manage.py migrate --noinput --fake-initial
 
 python manage.py create_admin || echo "Create admin failed, continuing..."
