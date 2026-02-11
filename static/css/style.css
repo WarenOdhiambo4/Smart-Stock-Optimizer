@@ -15,6 +15,14 @@
     --nav-yellow: #ffd233;
     --nav-link-size: 12px;
     --nav-link-weight: 800;
+    --fluid-body: clamp(11px, 0.35vw + 10px, 14px);
+    --fluid-table: clamp(9px, 0.25vw + 8.5px, 12px);
+    --fluid-h1: clamp(1.05rem, 1vw + 0.8rem, 1.6rem);
+    --fluid-h2: clamp(1rem, 0.85vw + 0.75rem, 1.4rem);
+    --fluid-h3: clamp(0.95rem, 0.7vw + 0.7rem, 1.2rem);
+    --fluid-h4: clamp(0.9rem, 0.5vw + 0.7rem, 1.05rem);
+    --fluid-h5: clamp(0.85rem, 0.45vw + 0.65rem, 1rem);
+    --fluid-h6: clamp(0.8rem, 0.4vw + 0.6rem, 0.95rem);
 }
 
 * {
@@ -25,7 +33,7 @@
 
 body {
     font-family: var(--font-family, 'Nunito', Arial, Helvetica, sans-serif);
-    font-size: var(--body-font-size, 12px);
+    font-size: var(--body-font-size, var(--fluid-body));
     background-color: transparent;
     background-image: none;
     color: #1f2937;
@@ -42,12 +50,19 @@ h1, h2, h3, h4, h5, h6,
     font-weight: 700;
 }
 
-h1 { font-size: 1.4rem; }
-h2 { font-size: 1.25rem; }
-h3 { font-size: 1.1rem; }
-h4 { font-size: 1rem; }
-h5 { font-size: 0.95rem; }
-h6 { font-size: 0.9rem; }
+h1 { font-size: var(--fluid-h1); }
+h2 { font-size: var(--fluid-h2); }
+h3 { font-size: var(--fluid-h3); }
+h4 { font-size: var(--fluid-h4); }
+h5 { font-size: var(--fluid-h5); }
+h6 { font-size: var(--fluid-h6); }
+
+input,
+select,
+textarea,
+button {
+    font-size: inherit;
+}
 
 a {
     color: var(--primary);
@@ -77,7 +92,7 @@ a:hover {
 .navbar .container-fluid {
     color: var(--nav-link-color, #fb8500) !important;
     font-weight: var(--nav-link-weight, 800);
-    font-size: var(--nav-link-size, 12px);
+    font-size: clamp(11px, 0.4vw + 9px, var(--nav-link-size, 12px));
 }
 
 .navbar-brand {
@@ -390,7 +405,7 @@ a:hover {
 }
 
 .table {
-    font-size: var(--table-font-size, 9px);
+    font-size: var(--table-font-size, var(--fluid-table));
     margin-bottom: 0;
     border-collapse: collapse;
     width: 100%;
@@ -402,7 +417,7 @@ a:hover {
     background: rgba(255, 103, 0, 0.2);
     color: #ff6700;
     font-weight: 700;
-    font-size: var(--table-font-size, 9px);
+    font-size: var(--table-font-size, var(--fluid-table));
     text-transform: uppercase;
     letter-spacing: 0.4px;
     border: 2px solid var(--gridline);
@@ -919,6 +934,45 @@ a:hover {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+}
+
+.page-actions,
+.finance-actions,
+.filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-group,
+.btn-group-sm {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    max-width: 100%;
+}
+
+.btn-group > .btn,
+.btn-group-sm > .btn {
+    border-radius: 0.25rem !important;
+}
+
+.table td .btn,
+.table td .form-select {
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .action-btns.compact {
+        flex-wrap: wrap;
+    }
+
+    .btn-group,
+    .btn-group-sm {
+        width: 100%;
+        justify-content: flex-start;
+    }
 }
 
 .list-group-item {
