@@ -42,7 +42,7 @@
             <h6 class="mb-3">{{ content.cms_order_items|default:'Order Items' }}</h6>
             <div id="orderItems">
                 <div class="row g-2 mb-2 order-item">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <input type="text" name="product_name" class="form-control form-control-sm" placeholder="Product Name" required>
                     </div>
                     <div class="col-md-2">
@@ -55,12 +55,25 @@
                         <input type="number" name="unit_price" step="0.01" class="form-control form-control-sm" placeholder="Price" required>
                     </div>
                     <div class="col-md-2">
+                        <input type="text" class="form-control form-control-sm line-total" placeholder="Total" readonly>
+                    </div>
+                    <div class="col-md-1">
                         <button type="button" class="btn btn-outline-danger btn-sm remove-item"><i class="bi bi-trash"></i></button>
                     </div>
                 </div>
             </div>
             <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addItem">
                 <i class="bi bi-plus me-1"></i>{{ content.cms_add_item|default:'Add Item' }}</button>
+
+            <div class="row g-2 align-items-center mt-3">
+                <div class="col-md-8"></div>
+                <div class="col-md-2 text-end">
+                    <label class="form-label mb-0">{{ content.cms_order_total|default:'Total Amount' }}</label>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" id="orderTotal" class="form-control form-control-sm" readonly value="0.00">
+                </div>
+            </div>
 
             <div class="mt-4">
                 <button type="submit" class="btn btn-primary">{{ content.cms_create_order|default:'Create Order' }}</button>
@@ -75,8 +88,17 @@
 <script>
 document.getElementById('addItem').addEventListener('click', function() {
     const template = document.querySelector('.order-item').cloneNode(true);
-    template.querySelectorAll('input').forEach(input => input.value = input.name === 'quantity' ? '1' : '');
+    template.querySelectorAll('input').forEach(input => {
+        if (input.name === 'quantity') {
+            input.value = '1';
+        } else if (input.classList.contains('line-total')) {
+            input.value = '';
+        } else {
+            input.value = '';
+        }
+    });
     document.getElementById('orderItems').appendChild(template);
+    updateOrderTotals();
 });
 
 document.getElementById('orderItems').addEventListener('click', function(e) {
@@ -84,8 +106,32 @@ document.getElementById('orderItems').addEventListener('click', function(e) {
         const items = document.querySelectorAll('.order-item');
         if (items.length > 1) {
             e.target.closest('.order-item').remove();
+            updateOrderTotals();
         }
     }
 });
+
+document.getElementById('orderItems').addEventListener('input', function(e) {
+    if (e.target.name === 'quantity' || e.target.name === 'unit_price') {
+        updateOrderTotals();
+    }
+});
+
+function updateOrderTotals() {
+    let total = 0;
+    document.querySelectorAll('.order-item').forEach(row => {
+        const qty = parseFloat(row.querySelector('input[name="quantity"]').value) || 0;
+        const price = parseFloat(row.querySelector('input[name="unit_price"]').value) || 0;
+        const lineTotal = qty * price;
+        const lineTotalField = row.querySelector('.line-total');
+        if (lineTotalField) {
+            lineTotalField.value = lineTotal ? lineTotal.toFixed(2) : '';
+        }
+        total += lineTotal;
+    });
+    document.getElementById('orderTotal').value = total.toFixed(2);
+}
+
+updateOrderTotals();
 </script>
 {% endblock %}

@@ -753,6 +753,17 @@ def order_list(request):
             Q(order_number__icontains=search) | 
             Q(supplier__icontains=search)
         )
+
+    orders = orders.annotate(
+        status_priority=Case(
+            When(status='PENDING', then=0),
+            When(status='PARTIALLY_COMPLETED', then=1),
+            When(status='PROCESSING', then=2),
+            When(status='COMPLETED', then=3),
+            default=4,
+            output_field=IntegerField(),
+        )
+    ).order_by('status_priority', '-created_at')
     
     # Order Management Metrics
     total_orders = orders.count()
@@ -835,10 +846,10 @@ def order_create(request):
             for i in range(len(product_names)):
                 if product_names[i]:
                     try:
-                        quantity = int(quantities[i]) if i < len(quantities) and quantities[i] else 1
-                        unit_price = Decimal(unit_prices[i]) if i < len(unit_prices) and unit_prices[i] else Decimal('0')
+                        quantity = parse_decimal(quantities[i], default=Decimal('1')) if i < len(quantities) else Decimal('1')
+                        unit_price = parse_decimal(unit_prices[i], default=Decimal('0')) if i < len(unit_prices) else Decimal('0')
                     except (ValueError, IndexError):
-                        quantity = 1
+                        quantity = Decimal('1')
                         unit_price = Decimal('0')
                     
                     OrderItem.objects.create(
