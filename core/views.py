@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.db.models import Sum, Count, Q, F, Case, When, IntegerField
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from decimal import Decimal, InvalidOperation
@@ -1875,10 +1876,29 @@ def trip_create(request):
             except (ValueError, TypeError):
                 other_expenses = Decimal('0')
             
-            # Handle date field
-            scheduled_date = request.POST.get('scheduled_date')
-            if not scheduled_date:
-                messages.error(request, 'Scheduled date is required')
+            # Handle date field (no future trips)
+            scheduled_date_raw = request.POST.get('scheduled_date')
+            if not scheduled_date_raw:
+                messages.error(request, 'Trip date is required')
+                return render(request, 'core/trip_form.html', {
+                    'vehicles': vehicles,
+                    'drivers': drivers,
+                    'sales': sales,
+                    'action': 'Create'
+                })
+            scheduled_dt = parse_datetime(scheduled_date_raw)
+            if not scheduled_dt:
+                messages.error(request, 'Invalid trip date format')
+                return render(request, 'core/trip_form.html', {
+                    'vehicles': vehicles,
+                    'drivers': drivers,
+                    'sales': sales,
+                    'action': 'Create'
+                })
+            if timezone.is_naive(scheduled_dt):
+                scheduled_dt = timezone.make_aware(scheduled_dt)
+            if scheduled_dt > timezone.now():
+                messages.error(request, 'Trip date cannot be in the future')
                 return render(request, 'core/trip_form.html', {
                     'vehicles': vehicles,
                     'drivers': drivers,
@@ -1895,7 +1915,8 @@ def trip_create(request):
                 destination=request.POST.get('destination', ''),
                 distance=distance,
                 sale_id=request.POST.get('sale') if request.POST.get('sale') else None,
-                scheduled_date=scheduled_date,
+                scheduled_date=scheduled_dt,
+                status='IN_PROGRESS',
                 revenue=revenue,
                 fuel_cost=fuel_cost,
                 other_expenses=other_expenses,
@@ -1938,13 +1959,37 @@ def trip_update(request, pk):
         trip.destination = request.POST.get('destination')
         trip.distance = Decimal(request.POST.get('distance', '0'))
         trip.sale_id = request.POST.get('sale') if request.POST.get('sale') else None
-        trip.scheduled_date = request.POST.get('scheduled_date')
+        scheduled_date_raw = request.POST.get('scheduled_date')
+        scheduled_dt = parse_datetime(scheduled_date_raw) if scheduled_date_raw else None
+        if not scheduled_dt:
+            messages.error(request, 'Trip date is required')
+            return render(request, 'core/trip_form.html', {
+                'trip': trip,
+                'vehicles': vehicles,
+                'drivers': drivers,
+                'sales': sales,
+                'action': 'Update'
+            })
+        if timezone.is_naive(scheduled_dt):
+            scheduled_dt = timezone.make_aware(scheduled_dt)
+        if scheduled_dt > timezone.now():
+            messages.error(request, 'Trip date cannot be in the future')
+            return render(request, 'core/trip_form.html', {
+                'trip': trip,
+                'vehicles': vehicles,
+                'drivers': drivers,
+                'sales': sales,
+                'action': 'Update'
+            })
+        trip.scheduled_date = scheduled_dt
         trip.revenue = Decimal(request.POST.get('revenue', '0'))
         trip.fuel_cost = Decimal(request.POST.get('fuel_cost', '0'))
         trip.other_expenses = Decimal(request.POST.get('other_expenses', '0'))
         trip.customer_name = request.POST.get('customer_name', '')
         trip.customer_phone = request.POST.get('customer_phone', '')
         trip.notes = request.POST.get('notes', '')
+        if trip.status == 'SCHEDULED':
+            trip.status = 'IN_PROGRESS'
         trip.save()
         messages.success(request, f'Trip {trip.trip_number} updated successfully!')
         return redirect('trip_list')
@@ -2058,10 +2103,10 @@ def maintenance_create(request):
         vehicle_id = request.POST.get('vehicle')
         maintenance_type = request.POST.get('maintenance_type')
         service_provider = request.POST.get('service_provider')
-        service_date = request.POST.get('service_date')
+        service_date_raw = request.POST.get('service_date')
         mileage_at_service_raw = request.POST.get('mileage_at_service')
 
-        if not vehicle_id or not maintenance_type or not service_provider or not service_date:
+        if not vehicle_id or not maintenance_type or not service_provider or not service_date_raw:
             messages.error(request, 'Please fill in all required fields.')
             return render(request, 'core/maintenance_form.html', {
                 'vehicles': vehicles,
@@ -2070,6 +2115,20 @@ def maintenance_create(request):
 
         if not mileage_at_service_raw:
             messages.error(request, 'Mileage at service is required.')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'action': 'Create'
+            })
+
+        service_date = parse_date(service_date_raw)
+        if not service_date:
+            messages.error(request, 'Invalid service date format.')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'action': 'Create'
+            })
+        if service_date > timezone.localdate():
+            messages.error(request, 'Service date cannot be in the future.')
             return render(request, 'core/maintenance_form.html', {
                 'vehicles': vehicles,
                 'action': 'Create'
@@ -2115,6 +2174,7 @@ def maintenance_create(request):
                 receipt_number=request.POST.get('receipt_number', ''),
                 notes=request.POST.get('notes', ''),
                 created_by=get_employee_for_user(request.user),
+                status='IN_PROGRESS',
             )
         except Exception as e:
             messages.error(request, f'Error creating maintenance record: {str(e)}')
@@ -2173,7 +2233,25 @@ def maintenance_edit(request, pk):
         maintenance.vehicle_id = request.POST.get('vehicle')
         maintenance.maintenance_type = request.POST.get('maintenance_type')
         maintenance.service_provider = request.POST.get('service_provider')
-        maintenance.service_date = request.POST.get('service_date')
+        service_date_raw = request.POST.get('service_date')
+        service_date = parse_date(service_date_raw) if service_date_raw else None
+        if not service_date:
+            messages.error(request, 'Service date is required.')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'maintenance': maintenance,
+                'parts_data': parse_parts_description(maintenance.description),
+                'action': 'Update'
+            })
+        if service_date > timezone.localdate():
+            messages.error(request, 'Service date cannot be in the future.')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'maintenance': maintenance,
+                'parts_data': parse_parts_description(maintenance.description),
+                'action': 'Update'
+            })
+        maintenance.service_date = service_date
         maintenance.receipt_number = request.POST.get('receipt_number', '')
         maintenance.notes = request.POST.get('notes', '')
 
@@ -2196,6 +2274,8 @@ def maintenance_edit(request, pk):
         maintenance.other_costs = parse_decimal(request.POST.get('other_costs'))
         maintenance.mileage_at_service = parse_int(request.POST.get('mileage_at_service'))
         maintenance.next_service_mileage = parse_int(request.POST.get('next_service_mileage')) if request.POST.get('next_service_mileage') else None
+        if maintenance.status == 'SCHEDULED':
+            maintenance.status = 'IN_PROGRESS'
 
         maintenance.save()
         messages.success(request, f'Maintenance {maintenance.maintenance_number} updated successfully!')

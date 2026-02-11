@@ -11,6 +11,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
+        <div class="table-responsive d-none d-md-block">
         <table class="table">
             <thead>
                 <tr>
@@ -57,6 +58,39 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for user in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ user.username }}</div>
+                <div class="mobile-card-row"><span>Name</span><strong>{{ user.first_name }} {{ user.last_name }}</strong></div>
+                <div class="mobile-card-row"><span>Email</span><strong>{{ user.email }}</strong></div>
+                <div class="mobile-card-row"><span>Role</span>
+                    {% if user.profile %}
+                    <span class="badge badge-info">{{ user.profile.get_role_display }}</span>
+                    {% else %}
+                    <span class="badge badge-secondary">{{ content.cms_no_profile|default:'No Profile' }}</span>
+                    {% endif %}
+                </div>
+                <div class="mobile-card-row"><span>Branch</span>
+                    {% if user.profile and user.profile.branch %}
+                    <strong>{{ user.profile.branch.name }}</strong>
+                    {% else %}
+                    <strong>-</strong>
+                    {% endif %}
+                </div>
+                <div class="mobile-card-row"><span>Status</span>
+                    <span class="badge {% if user.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                        {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+                <div class="mobile-card-actions">
+                    <a href="{% url 'user_edit' user.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}

@@ -25,6 +25,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
+        <div class="table-responsive d-none d-md-block">
         <table class="table">
             <thead>
                 <tr>
@@ -70,6 +71,37 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for note in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ note.title }}</div>
+                <div class="mobile-card-row"><span>Priority</span>
+                    <span class="badge bg-{% if note.priority == 'URGENT' %}danger{% elif note.priority == 'HIGH' %}warning{% elif note.priority == 'MEDIUM' %}info{% else %}secondary{% endif %}">
+                        {{ note.get_priority_display }}
+                    </span>
+                </div>
+                <div class="mobile-card-row"><span>Tags</span>
+                    <strong>
+                        {% for tag in note.tag_list %}
+                        {{ tag }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </strong>
+                </div>
+                <div class="mobile-card-row"><span>Created By</span><strong>{{ note.created_by|default:"-" }}</strong></div>
+                <div class="mobile-card-row"><span>Date</span><strong>{{ note.created_at|date:"M d, Y H:i" }}</strong></div>
+                <div class="mobile-card-row"><span>Note</span><strong>{{ note.content|truncatewords:15 }}</strong></div>
+                <div class="mobile-card-actions">
+                    <a href="{% url 'note_update' note.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                    <form method="post" action="{% url 'note_delete' note.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this note?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">{{ content.cms_delete|default:'Delete' }}</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}

@@ -875,7 +875,7 @@ a:hover {
 .action-btns {
     display: flex;
     gap: 0.35rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
 }
 
@@ -891,6 +891,12 @@ a:hover {
 
 .action-btns .btn {
     white-space: nowrap;
+}
+
+.table .action-btns .btn {
+    padding: 0.2rem 0.45rem;
+    font-size: 0.72rem;
+    line-height: 1.1;
 }
 
 .action-btns.compact .btn {
@@ -956,6 +962,66 @@ a:hover {
 .btn-group > .btn,
 .btn-group-sm > .btn {
     border-radius: 0.25rem !important;
+}
+
+.mobile-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+}
+
+.mobile-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), #ffffff);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    padding: 0.9rem;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.mobile-card-title {
+    font-weight: 700;
+    font-size: 0.98rem;
+    margin-bottom: 0.5rem;
+    color: var(--heading-color, var(--primary));
+}
+
+.mobile-card-row {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.2fr);
+    gap: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px dashed rgba(15, 23, 42, 0.08);
+}
+
+.mobile-card-row span {
+    color: var(--secondary);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.mobile-card-row strong,
+.mobile-card-row .badge,
+.mobile-card-row .row-status {
+    justify-self: end;
+}
+
+.mobile-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.mobile-card-actions .btn {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.74rem;
+    border-radius: 999px;
 }
 
 .table td .btn,

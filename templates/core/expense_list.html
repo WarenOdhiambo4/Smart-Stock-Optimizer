@@ -19,6 +19,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
+        <div class="table-responsive d-none d-md-block">
         <table class="table">
             <thead>
                 <tr>
@@ -70,6 +71,41 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for expense in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ expense.expense_number }}</div>
+                <div class="mobile-card-row"><span>Branch</span><strong>{{ expense.branch.name }}</strong></div>
+                <div class="mobile-card-row"><span>Type</span><strong>{{ expense.get_expense_type_display }}</strong></div>
+                <div class="mobile-card-row"><span>Description</span><strong>{{ expense.description|truncatewords:8 }}</strong></div>
+                <div class="mobile-card-row"><span>Amount</span><strong>${{ expense.amount }}</strong></div>
+                <div class="mobile-card-row"><span>Date</span><strong>{{ expense.expense_date|date:"M d, Y" }}</strong></div>
+                <div class="mobile-card-row"><span>Sale</span>
+                    <strong>
+                        {% if expense.sale %}
+                            {{ expense.sale.sale_number }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </strong>
+                </div>
+                <div class="mobile-card-actions">
+                    <a href="{% url 'expense_print' expense.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank">{{ content.cms_print|default:'Print' }}</a>
+                    {% if not expense.expense_number|slice:":5" == "TRIP-" and not expense.expense_number|slice:":6" == "MAINT-" and not expense.expense_number|slice:":5" == "LOSS-" %}
+                    <a href="{% url 'expense_update' expense.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                    <form method="post" action="{% url 'expense_delete' expense.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete expense {{ expense.expense_number }}?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">{{ content.cms_delete|default:'Delete' }}</button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted small">{{ content.cms_auto_generated|default:'Auto-generated' }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}
@@ -90,5 +126,4 @@ function printExpenses() {
 }
 </script>
 {% endblock %}
-
 

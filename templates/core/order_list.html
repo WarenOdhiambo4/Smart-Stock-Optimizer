@@ -71,6 +71,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
+        <div class="table-responsive d-none d-md-block">
         <table class="table">
             <thead>
                 <tr>
@@ -117,6 +118,32 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for order in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ order.order_number }}</div>
+                <div class="mobile-card-row"><span>Branch</span><strong>{{ order.branch.name }}</strong></div>
+                <div class="mobile-card-row"><span>Supplier</span><strong>{{ order.supplier|default:'-' }}</strong></div>
+                <div class="mobile-card-row"><span>Items</span><strong>{{ order.items.count }}</strong></div>
+                <div class="mobile-card-row"><span>Total</span><strong>${{ order.total_amount }}</strong></div>
+                <div class="mobile-card-row"><span>Status</span>
+                    <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% elif order.status == 'PROCESSING' %}badge-info{% elif order.status == 'PARTIALLY_COMPLETED' %}badge-secondary{% else %}badge-secondary{% endif %}">
+                        {{ order.status }}
+                    </span>
+                </div>
+                <div class="mobile-card-row"><span>Date</span><strong>{{ order.created_at|date:"M d, Y" }}</strong></div>
+                <div class="mobile-card-actions">
+                    <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_view|default:'View' }}</a>
+                    <a href="{% url 'order_edit' order.pk %}" class="btn btn-outline-secondary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                    {% if order.status != 'COMPLETED' %}
+                    <a href="{% url 'order_partial_complete' order.pk %}" class="btn btn-outline-success btn-sm">{{ content.cms_complete|default:'Complete' }}</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}

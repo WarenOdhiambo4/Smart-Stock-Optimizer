@@ -17,6 +17,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
+        <div class="table-responsive d-none d-md-block">
         <table class="table">
             <thead>
                 <tr>
@@ -74,6 +75,48 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for log in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ log.tracking_number }}</div>
+                <div class="mobile-card-row"><span>Customer</span><strong>{{ log.customer_name }}</strong></div>
+                <div class="mobile-card-row"><span>Phone</span><strong>{{ log.customer_phone }}</strong></div>
+                <div class="mobile-card-row"><span>From</span><strong>{{ log.from_branch.name }}</strong></div>
+                <div class="mobile-card-row"><span>Status</span>
+                    <span class="badge {% if log.status == 'DELIVERED' %}badge-success{% elif log.status == 'IN_TRANSIT' %}badge-info{% elif log.status == 'CANCELLED' %}badge-danger{% else %}badge-warning{% endif %}">
+                        {{ log.get_status_display }}
+                    </span>
+                </div>
+                <div class="mobile-card-row"><span>Delivery Date</span><strong>{{ log.delivery_date|date:"M d, Y"|default:"-" }}</strong></div>
+                <div class="mobile-card-row"><span>Cost</span><strong>${{ log.delivery_cost }}</strong></div>
+                <div class="mobile-card-actions">
+                    {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
+                    <a href="{% url 'logistics_edit' log.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                    {% endif %}
+                    <form method="post" action="{% url 'logistics_update_status' log.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <select name="status" onchange="this.form.submit()" class="form-select form-select-sm">
+                            <option value="PENDING" {% if log.status == 'PENDING' %}selected{% endif %}>{{ content.cms_pending|default:'Pending' }}</option>
+                            <option value="PROCESSING" {% if log.status == 'PROCESSING' %}selected{% endif %}>{{ content.cms_processing|default:'Processing' }}</option>
+                            <option value="IN_TRANSIT" {% if log.status == 'IN_TRANSIT' %}selected{% endif %}>{{ content.cms_in_transit|default:'In Transit' }}</option>
+                            <option value="DELIVERED" {% if log.status == 'DELIVERED' %}selected{% endif %}>{{ content.cms_delivered|default:'Delivered' }}</option>
+                            <option value="CANCELLED" {% if log.status == 'CANCELLED' %}selected{% endif %}>{{ content.cms_cancelled|default:'Cancelled' }}</option>
+                        </select>
+                    </form>
+                    {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
+                    <form method="post" action="{% url 'logistics_delete' log.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this logistics record?');">
+                            {{ content.cms_delete|default:'Delete' }}
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}

@@ -19,6 +19,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
+        <div class="table-responsive d-none d-md-block">
         <table class="table">
             <thead>
                 <tr>
@@ -51,6 +52,26 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for item in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ item.stock.product.name }}</div>
+                <div class="mobile-card-row"><span>Branch</span><strong>{{ item.stock.branch.name }}</strong></div>
+                <div class="mobile-card-row"><span>Quantity</span><strong>{{ item.quantity }}</strong></div>
+                <div class="mobile-card-row"><span>Damage</span>
+                    <span class="badge {% if item.damage_type == 'DAMAGED' %}badge-warning{% elif item.damage_type == 'EXPIRED' %}badge-danger{% else %}badge-secondary{% endif %}">
+                        {{ item.get_damage_type_display }}
+                    </span>
+                </div>
+                <div class="mobile-card-row"><span>Unit Cost</span><strong>{{ item.unit_cost|floatformat:2 }}</strong></div>
+                <div class="mobile-card-row"><span>Total Loss</span><strong>{{ item.total_loss|floatformat:2 }}</strong></div>
+                <div class="mobile-card-row"><span>Reported By</span><strong>{{ item.reported_by|default:'-' }}</strong></div>
+                <div class="mobile-card-row"><span>Date</span><strong>{{ item.reported_date|date:"M d, Y" }}</strong></div>
+            </div>
+            {% endfor %}
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}

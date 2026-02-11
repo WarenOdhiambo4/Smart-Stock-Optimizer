@@ -14,7 +14,7 @@
     <button type="button" class="btn btn-primary" data-add-row>{{ content.cms_add_row|default:'Add Row' }}</button>
 </div>
 
-<div class="spreadsheet-wrap" data-add-row-wrapper>
+<div class="spreadsheet-wrap d-none d-md-block" data-add-row-wrapper>
     <table class="spreadsheet-table">
         <thead>
             <tr>
@@ -94,6 +94,31 @@
             </tr>
         </tbody>
     </table>
+</div>
+
+<div class="mobile-card-list d-block d-md-none">
+    {% for entry in entries %}
+    <div class="mobile-card">
+        <div class="mobile-card-title">{{ entry.loan_id }}</div>
+        <div class="mobile-card-row"><span>Lender</span><strong>{{ entry.lender }}</strong></div>
+        <div class="mobile-card-row"><span>Account</span><strong>{{ entry.account.account_code }} - {{ entry.account.account_name }}</strong></div>
+        <div class="mobile-card-row"><span>Principal</span><strong>{{ entry.principal|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Interest</span><strong>{{ entry.interest_rate|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Paid</span><strong>{{ entry.amount_paid|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Outstanding</span><strong>{{ entry.outstanding_balance|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Due</span><strong>{{ entry.due_date|date:'Y-m-d' }}</strong></div>
+        <div class="mobile-card-row"><span>Status</span><strong>{{ entry.get_status_display }}</strong></div>
+        <div class="mobile-card-row"><span>Posted</span>
+            {% if entry.posted %}
+                <span class="row-status posted">{{ content.cms_posted|default:'Posted' }}</span>
+            {% else %}
+                <span class="row-status pending">{{ content.cms_unposted|default:'Unposted' }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted small">{{ content.cms_no_loans_found|default:"No loans found" }}</div>
+    {% endfor %}
 </div>
 {% endblock %}
 

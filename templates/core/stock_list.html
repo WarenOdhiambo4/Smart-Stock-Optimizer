@@ -29,7 +29,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
-        <div class="table-responsive stock-table-wrap">
+        <div class="table-responsive stock-table-wrap d-none d-md-block">
         <table class="table stock-table">
             <thead>
                 <tr>
@@ -76,6 +76,34 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for stock in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ stock.product.name }}</div>
+                <div class="mobile-card-row"><span>SKU</span><strong>{{ stock.product.sku }}</strong></div>
+                <div class="mobile-card-row"><span>Branch</span><strong>{{ stock.branch.name }}</strong></div>
+                <div class="mobile-card-row"><span>Quantity</span><strong class="{% if stock.is_low_stock %}low-stock{% endif %}">{{ stock.quantity }}</strong></div>
+                <div class="mobile-card-row"><span>Min Qty</span><strong>{{ stock.min_quantity }}</strong></div>
+                <div class="mobile-card-row"><span>Status</span>
+                    {% if stock.is_low_stock %}
+                        <span class="badge badge-danger">{{ content.cms_low_stock|default:'Low Stock' }}</span>
+                    {% else %}
+                        <span class="badge badge-success">{{ content.cms_ok|default:'OK' }}</span>
+                    {% endif %}
+                </div>
+                <div class="mobile-card-actions">
+                    <a href="{% url 'stock_reduce' stock.id %}" class="btn btn-outline-warning btn-sm">{{ content.cms_reduce|default:'Reduce' }}</a>
+                    <a href="{% url 'report_broken_product_for_stock' stock.id %}" class="btn btn-outline-danger btn-sm">{{ content.cms_report_broken|default:'Report Broken' }}</a>
+                    <form method="post" action="{% url 'stock_delete' stock.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Delete this stock record?');">
+                            {{ content.cms_delete|default:'Delete' }}</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
         </div>
         
         {% include 'core/pagination.html' %}

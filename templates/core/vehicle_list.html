@@ -19,7 +19,7 @@
             </div>
         </form>
 
-        <div class="table-responsive">
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -60,6 +60,30 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for vehicle in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ vehicle.registration_number }}</div>
+                <div class="mobile-card-row"><span>Type</span><strong>{{ vehicle.get_vehicle_type_display }}</strong></div>
+                <div class="mobile-card-row"><span>Make/Model</span><strong>{{ vehicle.make }} {{ vehicle.model }} ({{ vehicle.year }})</strong></div>
+                <div class="mobile-card-row"><span>Branch</span><strong>{{ vehicle.branch.name }}</strong></div>
+                <div class="mobile-card-row"><span>Driver</span><strong>{{ vehicle.assigned_driver|default:"-" }}</strong></div>
+                <div class="mobile-card-row"><span>Status</span>
+                    <span class="badge bg-{% if vehicle.status == 'ACTIVE' %}success{% elif vehicle.status == 'MAINTENANCE' %}warning{% else %}secondary{% endif %}">
+                        {{ vehicle.get_status_display }}
+                    </span>
+                </div>
+                <div class="mobile-card-row"><span>Mileage</span><strong>{{ vehicle.current_mileage|floatformat:0 }} KM</strong></div>
+                <div class="mobile-card-row"><span>Revenue</span><strong>${{ vehicle.total_revenue|floatformat:2 }}</strong></div>
+                <div class="mobile-card-actions">
+                    <a href="{% url 'vehicle_edit' vehicle.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted small">{{ content.cms_no_vehicles_found|default:"No vehicles found" }}</div>
+            {% endfor %}
         </div>
         
         {% if page_obj %}

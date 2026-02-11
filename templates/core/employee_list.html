@@ -19,6 +19,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
+        <div class="table-responsive d-none d-md-block">
         <table class="table">
             <thead>
                 <tr>
@@ -65,6 +66,43 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for employee in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ employee.full_name }}</div>
+                <div class="mobile-card-row"><span>Email</span><strong>{{ employee.email }}</strong></div>
+                <div class="mobile-card-row"><span>Phone</span><strong>{{ employee.phone }}</strong></div>
+                <div class="mobile-card-row"><span>Position</span><strong>{{ employee.position }}</strong></div>
+                <div class="mobile-card-row"><span>Branches</span>
+                    <strong>
+                        {% for branch in employee.branches.all %}
+                            {{ branch.name }}{% if not forloop.last %}, {% endif %}
+                        {% empty %}
+                            -
+                        {% endfor %}
+                    </strong>
+                </div>
+                <div class="mobile-card-row"><span>Status</span>
+                    {% if employee.is_active %}
+                        <span class="badge badge-success">{{ content.cms_active|default:'Active' }}</span>
+                    {% else %}
+                        <span class="badge badge-secondary">{{ content.cms_inactive|default:'Inactive' }}</span>
+                    {% endif %}
+                </div>
+                <div class="mobile-card-actions">
+                    <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                    <form method="post" action="{% url 'employee_delete' employee.pk %}" class="d-inline" onsubmit="return confirm('Delete this employee?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">{{ content.cms_delete|default:'Delete' }}</button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted small">{{ content.cms_no_employees_found|default:'No employees found' }}</div>
+            {% endfor %}
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}

@@ -19,7 +19,7 @@
             </div>
         </form>
 
-        <div class="table-responsive">
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -62,6 +62,30 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for maint in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ maint.maintenance_number }}</div>
+                <div class="mobile-card-row"><span>Vehicle</span><strong>{{ maint.vehicle.registration_number }}</strong></div>
+                <div class="mobile-card-row"><span>Type</span><strong>{{ maint.get_maintenance_type_display }}</strong></div>
+                <div class="mobile-card-row"><span>Date</span><strong>{{ maint.service_date|date:"M d, Y" }}</strong></div>
+                <div class="mobile-card-row"><span>Cost</span><strong>${{ maint.total_cost|floatformat:2 }}</strong></div>
+                <div class="mobile-card-row"><span>Status</span>
+                    <span class="badge bg-{% if maint.status == 'COMPLETED' %}success{% elif maint.status == 'IN_PROGRESS' %}warning{% elif maint.status == 'SCHEDULED' %}info{% else %}secondary{% endif %}">
+                        {{ maint.get_status_display }}
+                    </span>
+                </div>
+                <div class="mobile-card-actions">
+                    {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
+                    <a href="{% url 'maintenance_edit' maint.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted small">{{ content.cms_no_maintenance_records_found|default:"No maintenance records found" }}</div>
+            {% endfor %}
         </div>
         
         <!-- Pagination -->

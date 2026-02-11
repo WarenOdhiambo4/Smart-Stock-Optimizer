@@ -26,6 +26,7 @@
 <div class="card">
     <div class="card-body p-0">
         {% if page_obj %}
+        <div class="table-responsive d-none d-md-block">
         <table class="table">
             <thead>
                 <tr>
@@ -74,6 +75,43 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for movement in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ movement.stock.product.name }}</div>
+                <div class="mobile-card-row"><span>Date</span><strong>{{ movement.created_at|date:"M d, H:i" }}</strong></div>
+                <div class="mobile-card-row"><span>Type</span>
+                    <span class="badge {% if movement.movement_type == 'IN' %}badge-success{% elif movement.movement_type == 'OUT' or movement.movement_type == 'SALE' %}badge-danger{% else %}badge-info{% endif %}">
+                        {{ movement.get_movement_type_display }}
+                    </span>
+                </div>
+                <div class="mobile-card-row"><span>Quantity</span><strong>{{ movement.quantity }}</strong></div>
+                <div class="mobile-card-row"><span>From</span><strong>{{ movement.from_branch.name|default:movement.stock.branch.name }}</strong></div>
+                <div class="mobile-card-row"><span>To</span><strong>{{ movement.to_branch.name|default:'-' }}</strong></div>
+                <div class="mobile-card-row"><span>Status</span>
+                    <span class="badge {% if movement.status == 'APPROVED' %}badge-success{% elif movement.status == 'PENDING' %}badge-warning{% else %}badge-secondary{% endif %}">
+                        {{ movement.status }}
+                    </span>
+                </div>
+                {% if movement.notes %}
+                <div class="mobile-card-row"><span>Notes</span><strong>{{ movement.notes }}</strong></div>
+                {% endif %}
+                <div class="mobile-card-actions">
+                    {% if movement.status == 'PENDING' and movement.movement_type == 'TRANSFER' %}
+                    <form method="post" action="{% url 'approve_transfer' movement.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">{{ content.cms_approve|default:'Approve' }}</button>
+                        <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">{{ content.cms_reject|default:'Reject' }}</button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted small">-</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
         {% include 'core/pagination.html' %}
         {% else %}

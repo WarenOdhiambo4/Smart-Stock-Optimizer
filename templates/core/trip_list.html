@@ -40,7 +40,7 @@
             </div>
         </form>
 
-        <div class="table-responsive">
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -96,6 +96,38 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+
+        <div class="mobile-card-list d-block d-md-none">
+            {% for trip in page_obj %}
+            <div class="mobile-card">
+                <div class="mobile-card-title">{{ trip.trip_number }}</div>
+                <div class="mobile-card-row"><span>Vehicle</span><strong>{{ trip.vehicle.registration_number }}</strong></div>
+                <div class="mobile-card-row"><span>Route</span><strong>{{ trip.origin }} → {{ trip.destination }}</strong></div>
+                <div class="mobile-card-row"><span>Revenue</span><strong>${{ trip.revenue|floatformat:2 }}</strong></div>
+                <div class="mobile-card-row"><span>Profit</span>
+                    <strong class="{% if trip.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        ${{ trip.net_profit|floatformat:2 }}
+                    </strong>
+                </div>
+                <div class="mobile-card-row"><span>Date</span><strong>{{ trip.scheduled_date|date:"M d, Y" }}</strong></div>
+                <div class="mobile-card-row"><span>Status</span>
+                    <span class="badge bg-{% if trip.status == 'COMPLETED' %}success{% elif trip.status == 'IN_PROGRESS' %}warning{% elif trip.status == 'SCHEDULED' %}info{% else %}secondary{% endif %}">
+                        {{ trip.get_status_display }}
+                    </span>
+                </div>
+                <div class="mobile-card-actions">
+                    <a href="{% url 'trip_print' trip.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank">{{ content.cms_print|default:'Print' }}</a>
+                    <a href="{% url 'trip_update' trip.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                    <form method="post" action="{% url 'trip_delete' trip.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete trip {{ trip.trip_number }}?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">{{ content.cms_delete|default:'Delete' }}</button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted small">{{ content.cms_no_trips_found|default:"No trips found" }}</div>
+            {% endfor %}
         </div>
         
         <!-- Pagination -->

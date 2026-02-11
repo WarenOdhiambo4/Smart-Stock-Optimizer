@@ -14,7 +14,7 @@
 <div class="finance-note">{{ content.cms_payroll_ledger_is_auto_synced_from_the_payroll_module_manual|default:"Payroll Ledger is auto-synced from the Payroll module. Manual entry is disabled." }}</div>
 {% endif %}
 
-<div class="spreadsheet-wrap">
+<div class="spreadsheet-wrap d-none d-md-block">
     <table class="spreadsheet-table">
         <thead>
             <tr>
@@ -56,6 +56,31 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<div class="mobile-card-list d-block d-md-none">
+    {% for entry in entries %}
+    <div class="mobile-card">
+        <div class="mobile-card-title">{{ entry.pay_period }}</div>
+        <div class="mobile-card-row"><span>Employee</span><strong>{{ entry.employee_name }}</strong></div>
+        <div class="mobile-card-row"><span>Basic</span><strong>{{ entry.basic_salary|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Allowances</span><strong>{{ entry.allowances|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Deductions</span><strong>{{ entry.deductions|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Gross</span><strong>{{ entry.gross_pay|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Net</span><strong>{{ entry.net_pay|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Payment Date</span><strong>{{ entry.payment_date }}</strong></div>
+        <div class="mobile-card-row"><span>Reference</span><strong>{{ entry.reference }}</strong></div>
+        <div class="mobile-card-row"><span>Posted</span>
+            {% if entry.posted %}
+                <span class="row-status posted">{{ content.cms_posted|default:'Posted' }}</span>
+            {% else %}
+                <span class="row-status pending">{{ content.cms_unposted|default:'Unposted' }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted small">{{ content.cms_no_payroll_entries_found|default:"No payroll entries found" }}</div>
+    {% endfor %}
 </div>
 {% endblock %}
 

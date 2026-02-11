@@ -31,7 +31,7 @@
     </form>
 </div>
 
-<div class="spreadsheet-wrap">
+<div class="spreadsheet-wrap d-none d-md-block">
     <table class="spreadsheet-table">
         <thead>
             <tr>
@@ -64,6 +64,23 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<div class="mobile-card-list d-block d-md-none">
+    {% for entry in page_obj %}
+    <div class="mobile-card">
+        <div class="mobile-card-title">{{ entry.transaction.transaction_id }}</div>
+        <div class="mobile-card-row"><span>Date</span><strong>{{ entry.transaction.transaction_date }}</strong></div>
+        <div class="mobile-card-row"><span>Description</span><strong>{{ entry.transaction.description }}</strong></div>
+        <div class="mobile-card-row"><span>Branch</span><strong>{% if entry.transaction.branch %}{{ entry.transaction.branch.name }}{% else %}—{% endif %}</strong></div>
+        <div class="mobile-card-row"><span>Vehicle</span><strong>{% if entry.transaction.vehicle %}{{ entry.transaction.vehicle.registration_number }}{% else %}—{% endif %}</strong></div>
+        <div class="mobile-card-row"><span>Account</span><strong>{{ entry.account.account_name }}</strong></div>
+        <div class="mobile-card-row"><span>Debit</span><strong>{% if entry.debit_amount > 0 %}{{ entry.debit_amount|floatformat:2 }}{% else %}—{% endif %}</strong></div>
+        <div class="mobile-card-row"><span>Credit</span><strong>{% if entry.credit_amount > 0 %}{{ entry.credit_amount|floatformat:2 }}{% else %}—{% endif %}</strong></div>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted small">{{ content.cms_no_logistics_ledger_entries_found|default:"No logistics ledger entries found" }}</div>
+    {% endfor %}
 </div>
 
 {% if page_obj.has_other_pages %}

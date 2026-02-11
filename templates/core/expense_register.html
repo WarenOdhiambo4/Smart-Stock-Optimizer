@@ -14,7 +14,7 @@
 <div class="finance-note">{{ content.cms_expense_register_is_auto_synced_from_expenses_edit_in_expens|default:"Expense Register is auto-synced from Expenses. Edit in Expenses module." }}</div>
 {% endif %}
 
-<div class="spreadsheet-wrap">
+<div class="spreadsheet-wrap d-none d-md-block">
     <table class="spreadsheet-table">
         <thead>
             <tr>
@@ -59,6 +59,36 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<div class="mobile-card-list d-block d-md-none">
+    {% for entry in entries %}
+    <div class="mobile-card">
+        <div class="mobile-card-title">{{ entry.voucher_no }}</div>
+        <div class="mobile-card-row"><span>Date</span><strong>{{ entry.date }}</strong></div>
+        <div class="mobile-card-row"><span>Category</span><strong>{{ entry.category }}</strong></div>
+        <div class="mobile-card-row"><span>Account</span><strong>{{ entry.account_debited.account_code }} - {{ entry.account_debited.account_name }}</strong></div>
+        <div class="mobile-card-row"><span>Amount</span><strong>{{ entry.amount|floatformat:2 }}</strong></div>
+        <div class="mobile-card-row"><span>Payment</span><strong>{{ entry.get_payment_method_display }}</strong></div>
+        <div class="mobile-card-row"><span>Reference</span><strong>{{ entry.reference }}</strong></div>
+        <div class="mobile-card-row"><span>Approved</span>
+            {% if entry.approved %}
+                <span class="row-status posted">{{ content.cms_yes|default:'Yes' }}</span>
+            {% else %}
+                <span class="row-status pending">{{ content.cms_no|default:'No' }}</span>
+            {% endif %}
+        </div>
+        <div class="mobile-card-row"><span>Posted</span>
+            {% if entry.posted %}
+                <span class="row-status posted">{{ content.cms_yes|default:'Yes' }}</span>
+            {% else %}
+                <span class="row-status pending">{{ content.cms_no|default:'No' }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted small">{{ content.cms_no_expense_entries_found|default:"No expense entries found" }}</div>
+    {% endfor %}
 </div>
 {% endblock %}
 
