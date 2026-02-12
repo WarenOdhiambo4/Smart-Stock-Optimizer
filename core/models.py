@@ -554,15 +554,24 @@ class SaleItem(models.Model):
             StockMovement.objects.filter(movement_type='SALE', stock=self.stock, notes=note).delete()
             return
 
-        if is_new:
-            if not StockMovement.objects.filter(movement_type='SALE', stock=self.stock, notes=note).exists():
-                StockMovement.objects.create(
-                    stock=self.stock,
-                    movement_type='SALE',
-                    quantity=self.quantity,
-                    status='APPROVED',
-                    notes=note
-                )
+        movement = StockMovement.objects.filter(
+            movement_type='SALE',
+            stock=self.stock,
+            notes=note
+        ).first()
+
+        if movement is None and self.quantity:
+            movement = StockMovement.objects.create(
+                stock=self.stock,
+                movement_type='SALE',
+                quantity=self.quantity,
+                status='APPROVED',
+                notes=note,
+                unit_cost=self.unit_cost_at_sale,
+            )
+
+        if movement and movement.status == 'APPROVED' and not movement._processed:
+            movement.apply_stock_adjustment()
 
 
 class UserProfile(models.Model):
