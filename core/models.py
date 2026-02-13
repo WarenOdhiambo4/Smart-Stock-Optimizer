@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import F
 from django.contrib.auth.models import User
 from decimal import Decimal
 from simple_history.models import HistoricalRecords
@@ -162,8 +163,9 @@ class StockMovement(models.Model):
             return
         
         if self.movement_type in ['OUT', 'SALE']:
-            self.stock.quantity -= abs(self.quantity)
-            self.stock.save()
+            Stock.objects.filter(pk=self.stock_id).update(
+                quantity=F('quantity') - abs(self.quantity)
+            )
         elif self.movement_type == 'ADJUSTMENT':
             self.stock.quantity += self.quantity
             self.stock.save()
@@ -187,8 +189,9 @@ class StockMovement(models.Model):
                 self.stock.quantity += qty
                 self.stock.save()
         elif self.movement_type == 'TRANSFER':
-            self.stock.quantity -= abs(self.quantity)
-            self.stock.save()
+            Stock.objects.filter(pk=self.stock_id).update(
+                quantity=F('quantity') - abs(self.quantity)
+            )
             if self.to_branch:
                 to_stock, created = Stock.objects.get_or_create(
                     branch=self.to_branch,
