@@ -12,10 +12,13 @@ from django.core.paginator import Paginator
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from datetime import datetime, timedelta
+import logging
 import uuid
 
 from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, FuelConsumption, BusinessNote, TwoFactorAuth, BrokenProduct, SystemContent
 from .inventory_costing import consume_fifo_layers, restore_fifo_layers
+
+logger = logging.getLogger(__name__)
 
 
 def role_required(*roles):
@@ -243,12 +246,24 @@ def dashboard(request):
     # Financial metrics
     today = timezone.now().date()
     month_start = today.replace(day=1)
+    prev_month_end = month_start - timedelta(days=1)
+    prev_month_start = prev_month_end.replace(day=1)
     
     total_sales = Sale.objects.filter(sales_filter).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
     monthly_sales = Sale.objects.filter(sales_filter, created_at__gte=month_start).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
     
     total_expenses = Expense.objects.filter(expense_filter).exclude(expense_type='DELIVERY').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     monthly_expenses = Expense.objects.filter(expense_filter, expense_date__gte=month_start).exclude(expense_type='DELIVERY').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    prev_month_sales = Sale.objects.filter(
+        sales_filter,
+        created_at__date__gte=prev_month_start,
+        created_at__date__lte=prev_month_end
+    ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+    prev_month_expenses = Expense.objects.filter(
+        expense_filter,
+        expense_date__gte=prev_month_start,
+        expense_date__lte=prev_month_end
+    ).exclude(expense_type='DELIVERY').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
     # Calculate delivery expenses separately (business-wide)
     delivery_expenses = DeliveryChargesManager.get_total_delivery_expenses()
@@ -256,6 +271,18 @@ def dashboard(request):
     
     total_profit = total_sales - total_expenses - delivery_expenses
     monthly_profit = monthly_sales - monthly_expenses - monthly_delivery_expenses
+    prev_month_profit = prev_month_sales - prev_month_expenses
+
+    def pct_change(current, previous):
+        if previous and previous != 0:
+            return (current - previous) / previous * 100
+        return Decimal('0.00')
+
+    revenue_growth = pct_change(monthly_sales, prev_month_sales)
+    profit_growth = pct_change(monthly_profit, prev_month_profit)
+    expense_growth = pct_change(monthly_expenses, prev_month_expenses)
+    profit_margin = (monthly_profit / monthly_sales * 100) if monthly_sales else Decimal('0.00')
+    expense_ratio = (monthly_expenses / monthly_sales * 100) if monthly_sales else Decimal('0.00')
     
     recent_sales = Sale.objects.filter(sales_filter).select_related('branch')[:5]
     recent_orders = Order.objects.select_related('branch')[:5]
@@ -284,6 +311,12 @@ def dashboard(request):
         'pending_orders': pending_orders,
         'pending_transfers': pending_transfers,
         'pending_logistics': pending_logistics,
+        'revenue_growth': revenue_growth,
+        'profit_growth': profit_growth,
+        'expense_growth': expense_growth,
+        'profit_margin': profit_margin,
+        'expense_ratio': expense_ratio,
+        'prev_month_sales': prev_month_sales,
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -1063,7 +1096,10 @@ def sale_create(request):
                                 messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
                                 return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
 
-                        price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
+                        raw_price = unit_prices[i] if i < len(unit_prices) else None
+                        price = parse_decimal(raw_price, Decimal('0.00'))
+                        if price <= 0:
+                            price = stock.product.unit_price or Decimal('0.00')
                         if is_broken_sale:
                             unit_cost_at_sale = Decimal('0.00')
                         else:
@@ -1103,6 +1139,24 @@ def sale_create(request):
             messages.success(request, f'Sale {sale.sale_number} created successfully!')
             return redirect('sale_list')
         except Exception as e:
+            try:
+                branch_id = request.POST.get('branch')
+                sale_date = request.POST.get('sale_date')
+                stock_ids = request.POST.getlist('stock_id')
+                quantities = request.POST.getlist('quantity')
+                unit_prices = request.POST.getlist('unit_price')
+                logger.exception(
+                    "Sale create failed: user=%s branch=%s date=%s items=%s qty=%s prices=%s confirm=%s",
+                    getattr(request.user, 'username', None),
+                    branch_id,
+                    sale_date,
+                    len(stock_ids),
+                    quantities,
+                    unit_prices,
+                    request.POST.get('confirm'),
+                )
+            except Exception:
+                logger.exception("Sale create failed (logging error)")
             messages.error(request, f'Error creating sale: {str(e)}')
             return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
     
@@ -1195,7 +1249,10 @@ def sale_edit(request, pk):
                             messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
                             return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Update', 'sale': sale})
 
-                        price = Decimal(unit_prices[i]) if i < len(unit_prices) else stock.product.unit_price
+                        raw_price = unit_prices[i] if i < len(unit_prices) else None
+                        price = parse_decimal(raw_price, Decimal('0.00'))
+                        if price <= 0:
+                            price = stock.product.unit_price or Decimal('0.00')
                         if is_broken_sale:
                             unit_cost_at_sale = Decimal('0.00')
                         else:

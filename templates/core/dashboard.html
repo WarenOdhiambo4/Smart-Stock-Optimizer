@@ -5,125 +5,236 @@
 
 {% block content %}
 <style>
-    body { font-family: 'Nunito', sans-serif; font-size: 14px; }
-    .page-title { font-size: 14px; font-weight: 600; margin: 0; }
-    .quick-actions .btn { font-size: 12px; }
-    .stat-box { background: #ffffff; padding: 0.8rem; margin-bottom: 0.8rem; border-left: 3px solid var(--accent); border-radius: 8px; border: 1px solid var(--border); }
-    .stat-value { font-size: 14px; font-weight: 700; color: var(--primary); }
-    .stat-label { font-size: 12px; color: #6b7280; margin-top: 0.2rem; }
-    .section { }
-    .section-title { }
-    .table { font-size: 14px; }
-    .table th { background: #f0fdf4; color: #059669; font-weight: 600; font-size: 12px; }
-    .badge { font-size: 11px; }
-    .badge-warning { background: #fbbf24; color: #78350f; }
-    .badge-success { background: #10b981; color: white; }
-    .badge-info { background: #06b6d4; color: white; }
-    .badge-danger { background: #ef4444; color: white; }
-    .low-stock { color: #ef4444; font-weight: 600; }
+    .dashboard-shell {
+        background: #f6f3ee;
+        border-radius: 28px;
+        padding: clamp(16px, 2vw, 32px);
+        box-shadow: 0 20px 40px rgba(31, 41, 55, 0.08);
+        border: 1px solid rgba(17, 24, 39, 0.06);
+    }
+    .dash-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+    .dash-title {
+        font-size: clamp(20px, 2.6vw, 30px);
+        font-weight: 700;
+        color: #1f2937;
+    }
+    .dash-subtitle {
+        margin-top: 6px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+    .dash-controls select {
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+        background: #fffaf2;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .stat-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 18px;
+        border: 1px solid rgba(31, 41, 55, 0.08);
+        box-shadow: 0 12px 24px rgba(31, 41, 55, 0.06);
+    }
+    .stat-card h6 {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+    .stat-card .value {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1f2937;
+    }
+    .stat-card .delta {
+        margin-top: 6px;
+        font-size: 13px;
+        color: #6b7280;
+    }
+    .stat-card .delta span {
+        color: #4b6b37;
+        font-weight: 600;
+    }
+    .performance-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 18px;
+    }
+    .panel {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 20px;
+        border: 1px solid rgba(31, 41, 55, 0.08);
+        box-shadow: 0 16px 32px rgba(31, 41, 55, 0.08);
+    }
+    .panel h5 {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: #1f2937;
+    }
+    .chart-placeholder {
+        height: 180px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(107, 114, 128, 0.08), rgba(255,255,255,0));
+        position: relative;
+        overflow: hidden;
+    }
+    .chart-line {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 20px;
+        height: 120px;
+    }
+    .chart-line svg {
+        width: 100%;
+        height: 100%;
+    }
+    .donut {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: conic-gradient(#6b8f4e calc(var(--p) * 1%), #b7cf93 0);
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .donut::after {
+        content: "";
+        width: 110px;
+        height: 110px;
+        background: #fff;
+        border-radius: 50%;
+        position: absolute;
+    }
+    .donut span {
+        position: relative;
+        z-index: 2;
+        font-size: 18px;
+        font-weight: 700;
+        color: #2f3b2f;
+    }
+    .list-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+    }
+    .table-card table {
+        font-size: 13px;
+    }
+    .table-card th {
+        background: #f7f3ec;
+        color: #4b6b37;
+        font-weight: 600;
+        border-bottom: none;
+    }
+    @media (max-width: 991px) {
+        .performance-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
-<div class="page-header">
-    <h1 class="page-title">{{ content.cms_dashboard|default:'Dashboard' }}</h1>
-    <div class="quick-actions mt-2">
-        <a href="{% url 'sale_create' %}" class="btn btn-primary btn-sm me-2">{{ content.cms_new_sale|default:'New Sale' }}</a>
-        <a href="{% url 'order_create' %}" class="btn btn-outline-primary btn-sm">{{ content.cms_new_order|default:'New Order' }}</a>
+<div class="dashboard-shell">
+    <div class="dash-header">
+        <div>
+            <div class="dash-title">Paroha SCM</div>
+            <div class="dash-title" style="font-size: 20px; margin-top: 10px;">
+                Good {{ request.user.first_name|default:request.user.username }}!
+            </div>
+            <div class="dash-subtitle">Today is {% now "l, F d, Y" %}</div>
+        </div>
+        <div class="dash-controls">
+            <select>
+                <option>Last Month</option>
+                <option>Last 90 Days</option>
+            </select>
+        </div>
     </div>
-</div>
 
-<div class="row g-2 mb-3">
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-value">KES {{ monthly_sales|floatformat:2 }}</div>
-            <div class="stat-label">{{ content.cms_monthly_sales|default:"Monthly Sales" }}</div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h6>Total Revenue</h6>
+            <div class="value">KES {{ monthly_sales|floatformat:2 }}</div>
+            <div class="delta"><span>+{{ revenue_growth|floatformat:0 }}%</span> from last month</div>
+        </div>
+        <div class="stat-card">
+            <h6>Net Profit</h6>
+            <div class="value">KES {{ monthly_profit|floatformat:2 }}</div>
+            <div class="delta">Growth rate <span>+{{ profit_growth|floatformat:0 }}%</span></div>
+        </div>
+        <div class="stat-card">
+            <h6>Total Expenses</h6>
+            <div class="value">KES {{ monthly_expenses|floatformat:2 }}</div>
+            <div class="delta">Growth rate <span>+{{ expense_growth|floatformat:0 }}%</span></div>
+        </div>
+        <div class="stat-card">
+            <h6>Profit Margin</h6>
+            <div class="value">{{ profit_margin|floatformat:0 }}%</div>
+            <div class="delta">Growth rate <span>+{{ profit_growth|floatformat:0 }}%</span></div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-value">KES {{ monthly_expenses|floatformat:2 }}</div>
-            <div class="stat-label">{{ content.cms_monthly_expenses|default:"Monthly Expenses" }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-value">KES {{ monthly_profit|floatformat:2 }}</div>
-            <div class="stat-label">{{ content.cms_monthly_profit|default:"Monthly Profit" }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-value">KES {{ total_sales|floatformat:2 }}</div>
-            <div class="stat-label">{{ content.cms_total_sales|default:"Total Sales" }}</div>
-        </div>
-    </div>
-</div>
 
-<div class="row g-2 mb-3">
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-value">{{ total_branches }}</div>
-            <div class="stat-label">{{ content.cms_branches|default:"Branches" }}</div>
+    <div class="performance-grid">
+        <div class="panel">
+            <h5>Monthly Revenue Performance</h5>
+            <div class="d-flex justify-content-between mb-3">
+                <div>
+                    <div class="dash-subtitle">Highest monthly revenue</div>
+                    <div class="value">KES {{ monthly_sales|floatformat:2 }}</div>
+                </div>
+                <div>
+                    <div class="dash-subtitle">Lowest monthly revenue</div>
+                    <div class="value">KES {{ prev_month_sales|floatformat:2 }}</div>
+                </div>
+            </div>
+            <div class="chart-placeholder">
+                <div class="chart-line">
+                    <svg viewBox="0 0 300 120" preserveAspectRatio="none">
+                        <polyline fill="none" stroke="#6b8f4e" stroke-width="3" points="0,90 50,60 100,70 150,55 200,50 250,40 300,30"/>
+                        <polyline fill="none" stroke="#a4b792" stroke-width="2" points="0,100 60,80 120,85 180,70 240,65 300,55"/>
+                    </svg>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-value">{{ total_products }}</div>
-            <div class="stat-label">{{ content.cms_products|default:"Products" }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-value">{{ pending_logistics }}</div>
-            <div class="stat-label">{{ content.cms_pending_logistics|default:"Pending Logistics" }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-box">
-            <div class="stat-value">{{ low_stock_items|length }}</div>
-            <div class="stat-label">{{ content.cms_low_stock_items|default:"Low Stock Items" }}</div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-2 mb-3">
-    <div class="col-md-4">
-        <div class="stat-box">
-            <div class="d-flex justify-content-between">
-                <span>{{ content.cms_pending_orders|default:'Pending Orders' }}</span>
-                <span class="badge badge-warning">{{ pending_orders }}</span>
+        <div class="panel">
+            <h5>Expense Breakdown</h5>
+            <div class="dash-subtitle mb-3">Total Expenses: KES {{ monthly_expenses|floatformat:2 }} (+{{ expense_growth|floatformat:0 }}%)</div>
+            <div class="donut" style="--p: {{ expense_ratio|floatformat:1 }};">
+                <span>{{ expense_ratio|floatformat:1 }}%</span>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="stat-box">
-            <div class="d-flex justify-content-between">
-                <span>{{ content.cms_pending_transfers|default:'Pending Transfers' }}</span>
-                <span class="badge badge-info">{{ pending_transfers }}</span>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-box">
-            <div class="d-flex justify-content-between">
-                <span>{{ content.cms_low_stock_items|default:'Low Stock Items' }}</span>
-                <span class="badge badge-danger">{{ low_stock_items|length }}</span>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row g-2">
-    <div class="col-lg-6">
-        <div class="section">
-            <h6 class="section-title">{{ content.cms_recent_sales|default:'Recent Sales' }}</h6>
+    <div class="list-grid">
+        <div class="panel table-card">
+            <h5>Recent Sales</h5>
             {% if recent_sales %}
             <table class="table table-sm">
                 <thead>
                     <tr>
-                        <th>{{ content.cms_sale|default:'Sale #' }}</th>
-                        <th>{{ content.cms_branch|default:'Branch' }}</th>
-                        <th>{{ content.cms_amount|default:'Amount' }}</th>
-                        <th>{{ content.cms_date|default:'Date' }}</th>
+                        <th>Sale #</th>
+                        <th>Branch</th>
+                        <th>Amount</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -132,27 +243,23 @@
                         <td><a href="{% url 'sale_detail' sale.pk %}">{{ sale.sale_number }}</a></td>
                         <td>{{ sale.branch.name }}</td>
                         <td>KES {{ sale.total_amount }}</td>
-                        <td>{{ sale.created_at|date:"M d, H:i" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <p>{{ content.cms_no_sales_yet|default:'No sales yet' }}</p>
+            <p class="dash-subtitle">No sales yet</p>
             {% endif %}
         </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="section">
-            <h6 class="section-title">{{ content.cms_recent_orders|default:'Recent Orders' }}</h6>
+        <div class="panel table-card">
+            <h5>Recent Orders</h5>
             {% if recent_orders %}
             <table class="table table-sm">
                 <thead>
                     <tr>
-                        <th>{{ content.cms_order|default:'Order #' }}</th>
-                        <th>{{ content.cms_branch|default:'Branch' }}</th>
-                        <th>{{ content.cms_status|default:'Status' }}</th>
-                        <th>{{ content.cms_date|default:'Date' }}</th>
+                        <th>Order #</th>
+                        <th>Branch</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -160,50 +267,15 @@
                     <tr>
                         <td><a href="{% url 'order_detail' order.pk %}">{{ order.order_number }}</a></td>
                         <td>{{ order.branch.name }}</td>
-                        <td>
-                            <span class="badge {% if order.status == 'COMPLETED' %}badge-success{% elif order.status == 'PENDING' %}badge-warning{% else %}badge-info{% endif %}">
-                                {{ order.status }}
-                            </span>
-                        </td>
-                        <td>{{ order.created_at|date:"M d, H:i" }}</td>
+                        <td>{{ order.status }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <p>{{ content.cms_no_orders_yet|default:'No orders yet' }}</p>
+            <p class="dash-subtitle">No orders yet</p>
             {% endif %}
         </div>
     </div>
 </div>
-
-{% if low_stock_items %}
-<div class="row g-2 mt-2">
-    <div class="col-12">
-        <div class="section">
-            <h6 class="section-title">{{ content.cms_low_stock_alerts|default:'Low Stock Alerts' }}</h6>
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>{{ content.cms_product|default:'Product' }}</th>
-                        <th>{{ content.cms_branch|default:'Branch' }}</th>
-                        <th>{{ content.cms_current_qty|default:'Current Qty' }}</th>
-                        <th>{{ content.cms_min_qty|default:'Min Qty' }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stock in low_stock_items %}
-                    <tr>
-                        <td>{{ stock.product.name }}</td>
-                        <td>{{ stock.branch.name }}</td>
-                        <td class="low-stock">{{ stock.quantity }}</td>
-                        <td>{{ stock.min_quantity }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
 {% endblock %}
