@@ -1,4 +1,4 @@
-const CACHE_NAME = "paroha-scm-v2";
+const CACHE_NAME = "paroha-scm-v3";
 const STATIC_ASSETS = [
   "/static/css/style.css",
   "/manifest.json",
@@ -24,9 +24,24 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
 
   // Always go to network for page navigations (prevents cached logged-in pages)
   if (event.request.mode === "navigate" || event.request.destination === "document") {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Never cache API responses
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  const isStaticAsset =
+    url.pathname.startsWith("/static/") || url.pathname === "/manifest.json";
+
+  if (!isStaticAsset) {
     event.respondWith(fetch(event.request));
     return;
   }

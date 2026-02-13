@@ -1094,55 +1094,83 @@ def sale_create(request):
                 broken_flags = request.POST.getlist('is_broken_sale')
                 unit_prices = request.POST.getlist('unit_price')
 
+                items = []
+                total_by_stock = {}
+
                 for i in range(len(stock_ids)):
-                    if stock_ids[i]:
-                        stock = get_object_or_404(Stock, pk=stock_ids[i])
-                        qty = parse_decimal(quantities[i] if i < len(quantities) else None, Decimal('1.00'))
-                        is_broken_sale = False
-                        if i < len(broken_flags):
-                            is_broken_sale = broken_flags[i] in ['on', 'true', '1']
+                    if not stock_ids[i]:
+                        continue
+                    stock = get_object_or_404(Stock, pk=stock_ids[i])
+                    qty = parse_decimal(quantities[i] if i < len(quantities) else None, Decimal('1.00'))
+                    is_broken_sale = False
+                    if i < len(broken_flags):
+                        is_broken_sale = broken_flags[i] in ['on', 'true', '1']
 
-                        if qty <= 0:
-                            messages.error(request, 'Quantity must be greater than zero.')
-                            return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
+                    if qty <= 0:
+                        messages.error(request, 'Quantity must be greater than zero.')
+                        return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
 
-                        if not is_broken_sale:
-                            if qty > stock.quantity:
-                                messages.error(request, f'Quantity exceeds available stock for {stock.product.name}.')
-                                return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
+                    raw_price = unit_prices[i] if i < len(unit_prices) else None
+                    price = parse_decimal(raw_price, Decimal('0.00'))
+                    if price <= 0:
+                        price = stock.product.unit_price or Decimal('0.00')
 
-                        raw_price = unit_prices[i] if i < len(unit_prices) else None
-                        price = parse_decimal(raw_price, Decimal('0.00'))
-                        if price <= 0:
-                            price = stock.product.unit_price or Decimal('0.00')
-                        if is_broken_sale:
-                            unit_cost_at_sale = Decimal('0.00')
-                        else:
-                            t0 = time.monotonic()
-                            _total_cost, avg_cost = consume_fifo_layers(stock, qty)
-                            unit_cost_at_sale = avg_cost
-                            elapsed = time.monotonic() - t0
-                            if elapsed > 1.0:
-                                logger.warning(
-                                    "Slow FIFO consume: stock=%s qty=%s took=%.2fs",
-                                    stock.id, qty, elapsed
-                                )
+                    items.append({
+                        'stock': stock,
+                        'qty': qty,
+                        'price': price,
+                        'is_broken_sale': is_broken_sale,
+                    })
 
-                        t1 = time.monotonic()
-                        SaleItem.objects.create(
-                            sale=sale,
-                            stock=stock,
-                            quantity=qty,
-                            unit_price=price,
-                            unit_cost_at_sale=unit_cost_at_sale,
-                            is_broken_sale=is_broken_sale,
+                    if not is_broken_sale:
+                        total_by_stock[stock.id] = total_by_stock.get(stock.id, Decimal('0.00')) + qty
+
+                for stock_id, total_qty in total_by_stock.items():
+                    stock = next(item['stock'] for item in items if item['stock'].id == stock_id)
+                    if total_qty > stock.quantity:
+                        messages.error(
+                            request,
+                            f'Total quantity exceeds available stock for {stock.product.name}.'
                         )
-                        elapsed = time.monotonic() - t1
-                        if elapsed > 1.0:
-                            logger.warning(
-                                "Slow SaleItem create: stock=%s qty=%s took=%.2fs",
-                                stock.id, qty, elapsed
-                            )
+                        return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
+
+                avg_cost_by_stock = {}
+                for stock_id, total_qty in total_by_stock.items():
+                    stock = next(item['stock'] for item in items if item['stock'].id == stock_id)
+                    t0 = time.monotonic()
+                    _total_cost, avg_cost = consume_fifo_layers(stock, total_qty)
+                    avg_cost_by_stock[stock_id] = avg_cost
+                    elapsed = time.monotonic() - t0
+                    if elapsed > 1.0:
+                        logger.warning(
+                            "Slow FIFO consume: stock=%s qty=%s took=%.2fs",
+                            stock.id, total_qty, elapsed
+                        )
+
+                for item in items:
+                    stock = item['stock']
+                    qty = item['qty']
+                    is_broken_sale = item['is_broken_sale']
+                    if is_broken_sale:
+                        unit_cost_at_sale = Decimal('0.00')
+                    else:
+                        unit_cost_at_sale = avg_cost_by_stock.get(stock.id, Decimal('0.00'))
+
+                    t1 = time.monotonic()
+                    SaleItem.objects.create(
+                        sale=sale,
+                        stock=stock,
+                        quantity=qty,
+                        unit_price=item['price'],
+                        unit_cost_at_sale=unit_cost_at_sale,
+                        is_broken_sale=is_broken_sale,
+                    )
+                    elapsed = time.monotonic() - t1
+                    if elapsed > 1.0:
+                        logger.warning(
+                            "Slow SaleItem create: stock=%s qty=%s took=%.2fs",
+                            stock.id, qty, elapsed
+                        )
 
                 sale.calculate_total()
                 logger.info("Sale create commit: req=%s sale=%s", request_id, sale.sale_number)

@@ -181,7 +181,7 @@ let stockData = [];
 document.getElementById('branchSelect').addEventListener('change', function() {
     const branchId = this.value;
     if (branchId) {
-        fetch(`/api/branch/${branchId}/stocks/`)
+        fetch(`/api/branch/${branchId}/stocks/`, { cache: 'no-store' })
             .then(response => response.json())
             .then(data => {
                 stockData = data;
@@ -398,7 +398,7 @@ document.querySelectorAll('.sale-item').forEach(row => {
 });
 
 if (document.getElementById('branchSelect').value) {
-    fetch(`/api/branch/${document.getElementById('branchSelect').value}/stocks/`)
+    fetch(`/api/branch/${document.getElementById('branchSelect').value}/stocks/`, { cache: 'no-store' })
         .then(response => response.json())
         .then(data => {
             stockData = data;
