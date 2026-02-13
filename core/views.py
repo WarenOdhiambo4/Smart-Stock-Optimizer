@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Sum, Count, Q, F, Case, When, IntegerField
-from django.db import transaction
+from django.db import transaction, connection
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.http import JsonResponse
@@ -14,6 +14,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import logging
 import uuid
+import time
 
 from .models import Branch, Employee, Product, Stock, StockMovement, Order, OrderItem, OrderItemCompletion, OrderStatusHistory, Sale, SaleItem, UserProfile, Expense, Logistics, Vehicle, Trip, VehicleMaintenance, FuelConsumption, BusinessNote, TwoFactorAuth, BrokenProduct, SystemContent
 from .inventory_costing import consume_fifo_layers, restore_fifo_layers
@@ -1043,6 +1044,15 @@ def sale_create(request):
     
     if request.method == 'POST':
         try:
+            request_id = uuid.uuid4().hex[:8]
+            logger.info(
+                "Sale create start: req=%s user=%s branch=%s confirm=%s items=%s",
+                request_id,
+                getattr(request.user, 'username', None),
+                request.POST.get('branch'),
+                request.POST.get('confirm'),
+                len(request.POST.getlist('stock_id')),
+            )
             # Check if confirmation is required
             if request.POST.get('confirm') != 'true':
                 # First submission - show confirmation
@@ -1054,6 +1064,9 @@ def sale_create(request):
                 })
 
             with transaction.atomic():
+                if connection.vendor == 'postgresql':
+                    with connection.cursor() as cursor:
+                        cursor.execute("SET LOCAL statement_timeout = %s", [20000])
                 # Confirmed submission
                 branch_id = request.POST.get('branch')
                 sale_date = request.POST.get('sale_date')
@@ -1103,9 +1116,17 @@ def sale_create(request):
                         if is_broken_sale:
                             unit_cost_at_sale = Decimal('0.00')
                         else:
+                            t0 = time.monotonic()
                             _total_cost, avg_cost = consume_fifo_layers(stock, qty)
                             unit_cost_at_sale = avg_cost
+                            elapsed = time.monotonic() - t0
+                            if elapsed > 1.0:
+                                logger.warning(
+                                    "Slow FIFO consume: stock=%s qty=%s took=%.2fs",
+                                    stock.id, qty, elapsed
+                                )
 
+                        t1 = time.monotonic()
                         SaleItem.objects.create(
                             sale=sale,
                             stock=stock,
@@ -1114,8 +1135,15 @@ def sale_create(request):
                             unit_cost_at_sale=unit_cost_at_sale,
                             is_broken_sale=is_broken_sale,
                         )
+                        elapsed = time.monotonic() - t1
+                        if elapsed > 1.0:
+                            logger.warning(
+                                "Slow SaleItem create: stock=%s qty=%s took=%.2fs",
+                                stock.id, qty, elapsed
+                            )
 
                 sale.calculate_total()
+                logger.info("Sale create commit: req=%s sale=%s", request_id, sale.sale_number)
 
                 # Add multiple expenses if provided
                 expense_descriptions = request.POST.getlist('expense_description')
@@ -1146,7 +1174,8 @@ def sale_create(request):
                 quantities = request.POST.getlist('quantity')
                 unit_prices = request.POST.getlist('unit_price')
                 logger.exception(
-                    "Sale create failed: user=%s branch=%s date=%s items=%s qty=%s prices=%s confirm=%s",
+                    "Sale create failed: req=%s user=%s branch=%s date=%s items=%s qty=%s prices=%s confirm=%s",
+                    locals().get('request_id'),
                     getattr(request.user, 'username', None),
                     branch_id,
                     sale_date,

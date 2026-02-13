@@ -167,8 +167,9 @@ class StockMovement(models.Model):
                 quantity=F('quantity') - abs(self.quantity)
             )
         elif self.movement_type == 'ADJUSTMENT':
-            self.stock.quantity += self.quantity
-            self.stock.save()
+            Stock.objects.filter(pk=self.stock_id).update(
+                quantity=F('quantity') + self.quantity
+            )
         elif self.movement_type == 'IN':
             qty = abs(self.quantity)
             if self.unit_cost is not None:
@@ -186,8 +187,9 @@ class StockMovement(models.Model):
                 except Exception:
                     pass
             else:
-                self.stock.quantity += qty
-                self.stock.save()
+                Stock.objects.filter(pk=self.stock_id).update(
+                    quantity=F('quantity') + qty
+                )
         elif self.movement_type == 'TRANSFER':
             Stock.objects.filter(pk=self.stock_id).update(
                 quantity=F('quantity') - abs(self.quantity)
@@ -198,8 +200,9 @@ class StockMovement(models.Model):
                     product=self.stock.product,
                     defaults={'quantity': 0}
                 )
-                to_stock.quantity += abs(self.quantity)
-                to_stock.save()
+                Stock.objects.filter(pk=to_stock.pk).update(
+                    quantity=F('quantity') + abs(self.quantity)
+                )
         
         self._processed = True
         self.save(update_fields=['_processed'])
