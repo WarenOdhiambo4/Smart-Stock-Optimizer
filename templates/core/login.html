@@ -11,6 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="manifest" href="{% url 'manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'pwa/icons/icon-180.png' %}">
+    <meta name="theme-color" content="{{ content.theme_primary_color|default:'#0077b6' }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <style>
         .login-container {
             min-height: 100vh;
@@ -55,6 +60,10 @@
         }
         .install-app-btn {
             border-style: dashed;
+        }
+        .install-help {
+            font-size: 10px;
+            color: var(--secondary);
         }
     </style>
 </head>
@@ -116,9 +125,12 @@
                         <i class="bi bi-arrow-left me-2"></i>{{ content.login.back_button|default:'Back to Login' }}
                     </a>
                 {% endif %}
-                <button type="button" class="btn btn-outline-success w-100 mt-3 d-none install-app-btn" id="installAppBtn">
+                <button type="button" class="btn btn-outline-success w-100 mt-3 install-app-btn" id="installAppBtn">
                     <i class="bi bi-download me-2"></i>{{ content.login.install_button|default:'Install App' }}
                 </button>
+                <div class="install-help mt-2 text-center" id="installHelp">
+                    {{ content.login.install_help|default:'If install does not open, use your browser menu → Install app / Add to Home screen.' }}
+                </div>
             </form>
 
             <div class="text-center text-muted" style="font-size: 10px;">
@@ -145,34 +157,46 @@
 
         let deferredPrompt = null;
         const installBtn = document.getElementById('installAppBtn');
+        const installHelp = document.getElementById('installHelp');
 
         window.addEventListener('beforeinstallprompt', (event) => {
             event.preventDefault();
             deferredPrompt = event;
-            if (installBtn) {
-                installBtn.classList.remove('d-none');
+            if (installHelp) {
+                installHelp.classList.add('d-none');
             }
         });
 
         if (installBtn) {
             installBtn.addEventListener('click', async () => {
-                if (!deferredPrompt) return;
+                if (!deferredPrompt) {
+                    alert('Install not available. Use your browser menu → Install app / Add to Home screen.');
+                    return;
+                }
                 deferredPrompt.prompt();
                 try {
                     await deferredPrompt.userChoice;
                 } finally {
                     deferredPrompt = null;
-                    installBtn.classList.add('d-none');
+                    if (installHelp) {
+                        installHelp.classList.remove('d-none');
+                    }
                 }
             });
         }
 
         window.addEventListener('appinstalled', () => {
             deferredPrompt = null;
-            if (installBtn) {
-                installBtn.classList.add('d-none');
+            if (installHelp) {
+                installHelp.classList.add('d-none');
             }
         });
+
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("{% url 'service_worker' %}").catch(() => {});
+            });
+        }
     </script>
 </body>
 </html>
