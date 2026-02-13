@@ -53,6 +53,9 @@
             font-size: 11px;
             color: var(--secondary);
         }
+        .install-app-btn {
+            border-style: dashed;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -113,6 +116,9 @@
                         <i class="bi bi-arrow-left me-2"></i>{{ content.login.back_button|default:'Back to Login' }}
                     </a>
                 {% endif %}
+                <button type="button" class="btn btn-outline-success w-100 mt-3 d-none install-app-btn" id="installAppBtn">
+                    <i class="bi bi-download me-2"></i>{{ content.login.install_button|default:'Install App' }}
+                </button>
             </form>
 
             <div class="text-center text-muted" style="font-size: 10px;">
@@ -136,6 +142,37 @@
                 togglePassword.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
             });
         }
+
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installAppBtn');
+
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredPrompt = event;
+            if (installBtn) {
+                installBtn.classList.remove('d-none');
+            }
+        });
+
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                try {
+                    await deferredPrompt.userChoice;
+                } finally {
+                    deferredPrompt = null;
+                    installBtn.classList.add('d-none');
+                }
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            if (installBtn) {
+                installBtn.classList.add('d-none');
+            }
+        });
     </script>
 </body>
 </html>
