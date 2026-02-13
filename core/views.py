@@ -13,6 +13,8 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 from datetime import datetime, timedelta
 import logging
+import sys
+import traceback
 import uuid
 import time
 
@@ -1186,6 +1188,10 @@ def sale_create(request):
                 )
             except Exception:
                 logger.exception("Sale create failed (logging error)")
+            try:
+                print(traceback.format_exc(), file=sys.stderr)
+            except Exception:
+                pass
             messages.error(request, f'Error creating sale: {str(e)}')
             return render(request, 'core/sale_form.html', {'branches': branches, 'action': 'Create'})
     
