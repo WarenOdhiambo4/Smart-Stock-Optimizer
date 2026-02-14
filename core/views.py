@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.core.exceptions import ValidationError
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from datetime import datetime, timedelta
@@ -2125,6 +2126,36 @@ def trip_update(request, pk):
 
 @login_required
 @role_required('ADMIN', 'LOGISTICS')
+def trip_complete(request, pk):
+    if request.method != 'POST':
+        return redirect('trip_list')
+
+    trip = get_object_or_404(Trip, pk=pk)
+    if trip.status == 'COMPLETED':
+        messages.info(request, 'Trip is already completed.')
+        return redirect('trip_list')
+    if trip.status == 'CANCELLED':
+        messages.error(request, 'Cancelled trip cannot be completed.')
+        return redirect('trip_list')
+    if trip.scheduled_date and trip.scheduled_date > timezone.now():
+        messages.error(request, 'Trip date is in the future. Cannot complete trip.')
+        return redirect('trip_list')
+
+    trip.status = 'COMPLETED'
+    if not trip.start_time:
+        trip.start_time = trip.scheduled_date
+    if not trip.end_time:
+        trip.end_time = timezone.now()
+    if trip.start_time and trip.end_time and trip.end_time < trip.start_time:
+        trip.end_time = trip.start_time
+
+    trip.save()
+    messages.success(request, f'Trip {trip.trip_number} marked as completed.')
+    return redirect('trip_list')
+
+
+@login_required
+@role_required('ADMIN', 'LOGISTICS')
 def trip_delete(request, pk):
     trip = get_object_or_404(Trip, pk=pk)
     
@@ -2372,6 +2403,47 @@ def maintenance_edit(request, pk):
                 'action': 'Update'
             })
         maintenance.service_date = service_date
+
+        status_raw = request.POST.get('status')
+        status = status_raw or maintenance.status
+        valid_statuses = {choice[0] for choice in VehicleMaintenance.STATUS_CHOICES}
+        if status not in valid_statuses:
+            messages.error(request, 'Invalid maintenance status.')
+            return render(request, 'core/maintenance_form.html', {
+                'vehicles': vehicles,
+                'maintenance': maintenance,
+                'parts_data': parse_parts_description(maintenance.description),
+                'action': 'Update'
+            })
+
+        completion_date_raw = request.POST.get('completion_date')
+        completion_date = parse_date(completion_date_raw) if completion_date_raw else None
+        if status == 'COMPLETED':
+            if not completion_date:
+                messages.error(request, 'Completion date is required when status is completed.')
+                return render(request, 'core/maintenance_form.html', {
+                    'vehicles': vehicles,
+                    'maintenance': maintenance,
+                    'parts_data': parse_parts_description(maintenance.description),
+                    'action': 'Update'
+                })
+            if completion_date < service_date:
+                messages.error(request, 'Completion date cannot be before service date.')
+                return render(request, 'core/maintenance_form.html', {
+                    'vehicles': vehicles,
+                    'maintenance': maintenance,
+                    'parts_data': parse_parts_description(maintenance.description),
+                    'action': 'Update'
+                })
+            if completion_date > timezone.localdate():
+                messages.error(request, 'Completion date cannot be in the future.')
+                return render(request, 'core/maintenance_form.html', {
+                    'vehicles': vehicles,
+                    'maintenance': maintenance,
+                    'parts_data': parse_parts_description(maintenance.description),
+                    'action': 'Update'
+                })
+
         maintenance.receipt_number = request.POST.get('receipt_number', '')
         maintenance.notes = request.POST.get('notes', '')
 
@@ -2394,7 +2466,9 @@ def maintenance_edit(request, pk):
         maintenance.other_costs = parse_decimal(request.POST.get('other_costs'))
         maintenance.mileage_at_service = parse_int(request.POST.get('mileage_at_service'))
         maintenance.next_service_mileage = parse_int(request.POST.get('next_service_mileage')) if request.POST.get('next_service_mileage') else None
-        if maintenance.status == 'SCHEDULED':
+        maintenance.status = status
+        maintenance.completion_date = completion_date
+        if not status_raw and maintenance.status == 'SCHEDULED':
             maintenance.status = 'IN_PROGRESS'
 
         maintenance.save()
@@ -2409,6 +2483,36 @@ def maintenance_edit(request, pk):
         'parts_data': parts_data,
         'action': 'Update'
     })
+
+
+@login_required
+@role_required('ADMIN', 'MANAGER', 'LOGISTICS')
+def maintenance_complete(request, pk):
+    if request.method != 'POST':
+        return redirect('maintenance_list')
+
+    maintenance = get_object_or_404(VehicleMaintenance, pk=pk)
+    if maintenance.status == 'COMPLETED':
+        messages.info(request, 'Maintenance is already completed.')
+        return redirect('maintenance_list')
+    if maintenance.status == 'CANCELLED':
+        messages.error(request, 'Cancelled maintenance cannot be completed.')
+        return redirect('maintenance_list')
+    if maintenance.service_date and maintenance.service_date > timezone.localdate():
+        messages.error(request, 'Service date is in the future. Cannot complete maintenance.')
+        return redirect('maintenance_list')
+
+    maintenance.status = 'COMPLETED'
+    maintenance.completion_date = timezone.localdate()
+    try:
+        maintenance.full_clean()
+        maintenance.save()
+    except ValidationError as exc:
+        messages.error(request, f'Unable to complete maintenance: {exc}')
+        return redirect('maintenance_list')
+
+    messages.success(request, f'Maintenance {maintenance.maintenance_number} marked as completed.')
+    return redirect('maintenance_list')
 
 
 @login_required

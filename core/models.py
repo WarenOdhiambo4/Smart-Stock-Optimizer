@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from decimal import Decimal
 from simple_history.models import HistoricalRecords
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 
 class Branch(models.Model):
@@ -888,6 +889,18 @@ class VehicleMaintenance(models.Model):
     def total_cost(self):
         """Total maintenance cost"""
         return self.parts_cost + self.labor_cost + self.other_costs
+
+    def clean(self):
+        errors = {}
+        if self.status == 'COMPLETED':
+            if not self.completion_date:
+                errors['completion_date'] = 'Completion date is required when status is completed.'
+            elif self.service_date and self.completion_date < self.service_date:
+                errors['completion_date'] = 'Completion date cannot be before service date.'
+            elif self.completion_date > timezone.localdate():
+                errors['completion_date'] = 'Completion date cannot be in the future.'
+        if errors:
+            raise ValidationError(errors)
     
     def save(self, *args, **kwargs):
         is_new = self.pk is None

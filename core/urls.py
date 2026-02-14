@@ -124,6 +124,7 @@ urlpatterns = [
     path('trips/', views.trip_list, name='trip_list'),
     path('trips/create/', views.trip_create, name='trip_create'),
     path('trips/<int:pk>/edit/', views.trip_update, name='trip_update'),
+    path('trips/<int:pk>/complete/', views.trip_complete, name='trip_complete'),
     path('trips/<int:pk>/delete/', views.trip_delete, name='trip_delete'),
     path('trips/print/', views.trips_print, name='trips_print'),
     
@@ -131,6 +132,7 @@ urlpatterns = [
     path('maintenance/', views.maintenance_list, name='maintenance_list'),
     path('maintenance/create/', views.maintenance_create, name='maintenance_create'),
     path('maintenance/<int:pk>/edit/', views.maintenance_edit, name='maintenance_edit'),
+    path('maintenance/<int:pk>/complete/', views.maintenance_complete, name='maintenance_complete'),
     
     # Broken Products
     path('broken-products/', views_broken_products.broken_products_list, name='broken_products_list'),

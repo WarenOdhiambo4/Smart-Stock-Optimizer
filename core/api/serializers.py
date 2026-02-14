@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 from core.models import (
     Branch, Employee, Product, Stock, StockMovement, Order, OrderItem,
     Sale, SaleItem, Expense, Vehicle, Trip, VehicleMaintenance,
@@ -119,6 +120,27 @@ class VehicleMaintenanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleMaintenance
         fields = '__all__'
+
+    def validate(self, attrs):
+        status = attrs.get('status', getattr(self.instance, 'status', None))
+        service_date = attrs.get('service_date', getattr(self.instance, 'service_date', None))
+        completion_date = attrs.get('completion_date', getattr(self.instance, 'completion_date', None))
+
+        if status == 'COMPLETED':
+            if not completion_date:
+                raise serializers.ValidationError({
+                    'completion_date': 'Completion date is required when status is completed.'
+                })
+            if service_date and completion_date < service_date:
+                raise serializers.ValidationError({
+                    'completion_date': 'Completion date cannot be before service date.'
+                })
+            if completion_date > timezone.localdate():
+                raise serializers.ValidationError({
+                    'completion_date': 'Completion date cannot be in the future.'
+                })
+
+        return attrs
 
 
 class ShipmentItemSerializer(serializers.ModelSerializer):

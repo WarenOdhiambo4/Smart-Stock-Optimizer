@@ -83,6 +83,21 @@
                     <label class="form-label">{{ content.cms_service_date|default:'Service Date *' }}</label>
                     <input type="date" name="service_date" class="form-control" required value="{% if maintenance %}{{ maintenance.service_date|date:'Y-m-d' }}{% endif %}">
                 </div>
+                {% if maintenance %}
+                <div class="col-md-6">
+                    <label class="form-label">{{ content.cms_status|default:'Status *' }}</label>
+                    <select name="status" class="form-select" required>
+                        <option value="SCHEDULED" {% if maintenance.status == 'SCHEDULED' %}selected{% endif %}>{{ content.cms_scheduled|default:'Scheduled' }}</option>
+                        <option value="IN_PROGRESS" {% if maintenance.status == 'IN_PROGRESS' %}selected{% endif %}>{{ content.cms_in_progress|default:'In Progress' }}</option>
+                        <option value="COMPLETED" {% if maintenance.status == 'COMPLETED' %}selected{% endif %}>{{ content.cms_completed|default:'Completed' }}</option>
+                        <option value="CANCELLED" {% if maintenance.status == 'CANCELLED' %}selected{% endif %}>{{ content.cms_cancelled|default:'Cancelled' }}</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ content.cms_completion_date|default:'Completion Date' }}</label>
+                    <input type="date" name="completion_date" class="form-control" value="{% if maintenance and maintenance.completion_date %}{{ maintenance.completion_date|date:'Y-m-d' }}{% endif %}">
+                </div>
+                {% endif %}
                 <div class="col-md-4">
                     <label class="form-label">{{ content.cms_parts_total|default:'Parts Total' }}</label>
                     <input type="text" class="form-control" id="partsTotalDisplay" value="{% if maintenance %}{{ maintenance.parts_cost|floatformat:2 }}{% else %}0.00{% endif %}" readonly>

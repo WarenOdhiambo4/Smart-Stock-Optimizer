@@ -52,6 +52,12 @@
                         <td>
                             {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
                             <a href="{% url 'maintenance_edit' maint.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                            {% if maint.status != 'COMPLETED' and maint.status != 'CANCELLED' %}
+                            <form method="post" action="{% url 'maintenance_complete' maint.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-success btn-sm">{{ content.cms_mark_completed|default:'Mark Completed' }}</button>
+                            </form>
+                            {% endif %}
                             {% endif %}
                         </td>
                     </tr>
@@ -80,6 +86,12 @@
                 <div class="mobile-card-actions">
                     {% if user.profile.role == 'ADMIN' or user.profile.role == 'MANAGER' or user.profile.role == 'LOGISTICS' %}
                     <a href="{% url 'maintenance_edit' maint.pk %}" class="btn btn-outline-primary btn-sm">{{ content.cms_edit|default:'Edit' }}</a>
+                    {% if maint.status != 'COMPLETED' and maint.status != 'CANCELLED' %}
+                    <form method="post" action="{% url 'maintenance_complete' maint.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-success btn-sm">{{ content.cms_mark_completed|default:'Mark Completed' }}</button>
+                    </form>
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>
